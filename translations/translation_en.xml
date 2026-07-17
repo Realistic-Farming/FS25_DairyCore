@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<l10n>
+    <texts>
+        <text name="dc_setting_enabled" text="Dairy Core Enabled" />
+        <text name="dc_setting_collectionInterval" text="Default Collection Interval (h)" />
+        <text name="dc_setting_spoilage" text="Milk Spoilage" />
+        <text name="dc_setting_contracts" text="Dairy Contracts" />
+        <text name="dc_tab_title" text="Dairy" />
+        <text name="dc_tier_premium" text="Premium" />
+        <text name="dc_tier_standard" text="Standard" />
+        <text name="dc_tier_reduced" text="Reduced" />
+        <text name="dc_tier_poor" text="Poor" />
+        <text name="dc_spoilage_fresh" text="Fresh" />
+        <text name="dc_spoilage_ageing" text="Ageing" />
+        <text name="dc_spoilage_atrisk" text="At Risk" />
+        <text name="dc_spoilage_condemned" text="Condemned" />
+        <text name="dc_contract_standard" text="Standard Dairy Contract" />
+        <text name="dc_contract_premium_quality" text="Premium Quality Contract" />
+        <text name="dc_contract_syndicate" text="Syndicate Dairy Contract" />
+    </texts>
+</l10n>

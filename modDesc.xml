@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<modDesc descVersion="92">
+    <author>TisonK</author>
+    <version>1.0.0.0</version>
+    <modName>FS25_DairyCore</modName>
+
+    <title>
+        <en><![CDATA[Realistic Farming - Dairy Core]]></en>
+        <de><![CDATA[Realistic Farming - Dairy Core]]></de>
+        <fr><![CDATA[Realistic Farming - Dairy Core]]></fr>
+        <nl><![CDATA[Realistic Farming - Dairy Core]]></nl>
+        <it><![CDATA[Realistic Farming - Dairy Core]]></it>
+        <pl><![CDATA[Realistic Farming - Dairy Core]]></pl>
+        <es><![CDATA[Realistic Farming - Dairy Core]]></es>
+        <ea><![CDATA[Realistic Farming - Dairy Core]]></ea>
+        <pt><![CDATA[Realistic Farming - Dairy Core]]></pt>
+        <br><![CDATA[Realistic Farming - Dairy Core]]></br>
+        <ru><![CDATA[Realistic Farming - Dairy Core]]></ru>
+        <uk><![CDATA[Realistic Farming - Dairy Core]]></uk>
+        <cz><![CDATA[Realistic Farming - Dairy Core]]></cz>
+        <hu><![CDATA[Realistic Farming - Dairy Core]]></hu>
+        <ro><![CDATA[Realistic Farming - Dairy Core]]></ro>
+        <tr><![CDATA[Realistic Farming - Dairy Core]]></tr>
+        <fi><![CDATA[Realistic Farming - Dairy Core]]></fi>
+        <no><![CDATA[Realistic Farming - Dairy Core]]></no>
+        <sv><![CDATA[Realistic Farming - Dairy Core]]></sv>
+        <da><![CDATA[Realistic Farming - Dairy Core]]></da>
+        <kr><![CDATA[Realistic Farming - Dairy Core]]></kr>
+        <jp><![CDATA[Realistic Farming - Dairy Core]]></jp>
+        <ct><![CDATA[Realistic Farming - Dairy Core]]></ct>
+        <fc><![CDATA[Realistic Farming - Dairy Core]]></fc>
+        <id><![CDATA[Realistic Farming - Dairy Core]]></id>
+        <vi><![CDATA[Realistic Farming - Dairy Core]]></vi>
+    </title>
+
+    <description>
+        <en><![CDATA[A per-barn dairy management layer for the Realistic Farming ecosystem: herd health, milk quality, spoilage timing, collection scheduling and dairy contracts, all riding the shared in-game economic clock (Time Guard). It reads the base game herd values in standard mode and switches to a per-animal genetics calculation when Ritter's Realistic Livestock is present, and it degrades gracefully when a companion mod is absent.]]></en>
+        <de><![CDATA[Eine barnbezogene Milchwirtschafts-Schicht für das Realistic Farming Ökosystem: Herdengesundheit, Milchqualität, Verderbszeit, Abholplanung und Milchverträge, alle auf der gemeinsamen Wirtschaftsuhr (Time Guard). Im Standardmodus liest sie die Herdenwerte des Grundspiels und wechselt zu einer tierindividuellen Genetikberechnung, wenn Ritters Realistic Livestock vorhanden ist; fehlt ein Begleitmod, arbeitet sie weiterhin sauber.]]></de>
+        <fr><![CDATA[Une couche de gestion laitière par étable pour l'écosystème Realistic Farming : santé du troupeau, qualité du lait, péremption, planification de la collecte et contrats laitiers, le tout sur l'horloge économique partagée (Time Guard). En mode standard elle lit les valeurs du jeu de base et passe à un calcul génétique par animal quand Realistic Livestock de Ritter est présent, et elle fonctionne toujours proprement si un mod compagnon est absent.]]></fr>
+        <nl><![CDATA[Een dairylaag per stal voor het Realistic Farming ecosysteem: veegezondheid, melkkwaliteit, bederf, ophaalplanning en zuivelcontracten, allemaal op de gedeelde economische klok (Time Guard). In de standaardmodus leest het de kuddewaarden van het basisspel en schakelt over naar een berekening per dier wanneer Ritters Realistic Livestock aanwezig is; het blijft netjes werken als een bijbehorende mod ontbreekt.]]></nl>
+        <it><![CDATA[Uno strato di gestione lattiero-casearia per stalla per l'ecosistema Realistic Farming: salute della mandria, qualità del latte, deperibilità, pianificazione della raccolta e contratti lattieri, tutto sull'orologio economico condiviso (Time Guard). In modalità standard legge i valori del gioco base e passa a un calcolo genetico per animale quando è presente Realistic Livestock di Ritter, e continua a funzionare correttamente se un mod compagno è assente.]]></it>
+        <pl><![CDATA[Warstwa zarządzania mleczarnią na oborę dla ekosystemu Realistic Farming: zdrowie stada, jakość mleka, psucie się, harmonogram odbioru i kontrakty mleczne, wszystko na wspólnym zegarze ekonomicznym (Time Guard). W trybie standardowym czyta wartości stada z gry podstawowej i przełącza się na obliczenia genetyczne per zwierzę, gdy obecny jest Realistic Livestock Rittera; działa poprawnie także bez moda towarzyszącego.]]></pl>
+        <es><![CDATA[Una capa de gestión lechera por establo para el ecosistema Realistic Farming: salud del rebaño, calidad de la leche, caducidad, programación de recogida y contratos lecheros, todo sobre el reloj económico compartido (Time Guard). En modo estándar lee los valores del juego base y cambia a un cálculo genético por animal cuando está presente Realistic Livestock de Ritter, y sigue funcionando bien si falta un mod compañero.]]></es>
+        <ea><![CDATA[Una capa de gestión lechera por establo para el ecosistema Realistic Farming: salud del rebaño, calidad de la leche, caducidad, programación de recogida y contratos lecheros, todo sobre el reloj económico compartido (Time Guard). En modo estándar lee los valores del juego base y cambia a un cálculo genético por animal cuando está presente Realistic Livestock de Ritter, y sigue funcionando bien si falta un mod compañero.]]></ea>
+        <pt><![CDATA[Uma camada de gestão leiteira por estábulo para o ecossistema Realistic Farming: saúde do rebanho, qualidade do leite, deterioração, agendamento de coleta e contratos leiteiros, tudo no relógio econômico compartilhado (Time Guard). No modo padrão lê os valores do jogo base e muda para um cálculo genético por animal quando o Realistic Livestock do Ritter está presente, e continua funcionando bem sem um mod companheiro.]]></pt>
+        <br><![CDATA[Uma camada de gestão leiteira por estábulo para o ecossistema Realistic Farming: saúde do rebanho, qualidade do leite, deterioração, agendamento de coleta e contratos leiteiros, tudo no relógio econômico compartilhado (Time Guard). No modo padrão lê os valores do jogo base e muda para um cálculo genético por animal quando o Realistic Livestock do Ritter está presente, e continua funcionando bem sem um mod companheiro.]]></br>
+        <ru><![CDATA[Слой управления молочной фермой по коровникам для экосистемы Realistic Farming: здоровье стада, качество молока, сроки порчи, планирование сбора и молочные контракты, всё на общих экономических часах (Time Guard). В стандартном режиме читает значения стада базовой игры и переключается на генетический расчёт по каждому животному при наличии Realistic Livestock от Ritter, и продолжает корректно работать без сопутствующего мода.]]></ru>
+        <uk><![CDATA[Шар управління молочною фермою по корівниках для екосистеми Realistic Farming: здоров'я стада, якість молока, терміни псування, планування збору та молочні контракти, усе на спільному економічному годиннику (Time Guard). У стандартному режимі читає значення стада базової гри та переходить на генетичний розрахунок по кожній тварині за наявності Realistic Livestock від Ritter, і продовжує коректно працювати без супутнього мода.]]></uk>
+        <cz><![CDATA[Vrstva správy mléčné farmy na chlév pro ekosystém Realistic Farming: zdraví stáda, kvalita mléka, kažení, plánování svozu a mléčné kontrakty, vše na sdílených ekonomických hodinách (Time Guard). Ve standardním režimu čte hodnoty stáda ze základní hry a přepne na genetický výpočet na zvíře, když je přítomen Realistic Livestock od Rittera; funguje správně i bez doprovodného modu.]]></cz>
+        <hu><![CDATA[Istállónkénti tejgazdálkodási réteg a Realistic Farming ökoszisztémához: állományegészség, tejminőség, romlási idő, begyűjtési ütemezés és tejszerződések, mind a közös gazdasági órán (Time Guard). Standard módban az alapjáték állományértékeit olvassa, és állatonkénti genetikai számításra vált, ha Ritter Realistic Livestock jelen van; társmod hiányában is rendben működik.]]></hu>
+        <ro><![CDATA[Un strat de management al fermei de lapte per grajd pentru ecosistemul Realistic Farming: sănătatea cirezii, calitatea laptelui, alterare, programarea colectării și contracte de lapte, toate pe ceasul economic partajat (Time Guard). În modul standard citește valorile cirezii din jocul de bază și trece la un calcul genetic per animal când Realistic Livestock al lui Ritter este prezent, și funcționează corect și fără un mod însoțitor.]]></ro>
+        <tr><![CDATA[Realistic Farming ekosistemi için ahır başına süt yönetimi katmanı: sürü sağlığı, süt kalitesi, bozulma süresi, toplama zamanlaması ve süt sözleşmeleri, hepsi paylaşılan ekonomik saatte (Time Guard). Standart modda ana oyunun sürü değerlerini okur ve Ritter'ın Realistic Livestock'u varsa hayvan başına genetik hesaplamaya geçer; bir yardımcı mod yoksa da düzgün çalışır.]]></tr>
+        <fi><![CDATA[Navettakohtainen maidontuotannon hallintakerros Realistic Farming -ekosysteemille: karjan terveys, maidon laatu, pilaantumisaika, keräyksen aikataulutus ja maitosopimukset, kaikki jaetulla talouskellolla (Time Guard). Vakiotilassa se lukee peruspelin karja-arvot ja vaihtaa eläinkohtaiseen geneettiseen laskentaan, kun Ritterin Realistic Livestock on läsnä, ja toimii siististi myös ilman liitännäismodia.]]></fi>
+        <no><![CDATA[Et meieristyringslag per fjøs for Realistic Farming-økosystemet: buskaphelse, melkekvalitet, bedervingstid, innsamlingsplanlegging og meierikontrakter, alt på den delte økonomiklokken (Time Guard). I standardmodus leser den grunnspillets buskapsverdier og bytter til en genetisk beregning per dyr når Ritters Realistic Livestock er til stede, og fungerer greit også uten en følgemod.]]></no>
+        <sv><![CDATA[Ett mejeristyrningslager per lagård för Realistic Farming-ekosystemet: besättningshälsa, mjölkkvalitet, förskämningstid, insamlingsschema och mejerikontrakt, allt på den delade ekonomiklockan (Time Guard). I standardläge läser den grundspelets besättningsvärden och byter till en genetisk beräkning per djur när Ritters Realistic Livestock finns, och fungerar korrekt även utan en följemodd.]]></sv>
+        <da><![CDATA[Et mejeristyringslag per stald til Realistic Farming-økosystemet: besætningssundhed, mælkekvalitet, fordærvelsestid, indsamlingsplanlægning og mejerikontrakter, alt på det delte økonomiske ur (Time Guard). I standardtilstand læser den grundspillets besætningsværdier og skifter til en genetisk beregning per dyr, når Ritters Realistic Livestock er til stede, og fungerer fint også uden et ledsagermod.]]></da>
+        <kr><![CDATA[Realistic Farming 생태계를 위한 축사별 낙농 관리 계층입니다: 무리 건강, 우유 품질, 부패 시점, 수거 일정, 낙농 계약을 모두 공유 경제 시계(Time Guard) 위에서 처리합니다. 표준 모드에서는 기본 게임의 무리 값을 읽고, Ritter의 Realistic Livestock이 있으면 동물별 유전 계산으로 전환하며, 동반 모드가 없어도 정상 작동합니다.]]></kr>
+        <jp><![CDATA[Realistic Farming エコシステム向けの畜舎ごとの酪農管理レイヤーです。群れの健康、牛乳の品質、劣化時間、集荷スケジュール、酪農契約を、すべて共有の経済時計(Time Guard)の上で扱います。標準モードではベースゲームの群れ値を読み取り、RitterのRealistic Livestockが存在すると動物ごとの遺伝計算に切り替わり、関連モッドが無くても正しく動作します。]]></jp>
+        <ct><![CDATA[為 Realistic Farming 生態系提供的每畜舍乳業管理層：畜群健康、牛奶品質、腐壞時間、收集排程與乳業合約，全部運行於共用的經濟時鐘（Time Guard）之上。標準模式讀取基礎遊戲的畜群數值，當存在 Ritter 的 Realistic Livestock 時切換為逐隻動物的遺傳計算，缺少配套模組時也能正常運作。]]></ct>
+        <fc><![CDATA[为 Realistic Farming 生态系统提供的每畜舍乳业管理层：畜群健康、牛奶品质、腐坏时间、收集排程与乳业合约，全部运行于共享的经济时钟（Time Guard）之上。标准模式读取基础游戏的畜群数值，当存在 Ritter 的 Realistic Livestock 时切换为逐只动物的遗传计算，缺少配套模组时也能正常运作。]]></fc>
+        <id><![CDATA[Lapisan manajemen susu per kandang untuk ekosistem Realistic Farming: kesehatan ternak, kualitas susu, waktu pembusukan, penjadwalan pengambilan, dan kontrak susu, semuanya berjalan pada jam ekonomi bersama (Time Guard). Dalam mode standar ia membaca nilai ternak game dasar dan beralih ke perhitungan genetik per hewan saat Realistic Livestock milik Ritter hadir, dan tetap bekerja dengan baik tanpa mod pendamping.]]></id>
+        <vi><![CDATA[Một lớp quản lý sữa theo chuồng cho hệ sinh thái Realistic Farming: sức khỏe đàn, chất lượng sữa, thời gian hư hỏng, lịch thu gom và hợp đồng sữa, tất cả chạy trên đồng hồ kinh tế dùng chung (Time Guard). Ở chế độ tiêu chuẩn nó đọc các giá trị đàn của game gốc và chuyển sang tính toán di truyền theo từng con khi có Realistic Livestock của Ritter, và vẫn hoạt động tốt khi thiếu một mod đồng hành.]]></vi>
+    </description>
+
+    <iconFilename>icon.dds</iconFilename>
+
+    <multiplayer supported="true"/>
+
+    <l10n filenamePrefix="translations/translation" />
+
+    <extraSourceFiles>
+        <sourceFile filename="main.lua" />
+    </extraSourceFiles>
+</modDesc>
