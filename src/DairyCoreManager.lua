@@ -647,7 +647,6 @@ function DairyCoreManager:onAnimalMoved(errorCode)
     -- Refresh affected barn counts on the next day update. The event does not carry
     -- barnId; a full re-discover on the day tick reconciles counts. Fuel-cost logging
     -- is stored internally only (FuelCosts is a price oracle, no registration API).
-    self._pendingTransferRefresh = true
 end
 
 -- =========================================================
@@ -755,7 +754,7 @@ function DairyCoreManager:_deserializeBarns(data)
     if type(data) ~= "table" then return end
     for key, s in pairs(data) do
         local barnId = tonumber(key) or key
-        local b = self.barns[barnId] or { barnId = barnId, feedSourceFields = {} }
+        local b = self.barns[barnId] or { barnId = barnId, farmId = 0, feedSourceFields = {} }
         b.herdHealthScore = s.herdHealthScore or 60
         b.milkQualityTier = s.milkQualityTier or "standard"
         b.spoilageStatus = s.spoilageStatus or "Fresh"
@@ -799,7 +798,9 @@ function DairyCoreManager:_deserializeContracts(data)
     end
 end
 
--- Compact barn state for MP: [barnId, score, tierIdx, spoilageDrop, ...] per barn.
+-- Compact barn state for MP: [barnId, score, tierIdx, spoilageDrop, mycotoxin,
+-- collectionInterval, assignedWorkerId, lastCollectionDay, nextCollectionDue,
+-- feedSourceFields] per barn.
 function DairyCoreManager:_onWriteBarnState()
     local arr = {}
     for barnId, b in pairs(self.barns) do
@@ -808,6 +809,13 @@ function DairyCoreManager:_onWriteBarnState()
         arr[#arr + 1] = self:_tierIndexByKey(b.milkQualityTier)
         arr[#arr + 1] = b._spoilageTierDrop or 0
         arr[#arr + 1] = math.floor(b.mycotoxinPenalty or 0)
+        arr[#arr + 1] = b.collectionInterval or self.settings.defaultCollectionInterval
+        arr[#arr + 1] = b.assignedWorkerId
+        arr[#arr + 1] = b.lastCollectionDay
+        arr[#arr + 1] = b.nextCollectionDue
+        local feedFields = {}
+        for fid in pairs(b.feedSourceFields) do feedFields[#feedFields + 1] = fid end
+        arr[#arr + 1] = feedFields
     end
     return arr
 end
@@ -815,15 +823,25 @@ end
 function DairyCoreManager:_onReadBarnState(arr)
     if type(arr) ~= "table" then return end
     local i = 1
-    while i + 4 <= #arr do
+    while i + 9 <= #arr do
         local barnId = tonumber(arr[i]) or arr[i]
-        local b = self.barns[barnId] or { barnId = barnId, feedSourceFields = {} }
-        b.herdHealthScore = arr[i+1]
-        b.milkQualityTier = (DairyConstants.QUALITY.TIERS[arr[i+2]] or DairyConstants.QUALITY.TIERS[2]).key
-        b._spoilageTierDrop = arr[i+3]
-        b.mycotoxinPenalty = arr[i+4]
-        self.barns[barnId] = b
-        i = i + 5
+        if self.barns[barnId] ~= nil then
+            local b = self.barns[barnId]
+            b.herdHealthScore = arr[i+1]
+            b.milkQualityTier = (DairyConstants.QUALITY.TIERS[arr[i+2]] or DairyConstants.QUALITY.TIERS[2]).key
+            b._spoilageTierDrop = arr[i+3]
+            b.mycotoxinPenalty = arr[i+4]
+            b.collectionInterval = arr[i+5]
+            b.assignedWorkerId = arr[i+6]
+            b.lastCollectionDay = arr[i+7]
+            b.nextCollectionDue = arr[i+8]
+            local feedFields = arr[i+9]
+            if type(feedFields) == "table" then
+                b.feedSourceFields = {}
+                for _, fid in ipairs(feedFields) do b.feedSourceFields[fid] = true end
+            end
+        end
+        i = i + 10
     end
 end
 
@@ -849,6 +867,8 @@ function DairyCoreManager:_saveOwnFile()
         xml:setFloat(key .. "#score", b.herdHealthScore or 60)
         xml:setString(key .. "#tier", b.milkQualityTier or "standard")
         xml:setInt(key .. "#myc", math.floor(b.mycotoxinPenalty or 0))
+        xml:setString(key .. "#spoilage", b.spoilageStatus or "Fresh")
+        xml:setInt(key .. "#spoilageDrop", b._spoilageTierDrop or 0)
         if b.lastCollectionDay ~= nil then xml:setInt(key .. "#lastCol", b.lastCollectionDay) end
         local fs = {}
         for fid in pairs(b.feedSourceFields) do fs[#fs+1] = tostring(fid) end
@@ -871,7 +891,9 @@ function DairyCoreManager:_loadOwnFile()
                 milkQualityTier = xml:getString(key .. "#tier", "standard"),
                 mycotoxinPenalty = xml:getInt(key .. "#myc", 0),
                 lastCollectionDay = xml:getInt(key .. "#lastCol", nil),
-                collectionInterval = self.settings.defaultCollectionInterval, spoilageStatus = "Fresh" }
+                collectionInterval = self.settings.defaultCollectionInterval,
+                spoilageStatus = xml:getString(key .. "#spoilage", "Fresh"),
+                _spoilageTierDrop = xml:getInt(key .. "#spoilageDrop", 0) }
             for fid in string.gmatch(xml:getString(key .. "#feedFields", ""), "([^,]+)") do
                 local f = tonumber(fid); if f ~= nil then b.feedSourceFields[f] = true end
             end
