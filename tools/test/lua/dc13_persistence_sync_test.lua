@@ -293,3 +293,114 @@ T.eq("F84: a settled contract is not resurrected", after.contracts[2], nil)
 T.ok("F84: the reloaded contract goes back on the accrual",
   registeredAccruals["DairyCore_contract_1"] == true)
 T.eq("F84: the id counter survives, so no live id is reissued", after.nextContractId, 2)
+
+-- ══════════════════════════════════════════════════════════
+-- F75. DISCOVERY IS PER OWNING FARM
+-- ══════════════════════════════════════════════════════════
+-- On a dedicated server FSBaseMission:getFarmId returns NIL, and the old
+-- `mission:getFarmId() or 1` resolved that to a hardcoded 1. Only farm 1's barns were
+-- ever discovered; every other farm had no dairy at all and no message saying so.
+-- A barn belongs to the farm that OWNS THE PLACEABLE, not to whoever is looking.
+
+FarmManager = {
+  SPECTATOR_FARM_ID = 0, SINGLEPLAYER_FARM_ID = 1,
+  GUIDED_TOUR_FARM_ID = 14, INVALID_FARM_ID = 15,
+}
+
+local function placeable(uid, ownerFarmId)
+  return {
+    spec_husbandryMilk = {},
+    getUniqueId    = function() return uid end,
+    getOwnerFarmId = function() return ownerFarmId end,
+  }
+end
+
+-- Records every farm id discovery asks for, so "never hand nil to the engine" is an
+-- assertion rather than a hope.
+local function makeHusbandrySystem(byFarm)
+  local asked = {}
+  return {
+    asked = asked,
+    getPlaceablesByFarm = function(_, farmId)
+      asked[#asked + 1] = farmId
+      return byFarm[farmId] or {}
+    end,
+  }, asked
+end
+
+local function withFarms(ids)
+  local farms = {}
+  for _, id in ipairs(ids) do farms[#farms + 1] = { farmId = id } end
+  g_farmManager = { getFarms = function() return farms end }
+end
+
+-- ── A dedicated server: no local player, so getFarmId returns nil ──
+asServer(true)
+g_currentMission.getFarmId = function() return nil end
+withFarms({ 1, 2, 3 })
+local hs, asked = makeHusbandrySystem({
+  [1] = { placeable("barn_f1", 1) },
+  [2] = { placeable("barn_f2", 2) },
+  [3] = { placeable("barn_f3", 3) },
+})
+g_currentMission.husbandrySystem = hs
+
+local dedi = newManager()
+dedi:discoverBarns()
+
+T.ok("F75: farm 1's barn is found", dedi.barns["barn_f1"] ~= nil)
+T.ok("F75: farm 2's barn is found, and was invisible before", dedi.barns["barn_f2"] ~= nil)
+T.ok("F75: farm 3's barn is found, and was invisible before", dedi.barns["barn_f3"] ~= nil)
+T.eq("F75: every real farm was scanned", #asked, 3)
+
+-- Each barn carries ITS OWN owner, not the id of whoever asked.
+T.eq("a barn belongs to the farm that owns it (1)", dedi.barns["barn_f1"].farmId, 1)
+T.eq("a barn belongs to the farm that owns it (2)", dedi.barns["barn_f2"].farmId, 2)
+T.eq("a barn belongs to the farm that owns it (3)", dedi.barns["barn_f3"].farmId, 3)
+
+-- THE CRASH GUARD. getPlaceablesByFarm resolves `farmId or g_localPlayer.farmId`, and
+-- g_localPlayer is nil on a dedicated server, so a nil id raises there. The `or 1`
+-- that caused the bug also happened to prevent that, and the replacement must too.
+local sawNilAsk = false
+for _, id in ipairs(asked) do if id == nil then sawNilAsk = true end end
+T.ok("F75: never asks the engine for a nil farm", not sawNilAsk)
+
+-- ── Reserved farm ids are not farms ──
+withFarms({ 0, 1, 14, 15, 2 })
+local hs2, asked2 = makeHusbandrySystem({ [1] = {}, [2] = {} })
+g_currentMission.husbandrySystem = hs2
+newManager():discoverBarns()
+T.eq("spectator, guided-tour and invalid ids are skipped", #asked2, 2)
+
+-- ── No farm manager: fall back to this machine's own farm ──
+g_farmManager = nil
+g_currentMission.getFarmId = function() return 4 end
+local hs3, asked3 = makeHusbandrySystem({ [4] = { placeable("barn_f4", 4) } })
+g_currentMission.husbandrySystem = hs3
+local fallback = newManager()
+fallback:discoverBarns()
+T.eq("without a farm manager it scans the local farm", #asked3, 1)
+T.eq("and that farm is the local one, not a hardcoded 1", asked3[1], 4)
+T.ok("and the barn is still found", fallback.barns["barn_f4"] ~= nil)
+
+-- ── No farm manager AND no local farm: scan nothing, and above all ask nothing ──
+g_currentMission.getFarmId = function() return nil end
+local hs4, asked4 = makeHusbandrySystem({ [1] = { placeable("barn_ghost", 1) } })
+g_currentMission.husbandrySystem = hs4
+local blind = newManager()
+blind:discoverBarns()
+T.eq("with no farm to name, it asks for none rather than guessing 1", #asked4, 0)
+T.eq("and discovers nothing rather than another farm's barns", blind.barns["barn_ghost"], nil)
+
+-- ── No per-farm enumerator: take the whole set, read each placeable's own owner ──
+g_farmManager = nil
+g_currentMission.husbandrySystem = {
+  placeables = { placeable("barn_a", 2), placeable("barn_b", 3) },
+}
+local whole = newManager()
+whole:discoverBarns()
+T.eq("the whole-set path reads owner 2 off the placeable", whole.barns["barn_a"].farmId, 2)
+T.eq("the whole-set path reads owner 3 off the placeable", whole.barns["barn_b"].farmId, 3)
+
+g_currentMission.husbandrySystem = nil
+g_currentMission.getFarmId = nil

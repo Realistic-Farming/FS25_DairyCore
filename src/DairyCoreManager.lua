@@ -110,29 +110,100 @@ function DairyCoreManager:_isDairyBarn(placeable)
     return placeable ~= nil and placeable.spec_husbandryMilk ~= nil
 end
 
+-- A farm id that owns things, as opposed to the engine's reserved ids. Read from
+-- FarmManager when it is loaded so we inherit any change, with the shipped values as
+-- the fallback. SINGLEPLAYER_FARM_ID (1) is a REAL farm and is deliberately kept.
+function DairyCoreManager:_isRealFarmId(farmId)
+    if type(farmId) ~= "number" or farmId <= 0 then return false end
+    local fm = FarmManager
+    local spectator = (fm ~= nil and fm.SPECTATOR_FARM_ID) or 0
+    local tour      = (fm ~= nil and fm.GUIDED_TOUR_FARM_ID) or 14
+    local invalid   = (fm ~= nil and fm.INVALID_FARM_ID) or 15
+    return farmId ~= spectator and farmId ~= tour and farmId ~= invalid
+end
+
+-- Every farm whose barns this machine should look for.
+--
+-- F75, certified against dataS. `FSBaseMission:getFarmId` returns NIL on a dedicated
+-- server: `getIsServer()` is true, there is no `g_localPlayer` (BaseMission.lua:272
+-- nils it, PlayerSystem.lua:206 is the only setter), and with no connection argument
+-- the first branch returns nil (FSBaseMission.lua:1067-1086). The old
+-- `mission:getFarmId() or 1` therefore resolved to a HARDCODED 1 on every dedicated
+-- server, so only farm 1's barns were ever discovered. Every other farm had no dairy
+-- at all: no barns, no contracts, no simulation, and nothing on screen saying so.
+--
+-- The fix is not a better way to answer "which farm am I". A barn belongs to the farm
+-- that OWNS THE PLACEABLE, not to whoever happens to be looking at it, so discovery
+-- runs per owning farm.
+function DairyCoreManager:_farmIdsToScan()
+    local ids, seen = {}, {}
+    pcall(function()
+        local fm = g_farmManager
+        if fm == nil or fm.getFarms == nil then return end
+        for _, farm in pairs(fm:getFarms() or {}) do
+            local id = farm ~= nil and farm.farmId or nil
+            if id ~= nil and not seen[id] and self:_isRealFarmId(id) then
+                seen[id] = true
+                ids[#ids + 1] = id
+            end
+        end
+    end)
+    if #ids > 0 then return ids end
+
+    -- No farm manager, or it holds nothing yet. Fall back to this machine's own farm,
+    -- and keep the guarantee the whole function exists to make: NEVER hand nil to
+    -- getPlaceablesByFarm. It resolves `farmId or g_localPlayer.farmId`, and on a
+    -- dedicated server g_localPlayer is nil, so a nil id raises there. The old `or 1`
+    -- caused the bug AND happened to prevent that crash; this keeps the crash covered
+    -- without pretending everyone is farm 1.
+    local localId = nil
+    pcall(function()
+        if g_currentMission ~= nil and g_currentMission.getFarmId ~= nil then
+            localId = g_currentMission:getFarmId()
+        end
+    end)
+    if self:_isRealFarmId(localId) then return { localId } end
+    return {}
+end
+
 function DairyCoreManager:discoverBarns()
     if self.disabled then return end
     local mission = g_currentMission
     if mission == nil or mission.husbandrySystem == nil then return end
+    local hs = mission.husbandrySystem
 
-    local farmId = mission.getFarmId ~= nil and mission:getFarmId() or 1
-    local placeables = {}
-    pcall(function()
-        local hs = mission.husbandrySystem
-        if hs.getPlaceablesByFarm ~= nil then
-            placeables = hs:getPlaceablesByFarm(farmId) or {}
-        elseif hs.placeables ~= nil then
-            placeables = hs.placeables
-        elseif hs.husbandries ~= nil then
-            placeables = hs.husbandries
+    if hs.getPlaceablesByFarm ~= nil then
+        for _, farmId in ipairs(self:_farmIdsToScan()) do
+            local placeables = nil
+            pcall(function() placeables = hs:getPlaceablesByFarm(farmId) end)
+            self:_registerBarnsFrom(placeables, farmId)
         end
-    end)
+        return
+    end
 
-    for _, placeable in pairs(placeables) do
+    -- No per-farm enumerator. Take the whole set once and let each placeable name its
+    -- own owner, which is the same question asked a different way.
+    self:_registerBarnsFrom(hs.placeables or hs.husbandries, nil)
+end
+
+--- @param placeables table|nil
+--- @param queriedFarmId number|nil  the farm this set was asked for, when it was
+function DairyCoreManager:_registerBarnsFrom(placeables, queriedFarmId)
+    for _, placeable in pairs(placeables or {}) do
         if self:_isDairyBarn(placeable) then
             local ok, barnId = pcall(function() return placeable:getUniqueId() end)
             if ok and barnId ~= nil then
-                self:_getOrCreateBarn(barnId, farmId, placeable)
+                -- The placeable's own owner is the authority. The queried id only
+                -- stands in when the getter is missing, and the two cannot disagree
+                -- when both exist, because getPlaceablesByFarm filters on that getter.
+                local farmId = nil
+                pcall(function()
+                    if placeable.getOwnerFarmId ~= nil then farmId = placeable:getOwnerFarmId() end
+                end)
+                if not self:_isRealFarmId(farmId) then farmId = queriedFarmId end
+                if self:_isRealFarmId(farmId) then
+                    self:_getOrCreateBarn(barnId, farmId, placeable)
+                end
             end
         end
     end
