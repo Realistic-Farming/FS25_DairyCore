@@ -439,6 +439,9 @@ end
 
 function DairyCoreManager:onCollectionHourTick(ctx)
     if self.disabled or not self.settings.enabled then return end
+    -- Server only, same reason as onDayTick: this tick moves the collection schedule
+    -- and the spoilage clock, and both of those travel down over CHANNEL_BARNS.
+    if not self:_isServer() then return end
     local monotonicDay = ctx.monotonicDay or 0
     local hourOfDay = 0
     pcall(function()
@@ -662,7 +665,18 @@ function DairyCoreManager:_subscribeClock()
     self.clockBound = true
 end
 
+-- Time Guard fires its ticks on ALL peers by deliberate design and says so in its
+-- own contract, so the server gate is DairyCore's to apply and is not a Time Guard
+-- change. A client still re-discovers its own barns, because placeables are local
+-- and a barn built after join has to become visible to the reader, but it simulates
+-- nothing: every simulated field arrives over CHANNEL_BARNS, and a local recompute
+-- would overwrite what the server sent within one tick.
 function DairyCoreManager:onDayTick(ctx)
+    if self.disabled then return end
+    if not self:_isServer() then
+        self:discoverBarns()
+        return
+    end
     local currentDay = ctx.monotonicDay or 0
     self:updateAllBarns(currentDay)
     self:_markBarnsDirty()
@@ -798,50 +812,75 @@ function DairyCoreManager:_deserializeContracts(data)
     end
 end
 
--- Compact barn state for MP: [barnId, score, tierIdx, spoilageDrop, mycotoxin,
--- collectionInterval, assignedWorkerId, lastCollectionDay, nextCollectionDue,
--- feedSourceFields] per barn.
+-- Compact barn state for MP. Exactly BARN_STRIDE flat scalars per barn, in order:
+--    1 barnId (string)             2 herd health score (int)
+--    3 quality tier index (int)    4 spoilage tier drop (int)
+--    5 mycotoxin penalty (int)     6 collection interval hours (int)
+--    7 assignedWorkerId (string, NONE_STRING when unassigned)
+--    8 lastCollectionDay (int, NONE_NUMBER when never collected)
+--    9 nextCollectionDue (number, NONE_NUMBER when unscheduled)
+--   10 feedSourceFields (comma-joined ids, NONE_STRING when none)
+--
+-- Two rules the shape exists to enforce, both of which this record used to break.
+-- A nil is never appended: `arr[#arr+1] = nil` neither writes a slot nor advances
+-- the length, so one absent field shortens the record and the reader takes the next
+-- barn's identifier as this barn's data. And no slot is a table: the encoding
+-- carries scalars only and turns anything else into a float32 zero, so the feed
+-- field set crosses as a string and is rebuilt on the far side.
 function DairyCoreManager:_onWriteBarnState()
+    local net = DairyConstants.NETWORK
     local arr = {}
     for barnId, b in pairs(self.barns) do
+        local feedFields = {}
+        for fid in pairs(b.feedSourceFields or {}) do feedFields[#feedFields + 1] = tostring(fid) end
+        table.sort(feedFields)  -- pairs order is arbitrary; keep the payload stable
+
         arr[#arr + 1] = tostring(barnId)
         arr[#arr + 1] = math.floor(b.herdHealthScore or 60)
         arr[#arr + 1] = self:_tierIndexByKey(b.milkQualityTier)
-        arr[#arr + 1] = b._spoilageTierDrop or 0
+        arr[#arr + 1] = math.floor(b._spoilageTierDrop or 0)
         arr[#arr + 1] = math.floor(b.mycotoxinPenalty or 0)
-        arr[#arr + 1] = b.collectionInterval or self.settings.defaultCollectionInterval
-        arr[#arr + 1] = b.assignedWorkerId
-        arr[#arr + 1] = b.lastCollectionDay
-        arr[#arr + 1] = b.nextCollectionDue
-        local feedFields = {}
-        for fid in pairs(b.feedSourceFields) do feedFields[#feedFields + 1] = fid end
-        arr[#arr + 1] = feedFields
+        arr[#arr + 1] = math.floor(b.collectionInterval or self.settings.defaultCollectionInterval)
+        arr[#arr + 1] = b.assignedWorkerId ~= nil and tostring(b.assignedWorkerId) or net.NONE_STRING
+        arr[#arr + 1] = b.lastCollectionDay ~= nil and math.floor(b.lastCollectionDay) or net.NONE_NUMBER
+        arr[#arr + 1] = b.nextCollectionDue or net.NONE_NUMBER
+        arr[#arr + 1] = table.concat(feedFields, ",")
     end
     return arr
 end
 
 function DairyCoreManager:_onReadBarnState(arr)
     if type(arr) ~= "table" then return end
-    local i = 1
-    while i + 9 <= #arr do
+    local net = DairyConstants.NETWORK
+    local stride = net.BARN_STRIDE
+    local count = #arr
+
+    -- A payload that is not a whole number of records means writer and reader
+    -- disagree about the record. Applying it would read one barn's values into
+    -- another barn's fields, so refuse the batch and say so instead.
+    if count % stride ~= 0 then
+        DCLogger.warning("barn sync: payload of %d values is not a multiple of the %d-value record, ignoring batch",
+            count, stride)
+        return
+    end
+
+    for i = 1, count, stride do
         local barnId = tonumber(arr[i]) or arr[i]
-        if self.barns[barnId] ~= nil then
-            local b = self.barns[barnId]
-            b.herdHealthScore = arr[i+1]
-            b.milkQualityTier = (DairyConstants.QUALITY.TIERS[arr[i+2]] or DairyConstants.QUALITY.TIERS[2]).key
-            b._spoilageTierDrop = arr[i+3]
-            b.mycotoxinPenalty = arr[i+4]
+        local b = self.barns[barnId]
+        if b ~= nil then
+            b.herdHealthScore    = arr[i+1]
+            b.milkQualityTier    = (DairyConstants.QUALITY.TIERS[arr[i+2]] or DairyConstants.QUALITY.TIERS[2]).key
+            b._spoilageTierDrop  = arr[i+3]
+            b.mycotoxinPenalty   = arr[i+4]
             b.collectionInterval = arr[i+5]
-            b.assignedWorkerId = arr[i+6]
-            b.lastCollectionDay = arr[i+7]
-            b.nextCollectionDue = arr[i+8]
-            local feedFields = arr[i+9]
-            if type(feedFields) == "table" then
-                b.feedSourceFields = {}
-                for _, fid in ipairs(feedFields) do b.feedSourceFields[fid] = true end
+            b.assignedWorkerId   = arr[i+6] ~= net.NONE_STRING and arr[i+6] or nil
+            b.lastCollectionDay  = arr[i+7] ~= net.NONE_NUMBER and arr[i+7] or nil
+            b.nextCollectionDue  = arr[i+8] ~= net.NONE_NUMBER and arr[i+8] or nil
+            b.feedSourceFields   = {}
+            for fid in string.gmatch(tostring(arr[i+9] or ""), "([^,]+)") do
+                b.feedSourceFields[tonumber(fid) or fid] = true
             end
         end
-        i = i + 10
     end
 end
 
@@ -855,11 +894,25 @@ function DairyCoreManager:_savePath()
     return g_currentMission.missionInfo.savegameDirectory .. "/" .. DairyCoreManager.SAVE_FILE
 end
 
+-- When StateLedger is absent this file is the ONLY persistence the mod has, so its
+-- record has to carry what the ledger modules carry. It previously stored a subset
+-- of the barn and no contracts at all, which silently lost the two longest-horizon
+-- things the mod holds: the mycotoxin countdown (the penalty reloaded without its
+-- clock, so `_decayMycotoxin` never fired and a single bad feeding became permanent)
+-- and every active contract (accrued litres, remaining term and premium, gone on
+-- every save). Absence is stored as an explicit sentinel rather than an omitted
+-- attribute, so no read depends on a nil default.
+local OWN_FILE_NONE_NUMBER = -1
+local OWN_FILE_NONE_STRING = ""
+
 function DairyCoreManager:_saveOwnFile()
     local path = self:_savePath()
     if path == nil then return end
     local xml = XMLFile.create("dc_SaveXML", path, "dairyCore")
     if xml == nil then return end
+
+    xml:setInt("dairyCore#nextContractId", math.floor(self.nextContractId or 1))
+
     local i = 0
     for barnId, b in pairs(self.barns) do
         local key = string.format("dairyCore.barn(%d)", i)
@@ -867,14 +920,44 @@ function DairyCoreManager:_saveOwnFile()
         xml:setFloat(key .. "#score", b.herdHealthScore or 60)
         xml:setString(key .. "#tier", b.milkQualityTier or "standard")
         xml:setInt(key .. "#myc", math.floor(b.mycotoxinPenalty or 0))
+        xml:setInt(key .. "#mycDays", math.floor(b.mycotoxinDaysLeft or 0))
         xml:setString(key .. "#spoilage", b.spoilageStatus or "Fresh")
-        xml:setInt(key .. "#spoilageDrop", b._spoilageTierDrop or 0)
-        if b.lastCollectionDay ~= nil then xml:setInt(key .. "#lastCol", b.lastCollectionDay) end
+        xml:setInt(key .. "#spoilageDrop", math.floor(b._spoilageTierDrop or 0))
+        xml:setInt(key .. "#interval",
+            math.floor(b.collectionInterval or self.settings.defaultCollectionInterval))
+        xml:setInt(key .. "#lastCol",
+            b.lastCollectionDay ~= nil and math.floor(b.lastCollectionDay) or OWN_FILE_NONE_NUMBER)
+        xml:setFloat(key .. "#nextCol", b.nextCollectionDue or OWN_FILE_NONE_NUMBER)
+        xml:setString(key .. "#worker",
+            b.assignedWorkerId ~= nil and tostring(b.assignedWorkerId) or OWN_FILE_NONE_STRING)
+        xml:setInt(key .. "#contract",
+            b.activeContractId ~= nil and math.floor(b.activeContractId) or OWN_FILE_NONE_NUMBER)
         local fs = {}
-        for fid in pairs(b.feedSourceFields) do fs[#fs+1] = tostring(fid) end
+        for fid in pairs(b.feedSourceFields or {}) do fs[#fs+1] = tostring(fid) end
+        table.sort(fs)
         xml:setString(key .. "#feedFields", table.concat(fs, ","))
         i = i + 1
     end
+
+    -- Contracts, mirroring the LEDGER_CONTRACTS record: unsettled only.
+    local j = 0
+    for id, c in pairs(self.contracts) do
+        if not c.settled then
+            local key = string.format("dairyCore.contract(%d)", j)
+            xml:setString(key .. "#id", tostring(id))
+            xml:setString(key .. "#barnId", tostring(c.barnId))
+            xml:setInt(key .. "#farmId", math.floor(c.farmId or 1))
+            xml:setString(key .. "#type", c.type or "standard")
+            xml:setFloat(key .. "#volumeTarget", c.volumeTarget or 0)
+            xml:setInt(key .. "#termDays", math.floor(c.termDays or 0))
+            xml:setInt(key .. "#daysRemaining", math.floor(c.daysRemaining or 0))
+            xml:setFloat(key .. "#premiumRate", c.premiumRate or 1.0)
+            xml:setString(key .. "#qualityRequired", c.qualityRequired or OWN_FILE_NONE_STRING)
+            xml:setFloat(key .. "#delivered", c.delivered or 0)
+            j = j + 1
+        end
+    end
+
     xml:save()
     xml:delete()
 end
@@ -884,22 +967,77 @@ function DairyCoreManager:_loadOwnFile()
     if path == nil then return end
     local xml = XMLFile.loadIfExists("dc_SaveXML", path, "dairyCore")
     if xml == nil then return end
+
+    self.nextContractId = xml:getInt("dairyCore#nextContractId", self.nextContractId or 1)
+
     xml:iterate("dairyCore.barn", function(_, key)
-        local id = tonumber(xml:getString(key .. "#id")) or xml:getString(key .. "#id")
-        if id ~= nil then
-            local b = { barnId = id, feedSourceFields = {}, herdHealthScore = xml:getFloat(key .. "#score", 60),
-                milkQualityTier = xml:getString(key .. "#tier", "standard"),
-                mycotoxinPenalty = xml:getInt(key .. "#myc", 0),
-                lastCollectionDay = xml:getInt(key .. "#lastCol", nil),
-                collectionInterval = self.settings.defaultCollectionInterval,
-                spoilageStatus = xml:getString(key .. "#spoilage", "Fresh"),
-                _spoilageTierDrop = xml:getInt(key .. "#spoilageDrop", 0) }
-            for fid in string.gmatch(xml:getString(key .. "#feedFields", ""), "([^,]+)") do
-                local f = tonumber(fid); if f ~= nil then b.feedSourceFields[f] = true end
-            end
-            self.barns[id] = b
+        local rawId = xml:getString(key .. "#id", OWN_FILE_NONE_STRING)
+        if rawId == OWN_FILE_NONE_STRING then return end
+        local id = tonumber(rawId) or rawId
+
+        local lastCol  = xml:getInt(key .. "#lastCol", OWN_FILE_NONE_NUMBER)
+        local nextCol  = xml:getFloat(key .. "#nextCol", OWN_FILE_NONE_NUMBER)
+        local worker   = xml:getString(key .. "#worker", OWN_FILE_NONE_STRING)
+        local contract = xml:getInt(key .. "#contract", OWN_FILE_NONE_NUMBER)
+
+        local b = {
+            barnId              = id,
+            farmId              = 0,   -- resolved by discoverBarns on this machine
+            herdHealthScore     = xml:getFloat(key .. "#score", 60),
+            milkQualityTier     = xml:getString(key .. "#tier", "standard"),
+            milkLitresAvailable = 0,
+            mycotoxinPenalty    = xml:getInt(key .. "#myc", 0),
+            mycotoxinDaysLeft   = xml:getInt(key .. "#mycDays", 0),
+            spoilageStatus      = xml:getString(key .. "#spoilage", "Fresh"),
+            _spoilageTierDrop   = xml:getInt(key .. "#spoilageDrop", 0),
+            collectionInterval  = xml:getInt(key .. "#interval", self.settings.defaultCollectionInterval),
+            lastCollectionDay   = lastCol  >= 0 and lastCol or nil,
+            nextCollectionDue   = nextCol  >= 0 and nextCol or nil,
+            assignedWorkerId    = worker   ~= OWN_FILE_NONE_STRING and worker or nil,
+            activeContractId    = contract >= 0 and contract or nil,
+            feedSourceFields    = {},
+            feedDiseaseFlag     = false,
+            feedDiseaseCropName = nil,
+            ritterMode          = RLBridge.active,
+        }
+        for fid in string.gmatch(xml:getString(key .. "#feedFields", OWN_FILE_NONE_STRING), "([^,]+)") do
+            b.feedSourceFields[tonumber(fid) or fid] = true
+        end
+        self.barns[id] = b
+    end)
+
+    xml:iterate("dairyCore.contract", function(_, key)
+        local rawId = xml:getString(key .. "#id", OWN_FILE_NONE_STRING)
+        if rawId == OWN_FILE_NONE_STRING then return end
+        local id = tonumber(rawId) or rawId
+        local rawBarnId = xml:getString(key .. "#barnId", OWN_FILE_NONE_STRING)
+        local quality = xml:getString(key .. "#qualityRequired", OWN_FILE_NONE_STRING)
+
+        self.contracts[id] = {
+            contractId      = id,
+            barnId          = tonumber(rawBarnId) or rawBarnId,
+            farmId          = xml:getInt(key .. "#farmId", 1),
+            type            = xml:getString(key .. "#type", "standard"),
+            volumeTarget    = xml:getFloat(key .. "#volumeTarget", 0),
+            termDays        = xml:getInt(key .. "#termDays", 0),
+            daysRemaining   = xml:getInt(key .. "#daysRemaining", 0),
+            premiumRate     = xml:getFloat(key .. "#premiumRate", 1.0),
+            qualityRequired = quality ~= OWN_FILE_NONE_STRING and quality or nil,
+            delivered       = xml:getFloat(key .. "#delivered", 0),
+            settled         = false,
+        }
+
+        -- Same obligation the ledger path carries: a reloaded contract has to go back
+        -- on the Time Guard accrual or it stops accruing and never settles or pays.
+        self:_registerContractAccrual(id)
+
+        -- Never reissue a live contract's id, even if the counter did not survive.
+        local numericId = tonumber(id)
+        if numericId ~= nil and self.nextContractId <= numericId then
+            self.nextContractId = numericId + 1
         end
     end)
+
     xml:delete()
 end
 
