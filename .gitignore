@@ -1,1 +1,10 @@
+# Build output (shipped as a release asset, never committed)
 FS25_DairyCore.zip
+
+# Test harness dependencies (installed with npm, never committed)
+tools/test/node_modules/
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store
+*.swp
