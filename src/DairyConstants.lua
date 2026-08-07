@@ -100,6 +100,11 @@ DairyConstants.CONTRACTS = {
     -- DairyCore's own premium applied while a "livestock_boom" world event is active.
     LIVESTOCK_BOOM_MILK_BONUS = 1.12,
     LIVESTOCK_BOOM_PROCESSING_BONUS = 1.08,
+    -- OM-211: organic-fed herd milk premium, PER FARM, at settlement. SHIP value
+    -- 1.0 is NEUTRAL (no premium until Arissani's unlock pass sets it, steward
+    -- C2); the pay line floors at 1.0 so organic can only add. Awaiting the
+    -- Economy spine.
+    ORGANIC_MILK_PREMIUM_MAX = 1.0,
     INCOME_LABEL = "Livestock Contract Income",
 }
 
