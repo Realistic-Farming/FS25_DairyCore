@@ -111,7 +111,11 @@ function RLBridge:getHerdCounts(barnId, farmId)
             n = n + 1
             local health = animal.health or 100
             if health >= 60 then healthy = healthy + 1 else sick = sick + 1 end
-            if animal.isPregnant == true or (animal.reproduction ~= nil and animal.reproduction.pregnant) then
+            -- F146: the fallback leg read RL's numeric `reproduction` field as a
+            -- table (`reproduction.pregnant`), which is nil on a number and was
+            -- silently caught by safeRead, degrading Ritter mode to Standard.
+            -- `isPregnant` is the real field; drop the bad leg.
+            if animal.isPregnant == true then
                 pregnant = pregnant + 1
             end
             local prodRaw = (animal.genetics ~= nil and animal.genetics.productivity) or 1.0

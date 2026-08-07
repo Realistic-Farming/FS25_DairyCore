@@ -10,5 +10,8 @@
   },
   "devDependencies": {
     "fengari": "^0.1.4"
+  },
+  "dependencies": {
+    "luaparse": "^0.3.1"
   }
 }
