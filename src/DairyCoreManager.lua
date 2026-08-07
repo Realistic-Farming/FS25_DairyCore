@@ -661,6 +661,11 @@ function DairyCoreManager:_settleContractDay(contractId, sctx)
         local herd = self:_barnHerdCount(barn)
         local qualityFactor = self:_qualityTierForScore(barn.herdHealthScore).priceMod
         c.delivered = c.delivered + herd * PER_COW_LITRES_DAY * qualityFactor
+        -- OM-211: accumulate the barn's mean organic-feed credit per accrual day.
+        -- The pay line averages these over organicDays, so a contract that spends
+        -- part of its term on organic feed and part not pays a blended factor.
+        c.organicSum  = (c.organicSum or 0) + self:_barnOrganicFraction(barn)
+        c.organicDays = (c.organicDays or 0) + 1
         c.daysRemaining = c.daysRemaining - 1
         if c.daysRemaining <= 0 then
             self:_payContract(c)
@@ -680,6 +685,32 @@ function DairyCoreManager:_barnHerdCount(barn)
     return math.max(1, count)
 end
 
+--- OM-211: mean organic credit of the barn's designated feed fields, 0..1.
+--- Reads SoilFertilizer's shipped OrganicCertification authority
+--- (g_SoilFertilityManager.organic, delegate-when-present). SF absent, no
+--- designations, or no readable fields => 0, so the pay factor stays 1.0.
+--- Certified return shape: { state, daysAccrued, transitionDaysNeeded, certified, breaches }.
+---@param barn table
+---@return number  mean organic credit 0..1 (0 when SF is absent or unreadable)
+function DairyCoreManager:_barnOrganicFraction(barn)
+    local mgr = g_SoilFertilityManager
+    if mgr == nil or mgr.organic == nil or mgr.organic.getFieldOrganicState == nil then return 0 end
+    local sum, n = 0, 0
+    for fieldId in pairs(barn.feedSourceFields or {}) do
+        local ok, st = pcall(function() return mgr.organic:getFieldOrganicState(fieldId) end)
+        if ok and st ~= nil then
+            n = n + 1
+            if st.certified == true then
+                sum = sum + 1.0
+            elseif st.transitionDaysNeeded and st.transitionDaysNeeded > 0 and st.daysAccrued then
+                sum = sum + math.max(0, math.min(1, st.daysAccrued / st.transitionDaysNeeded))
+            end
+        end
+    end
+    if n == 0 then return 0 end
+    return sum / n
+end
+
 -- Pay contract income. Base-game addMoney moves the money (server only); TaxMod audits.
 function DairyCoreManager:_payContract(c)
     if not self:_isServer() then return end
@@ -695,6 +726,17 @@ function DairyCoreManager:_payContract(c)
     -- DairyCore's own livestock-boom milk premium (keyed on the MD event id).
     if self:_mdEventActive("livestock_boom") then
         premium = premium * DairyConstants.CONTRACTS.LIVESTOCK_BOOM_MILK_BONUS
+    end
+
+    -- OM-211: organic-feed milk premium, AFTER the sovereign floor, beside the
+    -- boom bonus. Mean organic credit over the contract's accrual days scales the
+    -- factor between 1.0 (no organic feed) and ORGANIC_MILK_PREMIUM_MAX; the
+    -- formula floors at 1.0 so organic can only add. An old save loads organicSum
+    -- / organicDays nil and the guard treats that as zero organic days (1.0).
+    if (c.organicDays and c.organicDays > 0) and
+       (c.organicSum and c.organicSum > 0) then
+        local organicFactor = c.organicSum / c.organicDays
+        premium = premium * (1 + organicFactor * (DairyConstants.CONTRACTS.ORGANIC_MILK_PREMIUM_MAX - 1))
     end
 
     local litres = math.min(c.delivered, c.volumeTarget)
@@ -861,7 +903,8 @@ function DairyCoreManager:_serializeContracts()
         if not c.settled then
             out[tostring(id)] = { barnId = c.barnId, farmId = c.farmId, type = c.type,
                 volumeTarget = c.volumeTarget, termDays = c.termDays, daysRemaining = c.daysRemaining,
-                premiumRate = c.premiumRate, qualityRequired = c.qualityRequired, delivered = c.delivered }
+                premiumRate = c.premiumRate, qualityRequired = c.qualityRequired, delivered = c.delivered,
+                organicSum = c.organicSum, organicDays = c.organicDays }
         end
     end
     out._nextId = self.nextContractId
@@ -877,7 +920,8 @@ function DairyCoreManager:_deserializeContracts(data)
             self.contracts[id] = { contractId = id, barnId = s.barnId, farmId = s.farmId,
                 type = s.type, volumeTarget = s.volumeTarget, termDays = s.termDays,
                 daysRemaining = s.daysRemaining, premiumRate = s.premiumRate,
-                qualityRequired = s.qualityRequired, delivered = s.delivered or 0, settled = false }
+                qualityRequired = s.qualityRequired, delivered = s.delivered or 0, settled = false,
+                organicSum = s.organicSum, organicDays = s.organicDays }
             self:_registerContractAccrual(id)
         end
     end
@@ -1025,6 +1069,8 @@ function DairyCoreManager:_saveOwnFile()
             xml:setFloat(key .. "#premiumRate", c.premiumRate or 1.0)
             xml:setString(key .. "#qualityRequired", c.qualityRequired or OWN_FILE_NONE_STRING)
             xml:setFloat(key .. "#delivered", c.delivered or 0)
+            xml:setFloat(key .. "#organicSum", c.organicSum or 0)
+            xml:setInt(key .. "#organicDays", math.floor(c.organicDays or 0))
             j = j + 1
         end
     end
@@ -1096,6 +1142,8 @@ function DairyCoreManager:_loadOwnFile()
             qualityRequired = quality ~= OWN_FILE_NONE_STRING and quality or nil,
             delivered       = xml:getFloat(key .. "#delivered", 0),
             settled         = false,
+            organicSum      = xml:getFloat(key .. "#organicSum", 0),
+            organicDays     = xml:getInt(key .. "#organicDays", 0),
         }
 
         -- Same obligation the ledger path carries: a reloaded contract has to go back
