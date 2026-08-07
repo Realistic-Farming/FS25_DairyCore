@@ -123,7 +123,11 @@ DairyConstants.PROSTAFF = {
     L12_QUALITY  = 1.05,
     L19_GLOBAL   = 1.05,
     L20_GLOBAL   = 1.15,   -- supersedes L19 (does not stack)
-    HERDSMAN_EXPENSE_LABEL = "Herdsman Automation",
+    -- F143: "Herdsman Automation" renamed 2026-08-07. RealisticLivestock owns
+    -- the word Herdsman (it ships a wage-bearing Herdsman subsystem); no
+    -- player-facing string of ours uses it. DairyCore's own vocabulary for this
+    -- job is collection scheduling, hence Collection. Internal identifier stays.
+    HERDSMAN_EXPENSE_LABEL = "Collection Automation",
 }
 
 -- Wire contract for CHANNEL_BARNS. The NetworkSync value encoding carries
