@@ -1,0 +1,17 @@
+{
+  "name": "fs25-dairycore-tests",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-test harness for FS25_DairyCore (never shipped: build.sh packs an allowlist that does not include tools).",
+  "scripts": {
+    "test": "node run-tests.mjs",
+    "all": "node run-tests.mjs"
+  },
+  "devDependencies": {
+    "fengari": "^0.1.4"
+  },
+  "dependencies": {
+    "luaparse": "^0.3.1"
+  }
+}

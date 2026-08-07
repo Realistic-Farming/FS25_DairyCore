@@ -121,9 +121,18 @@ DairyConstants.PROSTAFF = {
     HERDSMAN_EXPENSE_LABEL = "Herdsman Automation",
 }
 
+-- Wire contract for CHANNEL_BARNS. The NetworkSync value encoding carries
+-- bool/int32/float32/string and nothing else, and a nil neither writes a slot nor
+-- advances the array length, so every slot on the wire is a non-nil scalar and an
+-- absent value travels as an explicit sentinel. Writer and reader must agree on
+-- BARN_STRIDE exactly: a record one slot short reads every later barn at the wrong
+-- offset, which puts one barn's numbers into another barn's typed fields.
 DairyConstants.NETWORK = {
     CHANNEL_BARNS = "DairyCore_BarnState",
     CHANNEL_COLLECTIONS = "DairyCore_Collections",
+    BARN_STRIDE = 10,
+    NONE_STRING = "",   -- absent string slot (worker id, feed field list)
+    NONE_NUMBER = -1,   -- absent numeric slot (last collection day, next due)
 }
 
 -- Time Guard accrual priorities (lower settles first). Money-moving before reads.
