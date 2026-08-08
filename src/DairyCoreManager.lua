@@ -480,9 +480,46 @@ function DairyCoreManager:_spoilageStage(daysSince)
     else return sp.STAGES.condemned end
 end
 
+-- Advance one spoilage stage by moving lastCollectionDay across the next
+-- stage threshold (comment contract: one stage per crossed missed window).
+-- Starts the clock on first miss when lastCollectionDay was nil.
+function DairyCoreManager:_advanceSpoilageOneStage(barn, currentDay)
+    local sp = DairyConstants.SPOILAGE
+    local freshDays = sp.FRESH_DAYS
+    if self:_proStaffLevel() >= 18 then
+        freshDays = freshDays + (sp.L18_FRESH_BONUS_HOURS / 24)
+    end
+    local daysSince = 0
+    if barn.lastCollectionDay ~= nil then
+        daysSince = math.max(0, currentDay - barn.lastCollectionDay)
+    end
+    local targetDays
+    if daysSince < freshDays then
+        targetDays = freshDays
+    elseif daysSince < sp.AGEING_DAYS then
+        targetDays = sp.AGEING_DAYS
+    elseif daysSince < sp.ATRISK_DAYS then
+        targetDays = sp.ATRISK_DAYS
+    else
+        -- Already condemned; keep ageing from current lastCollectionDay.
+        self:_updateSpoilage(barn, currentDay)
+        return
+    end
+    barn.lastCollectionDay = currentDay - targetDays
+    self:_updateSpoilage(barn, currentDay)
+    self:_markBarnsDirty()
+end
+
 function DairyCoreManager:_updateSpoilage(barn, currentDay)
-    local last = barn.lastCollectionDay or currentDay
-    local daysSince = math.max(0, currentDay - last)
+    -- Nil lastCollectionDay means the clock has never started. Do NOT treat
+    -- that as "collected today" (forever-Fresh). Stay Fresh with zero drop
+    -- until markCollected or a missed window starts the clock.
+    if barn.lastCollectionDay == nil then
+        barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.name
+        barn._spoilageTierDrop = 0
+        return
+    end
+    local daysSince = math.max(0, currentDay - barn.lastCollectionDay)
     local stage = self:_spoilageStage(daysSince)
     barn.spoilageStatus = stage.name
     barn._spoilageTierDrop = stage.tierDrop
@@ -501,6 +538,7 @@ function DairyCoreManager:markCollected(barn, currentDay)
     barn.lastCollectionDay = currentDay
     barn.spoilageStatus = "Fresh"
     barn._spoilageTierDrop = 0
+    barn._missedWindow = nil
     self:_markBarnsDirty()
 end
 
@@ -530,6 +568,10 @@ function DairyCoreManager:onCollectionHourTick(ctx)
             if barn.assignedWorkerId == nil then
                 barn._missedWindow = true
                 DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
+                -- Finish the dead path: consume _missedWindow by ageing via stage
+                -- thresholds. Does not invent assignedWorkerId writers.
+                self:_advanceSpoilageOneStage(barn, monotonicDay)
+                barn._missedWindow = nil
             else
                 local skill = DairyConstants.COLLECTION.SKILL[self:_workerLevelName(barn)]
                               or DairyConstants.COLLECTION.SKILL.experienced
@@ -1164,14 +1206,18 @@ end
 -- FarmTablet read model + console
 -- =========================================================
 
--- Read-only per-barn rows for the FarmTablet Dairy tab (autoDetect model).
+-- Read-only per-barn rows for Esc RF PDA / FarmTablet surfaces (autoDetect model).
+-- spoilageClockStarted: true after markCollected OR after a missed window starts
+-- the clock via _advanceSpoilageOneStage. Idle (nil lastCollectionDay) stays Fresh
+-- without faking "collected today". assignedWorkerId still has no writer here.
 function DairyCoreManager:getBarnRows()
     local rows = {}
     for barnId, b in pairs(self.barns) do
         local eff = self:getEffectiveQualityTier(b)
         local row = { barnId = barnId, ritterMode = b.ritterMode == true,
             herdHealth = math.floor(b.herdHealthScore or 0), qualityTier = eff.name,
-            spoilage = b.spoilageStatus, feedDiseaseFlag = b.feedDiseaseFlag == true,
+            spoilage = b.spoilageStatus, spoilageClockStarted = b.lastCollectionDay ~= nil,
+            feedDiseaseFlag = b.feedDiseaseFlag == true,
             feedDiseaseCropName = b.feedDiseaseCropName, mycotoxin = b.mycotoxinPenalty or 0,
             contractId = b.activeContractId }
         if b.ritterMode then
