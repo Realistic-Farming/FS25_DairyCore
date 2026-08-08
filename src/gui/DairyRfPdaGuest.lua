@@ -1,4 +1,4 @@
-﻿-- =========================================================
+-- =========================================================
 -- DairyRfPdaGuest - Esc RF PDA Dairy framework (Table shell)
 -- Soft-detect: mission.dairyCoreManager. isAvailable false when PF / disabled.
 -- getBarnRows() only. Read-only. Densify 2026-08-05: Sale quality honesty.
