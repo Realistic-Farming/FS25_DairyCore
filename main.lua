@@ -18,6 +18,13 @@ source(modDirectory .. "src/DairyConstants.lua")
 source(modDirectory .. "src/RLBridge.lua")
 source(modDirectory .. "src/DairyCoreManager.lua")
 
+-- Esc RF PDA framework joiner (NO-HOST).
+source(g_currentModDirectory .. "src/gui/RfEscModules.lua")
+source(g_currentModDirectory .. "src/gui/RfPdaMenuPage.lua")
+source(g_currentModDirectory .. "src/gui/RfEscBootstrap.lua")
+source(g_currentModDirectory .. "src/gui/RfEscUiDebugger.lua")
+source(g_currentModDirectory .. "src/gui/DairyRfPdaGuest.lua")
+
 local dairyCore = DairyCoreManager.new()
 getfenv(0)["g_dairyCoreManager"] = dairyCore
 
@@ -66,4 +73,31 @@ FSBaseMission.delete = Utils.prependedFunction(FSBaseMission.delete, onMissionDe
 if addConsoleCommand ~= nil then
     addConsoleCommand("dairyStatus", "Show DairyCore barns, mode, contracts",
         "consoleCommandStatus", dairyCore)
+end
+
+
+local function _rfEscTryRegister()
+    if DairyRfPdaGuest ~= nil and type(DairyRfPdaGuest.tryRegister) == "function" then
+        pcall(DairyRfPdaGuest.tryRegister)
+    end
+end
+
+-- Esc RF PDA: register module after mission/door ready (retry-safe).
+if Mission00 ~= nil then
+    Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, function()
+        _rfEscTryRegister()
+    end)
+end
+if FSBaseMission ~= nil then
+    FSBaseMission.onStartMission = Utils.appendedFunction(FSBaseMission.onStartMission, function()
+        _rfEscTryRegister()
+    end)
+end
+
+if FSBaseMission ~= nil then
+    FSBaseMission.delete = Utils.appendedFunction(FSBaseMission.delete, function()
+        if DairyRfPdaGuest ~= nil and type(DairyRfPdaGuest.reset) == "function" then
+            DairyRfPdaGuest.reset()
+        end
+    end)
 end

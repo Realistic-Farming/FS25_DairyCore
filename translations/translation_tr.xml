@@ -18,5 +18,21 @@
         <text name="dc_contract_standard" text="Standard Dairy Contract" />
         <text name="dc_contract_premium_quality" text="Premium Quality Contract" />
         <text name="dc_contract_syndicate" text="Syndicate Dairy Contract" />
+        <text name="rf_pda_side_info_dairy" text="[EN] This pause page is your barn herd glance. Each row is one dairy barn: herd score, the milk sale quality you would get today, and spoilage stage since the last collection. Sale quality already includes spoilage: if milk is ageing, the tier you see is the pulled-down one, not a separate earned grade. Warnings for feed disease or mycotoxin appear only when the barn data already carries them. Esc does not schedule collections, change contracts, or set feed fields. Open Farm Tablet Dairy when you have it for the deep desk. Quiet when Precision Farming is active." />
+        <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
+        <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
+        <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
+        <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
+        <text name="dairy_rf_pda_empty" text="[EN] no barns" />
+        <text name="dairy_rf_pda_more" text="[EN] Showing %d of %d" />
+        <text name="dairy_rf_pda_warn_feed" text="[EN] feed disease" />
+        <text name="dairy_rf_pda_warn_feed_crop" text="[EN] feed disease (%s)" />
+        <text name="dairy_rf_pda_warn_myc" text="[EN] mycotoxin" />
+        <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
+        <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
+    <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
     </texts>
 </l10n>
