@@ -128,15 +128,52 @@ end
 
 --- Stable scan: barnId ascending (human name HOLD this pass).
 
+--- Human barn name for Col A (Tyson eyes-on 2026-08-08 shot 04: raw uniqueId is ugly).
+--- George resolve ladder: go to the placeable via placeableSystem and take the first
+--- non-empty real name, then fall back to a truncated id. Every step is pcall-guarded
+--- and nil-safe: an unknown id or a missing placeableSystem must truncate, never throw.
+--- Veto honoured: no invented row.barnName, no typeDesc, no LUADOC getName triple-trust.
 local function barnLabel(r)
     if r == nil then
         return "?"
     end
+    -- Anything the row already carries as a real human name still wins.
     local human = r.nameCustom or r.displayName or r.barnName or r.name
     if type(human) == "string" and human ~= "" then
         return human
     end
-    local id = tostring(r.barnId or "?")
+
+    local barnId = r.barnId
+    if barnId ~= nil and g_currentMission ~= nil and g_currentMission.placeableSystem ~= nil then
+        local ps = g_currentMission.placeableSystem
+        local placeable
+        if type(ps.getPlaceableByUniqueId) == "function" then
+            local ok, p = pcall(function() return ps:getPlaceableByUniqueId(barnId) end)
+            if ok then placeable = p end
+        end
+        if placeable ~= nil then
+            -- 1) getName() / nameCustom
+            if type(placeable.getName) == "function" then
+                local ok, n = pcall(function() return placeable:getName() end)
+                if ok and type(n) == "string" and n ~= "" then return n end
+            end
+            if type(placeable.nameCustom) == "string" and placeable.nameCustom ~= "" then
+                return placeable.nameCustom
+            end
+            -- 2) nameL10n
+            if type(placeable.nameL10n) == "string" and placeable.nameL10n ~= "" then
+                return placeable.nameL10n
+            end
+            -- 3) storeItem name
+            local si = placeable.storeItem
+            if si ~= nil and type(si.name) == "string" and si.name ~= "" then
+                return si.name
+            end
+        end
+    end
+
+    -- 4) last resort: truncated id
+    local id = tostring(barnId or "?")
     if #id > 24 then
         return id:sub(1, 22) .. "..."
     end
@@ -186,7 +223,29 @@ local SIDE_FALLBACK =
 local BLURB_FALLBACK =
     "Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only."
 
+local _rfFwTitleBaselineWarned = false
+
+--- rfFwTableTitle is shared by every Table-mode module (Income, Dairy, Depot, NPCFavor).
+--- Income deliberately drops it to the bottom band (-360) for its own glance, and no host
+--- calls onHide, so whoever shows next must reassert its own baseline or it inherits
+--- Income's position. Cheap, idempotent, and keeps each guest owning its own layout.
+local function resetFwTableTitlePos(container)
+    local el = findDescendant(container, "rfFwTableTitle")
+    if el == nil or type(el.setPosition) ~= "function" then return end
+    if GuiUtils == nil or type(GuiUtils.getNormalizedXValue) ~= "function"
+        or type(GuiUtils.getNormalizedYValue) ~= "function" then
+        if not _rfFwTitleBaselineWarned then
+            _rfFwTitleBaselineWarned = true
+            print("[DairyCore] DairyRfPdaGuest: GuiUtils normalizer absent - cannot reassert rfFwTableTitle baseline")
+        end
+        return
+    end
+    el:setPosition(GuiUtils.getNormalizedXValue("0px", 0), GuiUtils.getNormalizedYValue("0px", 0))
+    if type(el.updateAbsolutePosition) == "function" then el:updateAbsolutePosition() end
+end
+
 function DairyRfPdaGuest.onShow(container, lightOnly)
+    resetFwTableTitlePos(container)
     clearHostDupes(container)
     showTableMode(container)
     paintSide(container, "rf_pda_side_info_dairy", SIDE_FALLBACK)
