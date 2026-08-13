@@ -2,7 +2,7 @@
 
 **Realistic Farming - Dairy Core** is a per-barn dairy management layer for the Realistic Farming mod ecosystem. It reads the ecosystem (SoilFertilizer, MarketDynamics, RandomWorldEvents, WorkerCosts, FuelCosts, NPCFavor, TaxMod, ProStaff, and Ritter's Realistic Livestock) and rides the shared **Time Guard** economic clock. Every cross-mod edge is handle-gated and pcall-wrapped, so it degrades gracefully when a companion mod is absent.
 
-**Version:** 1.0.0.0
+**Version:** 1.0.1.0
 
 ## What it does
 
@@ -11,6 +11,8 @@
   - *Ritter*: a per-animal genetics + health composite via `RLBridge` when Realistic Livestock is present. Any read failure trips cleanly back to Standard (F13: DairyCore never writes into Ritter).
 - **Milk quality tiers** (Premium / Standard / Reduced / Poor) from the herd health score.
 - **Time-based spoilage** (Fresh / Ageing / At Risk / Condemned) on the Time Guard day tick; a missed collection window advances it one stage.
+- **The milk round (DC-9)**: the mod now NOTICES milk leaving a barn whichever way it went. A tanker or an AI haul is detected from the raw storage level (ungated, F108-safe) and credited as `self`/`hauled`; a standing rota (a WorkerCosts worker assigned per barn, admin-gated) and the office sale actively remove, price and credit milk with their own sources (`rota`/`office`). The freshness clock now actually ticks.
+- **The office sale (DC-21)**: sell milk from an admin action without a truck. Reads the level, prices it through the spot market, applies a tunable administrative margin (SettingsHub), removes the milk by the standard removal path and credits the money.
 - **Administrative collection scheduling** with a WorkerCosts skill read (no AI pathing).
 - **Feed-source fields**: player-designated per barn, with the SF `diseaseDiscovered` reveal gate (a free flag names *which* field is at risk; the disease name surfaces only after a scout or the paid report).
 - **Read-only mycotoxin penalty** to herd health (both modes), received from the disease broadcast.
