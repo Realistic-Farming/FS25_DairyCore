@@ -67,6 +67,50 @@ DairyConstants.COLLECTION = {
         master      = { speedMod = 0.85, fuelMod = 1.00, earlyFlag = true  },  -- flags low feed/water early
         legendary   = { speedMod = 0.80, fuelMod = 1.00, earlyFlag = true  },  -- + herd-decline flag at ProStaff L16
     },
+    -- The four ways milk can leave a barn (DC-9). `self` and `hauled` are detected
+    -- passively from the level; `rota` and `office` are the mod's own active paths
+    -- (DC-9's rota and DC-21's office sale) and record the collection themselves.
+    SOURCES = {
+        self   = "self",
+        hauled = "hauled",
+        rota   = "rota",
+        office = "office",
+    },
+    -- The rota's published state. HireHall publishes EIGHT lifecycle states; three
+    -- of them (available/hired/training/injured/onLeave/contract) are still on the
+    -- round, the terminal states mean the man is gone, and anything unknown is
+    -- treated as still on the round (DC-9 3.5).
+    ROTA_STATES = {
+        UNASSIGNED    = "unassigned",
+        ASSIGNED_OK   = "assigned_ok",
+        ASSIGNED_DEPARTED = "assigned_departed",
+    },
+    -- The six HireHall lifecycle values that mean the worker is STILL on the round
+    -- (keys lowercase: lifecycle values are compared lowercased). `injured` and
+    -- `onleave` are deliberately included: HireHallEvolution auto-moves a worker to
+    -- onLeave at fatigue 95, and a two-way read would lapse the round the harder a
+    -- farmer works his best man. The terminal states are the two NOT here.
+    ON_ROUND_STATES = {
+        available = true, hired = true, training = true,
+        injured = true, onleave = true, contract = true,
+    },
+    -- The only KNOWN terminal states. Everything else, recognised or not, is treated
+    -- as still on the round (DC-9 3.5: an unknown lifecycle must not silently lapse
+    -- a round).
+    TERMINAL_STATES = {
+        retired = true, fired = true,
+    },
+}
+
+-- DC-21: administrative milk disposal. The margin is the administrative cost of an
+-- office/rota sale with no truck and no fuel, and its MAGNITUDE is a human ruling.
+-- This default is a RECOMMENDATION (a percentage, because it scales with herd size),
+-- named and tunable via SettingsHub, never hardcoded inline. Pending Arissani's call.
+DairyConstants.SALE = {
+    DEFAULT_MARGIN = 0.05,   -- 5% off the spot price
+    MARGIN_MIN     = 0.0,
+    MARGIN_MAX     = 0.25,
+    INCOME_LABEL   = "Milk Sale (Administrative)",
 }
 
 -- Dairy contracts. termDays are in-game DAYS (Time Guard clock; no "week").
@@ -142,6 +186,14 @@ DairyConstants.NETWORK = {
     BARN_STRIDE = 10,
     NONE_STRING = "",   -- absent string slot (worker id, feed field list)
     NONE_NUMBER = -1,   -- absent numeric slot (last collection day, next due)
+}
+
+-- NetworkSync admin-gated actions (all default adminOnly = true; DC-9 and DC-21
+-- take the default rather than overriding it).
+DairyConstants.ACTIONS = {
+    SELL_MILK     = "DairyCore_SellMilk",      -- DC-21 office sale (args: barnId, quantity)
+    ASSIGN_ROTA   = "DairyCore_AssignRota",    -- DC-9 rota assignment (args: barnId, workerId)
+    UNASSIGN_ROTA = "DairyCore_UnassignRota",  -- DC-9 rota release (args: barnId)
 }
 
 -- Time Guard accrual priorities (lower settles first). Money-moving before reads.

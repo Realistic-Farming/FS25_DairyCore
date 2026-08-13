@@ -28,11 +28,13 @@ function DairyCoreManager.new()
     self.disabled     = false   -- true when Precision Farming is present
     self.bedrockBound = false
     self.clockBound   = false
+    self.actionsBound = false
     self.settings = {
         enabled                 = true,
         defaultCollectionInterval = DairyConstants.COLLECTION.DEFAULT_INTERVAL_HOURS,
         spoilageEnabled         = true,
         contractsEnabled        = true,
+        saleMargin              = DairyConstants.SALE.DEFAULT_MARGIN,
     }
     return self
 end
@@ -58,6 +60,7 @@ function DairyCoreManager:onMissionLoaded()
     end
 
     self:_subscribeClock()
+    self:_bindActions()
     self:discoverBarns()
 
     -- Trailer-transfer completion (Ritter mode, Integration 29C): base-game event.
@@ -172,18 +175,30 @@ function DairyCoreManager:discoverBarns()
     if mission == nil or mission.husbandrySystem == nil then return end
     local hs = mission.husbandrySystem
 
+    -- Clear every transient placeable ref so reconcile can tell a barn that was not
+    -- re-registered this pass (sold, demolished) from one that was.
+    for _, barn in pairs(self.barns) do
+        barn._placeable = nil
+    end
+
     if hs.getPlaceablesByFarm ~= nil then
         for _, farmId in ipairs(self:_farmIdsToScan()) do
             local placeables = nil
             pcall(function() placeables = hs:getPlaceablesByFarm(farmId) end)
             self:_registerBarnsFrom(placeables, farmId)
         end
-        return
+    else
+        -- No per-farm enumerator. Take the whole set once and let each placeable name its
+        -- own owner, which is the same question asked a different way.
+        self:_registerBarnsFrom(hs.placeables or hs.husbandries, nil)
     end
 
-    -- No per-farm enumerator. Take the whole set once and let each placeable name its
-    -- own owner, which is the same question asked a different way.
-    self:_registerBarnsFrom(hs.placeables or hs.husbandries, nil)
+    -- DC-9 repair 5 + the milk-round listeners: drop records that are provably dead,
+    -- clear the rota on a farm change, and start watching every live barn's storage.
+    self:_reconcileBarns()
+    for _, barn in pairs(self.barns) do
+        self:_attachStorageListeners(barn)
+    end
 end
 
 --- @param placeables table|nil
@@ -228,6 +243,16 @@ function DairyCoreManager:_getOrCreateBarn(barnId, farmId, placeable)
             collectionInterval = self.settings.defaultCollectionInterval,
             nextCollectionDue = nil,
             assignedWorkerId = nil,
+            -- DC-9 milk-round detection state. `lastKnownMilkLevel` is the previous
+            -- observed level; a drop is a collection, a rise is production. The rota
+            -- and the office record their own collections and re-seed it in the same
+            -- step so the passive detector never re-counts a sale it made.
+            lastKnownMilkLevel = {},     -- fillType -> last observed litres
+            lastCollectionHours = nil,   -- monotonic hour of the last collection (DC-8)
+            lastCollectionSource = nil,  -- self / hauled / rota / office
+            lastCollectionLitres = {},   -- fillType -> litres of the last collection
+            rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED,
+            _suppressDetection = false,  -- transient: an active rota/office sale is mid-flight
             activeContractId = nil,
             ritterMode = RLBridge.active,
         }
@@ -324,6 +349,10 @@ function DairyCoreManager:_proStaffLevel()
 end
 
 -- WorkerCosts: resolve the assigned collection worker's skill level name for a barn.
+-- DC-9 repair 1: WorkerCosts publishes CAPITALISED level names and the SKILL table is
+-- keyed lowercase, so every worker used to fall through to the default. Normalise at
+-- the read, coercing to string FIRST (the roster can put a number in `level`), never
+-- re-keying the table.
 function DairyCoreManager:_workerLevelName(barn)
     local levelName = "experienced"  -- neutral default
     pcall(function()
@@ -333,12 +362,46 @@ function DairyCoreManager:_workerLevelName(barn)
         if snap == nil or snap.workers == nil then return end
         for _, w in ipairs(snap.workers) do
             if barn.assignedWorkerId ~= nil and w.uuid == barn.assignedWorkerId then
-                levelName = w.levelName or w.level or levelName
+                local raw = w.levelName or w.level or levelName
+                levelName = tostring(raw):lower()
                 return
             end
         end
     end)
     return levelName
+end
+
+-- DC-9 rota state: the three-way lifecycle sort over the assigned worker. HireHall
+-- publishes eight lifecycle states; six mean still-on-the-round (including injured
+-- and onLeave, because HireHallEvolution auto-moves a worker to onLeave at fatigue
+-- 95), two (retired, fired) mean the man is gone, and anything unknown or absent is
+-- treated as still on the round. UNKNOWN-OR-ABSENT reads as still-on-round by
+-- design: a roster that does not carry a lifecycle field, or carries one this mod
+-- has never seen, must not silently lapse a round.
+function DairyCoreManager:_workerRotaState(barn)
+    if barn.assignedWorkerId == nil then
+        return DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+    end
+    local lifecycle = nil
+    pcall(function()
+        local wc = g_currentMission ~= nil and g_currentMission.workerCostsManager
+        if wc == nil then return end
+        local snap = wc.getRosterSnapshot ~= nil and wc:getRosterSnapshot() or nil
+        if snap == nil or snap.workers == nil then return end
+        for _, w in ipairs(snap.workers) do
+            if w.uuid == barn.assignedWorkerId then
+                lifecycle = w.lifecycleState
+                return
+            end
+        end
+    end)
+    if lifecycle ~= nil then
+        local lower = tostring(lifecycle):lower()
+        if DairyConstants.COLLECTION.TERMINAL_STATES[lower] then
+            return DairyConstants.COLLECTION.ROTA_STATES.ASSIGNED_DEPARTED
+        end
+    end
+    return DairyConstants.COLLECTION.ROTA_STATES.ASSIGNED_OK
 end
 
 -- TaxMod audit line (bookkeeping only; never moves money). Sign: +credit / -debit.
@@ -534,12 +597,250 @@ function DairyCoreManager:getEffectiveQualityTier(barn)
 end
 
 -- Called when a collection actually happens (administrative; resets the timer).
-function DairyCoreManager:markCollected(barn, currentDay)
+-- DC-9: also stamps the monotonic collection hour and the collection's source.
+function DairyCoreManager:markCollected(barn, currentDay, nowHours, source)
     barn.lastCollectionDay = currentDay
+    if nowHours ~= nil then barn.lastCollectionHours = nowHours end
+    if source ~= nil then barn.lastCollectionSource = source end
     barn.spoilageStatus = "Fresh"
     barn._spoilageTierDrop = 0
     barn._missedWindow = nil
     self:_markBarnsDirty()
+end
+
+-- =========================================================
+-- DC-9 / DC-21: the milk round. Detection, the rota and the office sale.
+-- =========================================================
+
+-- The milk storage object on a dairy barn, ungated (F108). The husbandry's
+-- unloading station is a Storage whose fillLevels hold the milk; reading the raw
+-- Storage method bypasses UnloadingStation's farm-gated override, so a farm
+-- resolution failure can never read zero and manufacture a phantom collection.
+function DairyCoreManager:_milkStorageOf(barn)
+    local p = barn ~= nil and barn._placeable
+    if p == nil or p.spec_husbandry == nil then return nil end
+    return p.spec_husbandry.unloadingStation or p.spec_husbandry.loadingStation
+end
+
+-- Raw ungated level for a fill type (Storage:getFillLevel semantics).
+function DairyCoreManager:_milkLevel(barn, fillType)
+    local storage = self:_milkStorageOf(barn)
+    if storage == nil then return 0 end
+    if storage.fillLevels ~= nil then
+        return storage.fillLevels[fillType] or 0
+    end
+    local ok, level = pcall(function() return storage:getFillLevel(fillType) end)
+    return ok and level or 0
+end
+
+-- DC-9 3.2: compare a barn's current level against lastKnownMilkLevel. A drop is a
+-- collection (size = the difference); a rise is production. The comparison is sign-
+-- agnostic on purpose: it self-corrects after a missed callback and cannot drift.
+-- Per fill type, so a buffalo barn never credits a MILK collection. Nil-safe against
+-- legacy barn records that predate the milk-round fields.
+function DairyCoreManager:_observeBarnLevels(barn, nowHours, monotonicDay)
+    if barn.lastKnownMilkLevel == nil then barn.lastKnownMilkLevel = {} end
+    if barn.lastCollectionLitres == nil then barn.lastCollectionLitres = {} end
+    local milkFillType = DairyConstants.CONTRACTS.MILK_FILLTYPE
+    local prev = barn.lastKnownMilkLevel[milkFillType]
+    if prev == nil then
+        barn.lastKnownMilkLevel[milkFillType] = self:_milkLevel(barn, milkFillType)
+        return
+    end
+    local current = self:_milkLevel(barn, milkFillType)
+    if current < prev then
+        -- A collection (tanker or AI haul). Size is the difference.
+        barn.lastCollectionLitres[milkFillType] = prev - current
+        barn.lastCollectionSource = DairyConstants.COLLECTION.SOURCES.hauled
+        self:markCollected(barn, monotonicDay or 0, nowHours,
+            barn.lastCollectionSource)
+    end
+    barn.lastKnownMilkLevel[milkFillType] = current
+end
+
+-- Storage callback (fires on any real level change, farm-agnostic). The active rota
+-- and office paths suppress this so a sale they made is not re-counted.
+function DairyCoreManager:_onStorageFillChanged(barn, fillType)
+    if barn == nil or barn._suppressDetection then return end
+    local nowHours = self:_nowHours()
+    self:_observeBarnLevels(barn, nowHours, self:_monotonicDay())
+end
+
+function DairyCoreManager:_nowHours()
+    local monotonicDay = self:_monotonicDay()
+    local hourOfDay = 0
+    pcall(function()
+        local env = g_currentMission and g_currentMission.environment
+        hourOfDay = env and (env.dayTime / (60 * 60 * 1000)) or 0
+    end)
+    return monotonicDay * 24 + hourOfDay
+end
+
+function DairyCoreManager:_monotonicDay()
+    local day = 0
+    pcall(function()
+        local env = g_currentMission and g_currentMission.environment
+        day = env and env.currentDay or 0
+    end)
+    return day
+end
+
+-- Attach one storage listener per barn (idempotent), so a tanker or AI haul is
+-- noticed the moment it happens rather than on the next hour tick.
+function DairyCoreManager:_attachStorageListeners(barn)
+    if barn._storageListenerBound then return end
+    local storage = self:_milkStorageOf(barn)
+    if storage == nil or storage.addFillLevelChangedListeners == nil then return end
+    local listener = function(fillType, delta)
+        self:_onStorageFillChanged(barn, fillType)
+    end
+    barn._storageListenerFn = listener
+    pcall(function()
+        storage:addFillLevelChangedListeners(listener)
+        barn._storageListenerBound = true
+    end)
+end
+
+function DairyCoreManager:_detachStorageListeners(barn)
+    if not barn._storageListenerBound then return end
+    local storage = self:_milkStorageOf(barn)
+    if storage ~= nil and storage.removeFillLevelChangedListeners ~= nil
+        and barn._storageListenerFn ~= nil then
+        pcall(function() storage:removeFillLevelChangedListeners(barn._storageListenerFn) end)
+    end
+    barn._storageListenerBound = nil
+    barn._storageListenerFn = nil
+end
+
+-- DC-9 rota: server-authoritative worker assignment. Clients never write it.
+-- NetworkSync's default adminOnly=true gates the player-facing path.
+function DairyCoreManager:assignCollectionWorker(barnId, workerId)
+    local barn = self.barns[barnId]
+    if barn == nil or not self:_isServer() then return false end
+    barn.assignedWorkerId = workerId
+    barn.rotaState = self:_workerRotaState(barn)
+    if barn.nextCollectionDue == nil then
+        barn.nextCollectionDue = self:_nowHours() + (barn.collectionInterval or 24)
+    end
+    self:_markBarnsDirty()
+    return true
+end
+
+function DairyCoreManager:unassignCollectionWorker(barnId)
+    local barn = self.barns[barnId]
+    if barn == nil or not self:_isServer() then return false end
+    barn.assignedWorkerId = nil
+    barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+    self:_markBarnsDirty()
+    return true
+end
+
+-- DC-21 3.1: the internal office/rota sale. ONE ordinary mechanism, no permission
+-- check inside it. Reads the level, prices it through the spot market, applies the
+-- margin, removes the milk by the standard removal path (pricing against what ACTUALLY
+-- came out), credits the money and records the collection. Permission lives at the
+-- boundary: the NetworkSync action wrapper for office, the server tick for rota.
+-- DC-9 3.4: this is what the rota calls directly on the server.
+function DairyCoreManager:_adminSellMilk(barn, quantity, source, nowHours, monotonicDay)
+    if barn == nil or not self:_isServer() then
+        return nil, "server_only"
+    end
+    local fillType = DairyConstants.CONTRACTS.MILK_FILLTYPE
+    local available = self:_milkLevel(barn, fillType)
+    if available <= 0 then return nil, "no_milk" end
+
+    local requested = quantity or available
+    requested = math.min(requested, available)
+
+    -- Suppress the passive detector while we move the milk, so this sale is counted
+    -- once, by us, with its real source.
+    barn._suppressDetection = true
+    local removed = 0
+    pcall(function()
+        local p = barn._placeable
+        if p ~= nil and p.removeHusbandryFillLevel ~= nil then
+            local ftIndex = 0
+            pcall(function()
+                local ftm = g_fillTypeManager
+                if ftm ~= nil then ftIndex = ftm:getFillTypeIndexByName(fillType) or 0 end
+            end)
+            local remaining = p:removeHusbandryFillLevel(barn.farmId, requested, ftIndex)
+            if type(remaining) == "number" then
+                removed = math.max(0, requested - remaining)
+            else
+                removed = requested
+            end
+        end
+    end)
+    barn._suppressDetection = false
+
+    if removed <= 0 then return nil, "no_milk" end
+
+    local spot = self:_milkSpotPrice()
+    local margin = self.settings.saleMargin or DairyConstants.SALE.DEFAULT_MARGIN
+    margin = math.max(DairyConstants.SALE.MARGIN_MIN,
+                      math.min(DairyConstants.SALE.MARGIN_MAX, margin))
+    local income = math.floor(removed * spot * (1 - margin))
+    if income > 0 then
+        pcall(function()
+            g_currentMission:addMoney(income, barn.farmId, MoneyType.OTHER, true, true)
+        end)
+        self:_taxAudit(barn.farmId, income, DairyConstants.SALE.INCOME_LABEL)
+    end
+
+    -- Record the collection with its real source and re-seed the detector in the
+    -- same step, so the passive path cannot re-count this drop.
+    if barn.lastCollectionLitres == nil then barn.lastCollectionLitres = {} end
+    barn.lastCollectionLitres[fillType] = removed
+    barn.lastCollectionSource = source
+    barn.lastKnownMilkLevel[fillType] = self:_milkLevel(barn, fillType)
+    self:markCollected(barn, monotonicDay or self:_monotonicDay(), nowHours or self:_nowHours(), source)
+    DCLogger.info("Milk sale (%s): %d L -> %d (barn %s)", tostring(source),
+        math.floor(removed), income, tostring(barn.barnId))
+    return removed, "ok"
+end
+
+-- DC-21 3.3: the rota's entry point, called directly by the hour tick on the server.
+function DairyCoreManager:_rotaCollection(barn, nowHours, monotonicDay)
+    self:_adminSellMilk(barn, nil, DairyConstants.COLLECTION.SOURCES.rota, nowHours, monotonicDay)
+end
+
+-- DC-21 3.2: the thin admin wrapper the office menu invokes.
+function DairyCoreManager:sellMilk(barnId, quantity)
+    local barn = self.barns[barnId]
+    if barn == nil then return nil, "no_barn" end
+    return self:_adminSellMilk(barn, quantity, DairyConstants.COLLECTION.SOURCES.office)
+end
+
+-- DC-9 repair 5: no barn record is ever removed. Reconcile at discovery: drop any
+-- record whose placeable no longer resolves, and clear the rota when the resolved
+-- farm differs from the stored one (a barn that changes hands resolves fine, it is
+-- simply somebody else's now).
+function DairyCoreManager:_reconcileBarns()
+    for barnId, barn in pairs(self.barns) do
+        local p = barn._placeable
+        if p == nil then
+            -- Placeable unresolved this pass (fresh discovery may not have reached
+            -- it yet); only drop records we can prove dead.
+            if barn._probeDead then
+                self:_detachStorageListeners(barn)
+                self.barns[barnId] = nil
+            else
+                barn._probeDead = true
+            end
+        else
+            barn._probeDead = nil
+            if barn.farmId ~= nil and p.getOwnerFarmId ~= nil then
+                local owner = nil
+                pcall(function() owner = p:getOwnerFarmId() end)
+                if self:_isRealFarmId(owner) and owner ~= barn.farmId then
+                    barn.assignedWorkerId = nil
+                    barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+                    barn.farmId = owner
+                end
+            end
+        end
+    end
 end
 
 -- =========================================================
@@ -552,14 +853,17 @@ function DairyCoreManager:onCollectionHourTick(ctx)
     -- and the spoilage clock, and both of those travel down over CHANNEL_BARNS.
     if not self:_isServer() then return end
     local monotonicDay = ctx.monotonicDay or 0
-    local hourOfDay = 0
-    pcall(function()
-        local env = g_currentMission and g_currentMission.environment
-        hourOfDay = env and (env.dayTime / (60*60*1000)) or 0
-    end)
-    local nowHours = monotonicDay * 24 + hourOfDay
+    local nowHours = self:_nowHours()
 
     for _, barn in pairs(self.barns) do
+        -- DC-9: notice milk that left since the last tick (tanker, AI haul).
+        self:_observeBarnLevels(barn, nowHours, monotonicDay)
+
+        -- Refresh the rota state from the live roster (three-way lifecycle sort).
+        if barn.assignedWorkerId ~= nil then
+            barn.rotaState = self:_workerRotaState(barn)
+        end
+
         if barn.nextCollectionDue == nil then
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
         elseif nowHours >= barn.nextCollectionDue then
@@ -568,15 +872,18 @@ function DairyCoreManager:onCollectionHourTick(ctx)
             if barn.assignedWorkerId == nil then
                 barn._missedWindow = true
                 DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
-                -- Finish the dead path: consume _missedWindow by ageing via stage
-                -- thresholds. Does not invent assignedWorkerId writers.
                 self:_advanceSpoilageOneStage(barn, monotonicDay)
                 barn._missedWindow = nil
             else
+                -- DC-9 3.4: the rota is ACTIVE, not passive. It calls DC-21's
+                -- internal sale mechanism directly on the server (source rota),
+                -- which actually removes, prices and credits the milk.
                 local skill = DairyConstants.COLLECTION.SKILL[self:_workerLevelName(barn)]
                               or DairyConstants.COLLECTION.SKILL.experienced
-                self:markCollected(barn, ctx.monotonicDay or 0)
-                barn._lastRunSpeedMod = skill.speedMod
+                local removed = self:_rotaCollection(barn, nowHours, monotonicDay)
+                if removed and removed > 0 then
+                    barn._lastRunSpeedMod = skill.speedMod
+                end
             end
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
         end
@@ -807,6 +1114,38 @@ function DairyCoreManager:onAnimalMoved(errorCode)
     -- is stored internally only (FuelCosts is a price oracle, no registration API).
 end
 
+-- DC-21 3.2 + DC-9 rota: the admin-gated network actions. The office sale wrapper and
+-- the rota assignment both validate the caller through NetworkSync's default
+-- adminOnly=true, then call the mechanism. The rota's hourly run bypasses these
+-- actions entirely and calls _adminSellMilk directly (a scheduled tick has no
+-- connection, so routing it through the admin gate would be a gate that looks like
+-- it is working).
+function DairyCoreManager:_bindActions()
+    if self.actionsBound then return end
+    local ns = self:_getNetworkSync()
+    if ns == nil or ns.registerAction == nil then return end
+
+    ns:registerAction(DairyConstants.ACTIONS.SELL_MILK, {
+        onAction = function(userId, args)
+            if type(args) ~= "table" or args.barnId == nil then return end
+            self:sellMilk(args.barnId, args.quantity)
+        end,
+    })
+    ns:registerAction(DairyConstants.ACTIONS.ASSIGN_ROTA, {
+        onAction = function(userId, args)
+            if type(args) ~= "table" or args.barnId == nil then return end
+            self:assignCollectionWorker(args.barnId, args.workerId)
+        end,
+    })
+    ns:registerAction(DairyConstants.ACTIONS.UNASSIGN_ROTA, {
+        onAction = function(userId, args)
+            if type(args) ~= "table" or args.barnId == nil then return end
+            self:unassignCollectionWorker(args.barnId)
+        end,
+    })
+    self.actionsBound = true
+end
+
 -- =========================================================
 -- Time Guard clock subscription
 -- =========================================================
@@ -885,12 +1224,16 @@ function DairyCoreManager:_bindBedrock()
                   adminOnly = true, label = "Default Collection Interval (h)" },
                 { id = "spoilageEnabled", type = "bool", default = true, adminOnly = true, label = "Milk Spoilage" },
                 { id = "contractsEnabled", type = "bool", default = true, adminOnly = true, label = "Dairy Contracts" },
+                { id = "saleMargin", type = "float", default = DairyConstants.SALE.DEFAULT_MARGIN,
+                  min = DairyConstants.SALE.MARGIN_MIN, max = DairyConstants.SALE.MARGIN_MAX,
+                  adminOnly = true, label = "Milk Sale Margin (fraction)" },
             },
             onChange = function(key, value)
                 if key == "enabled" then self.settings.enabled = value ~= false
                 elseif key == "defaultCollectionInterval" then self.settings.defaultCollectionInterval = value
                 elseif key == "spoilageEnabled" then self.settings.spoilageEnabled = value ~= false
-                elseif key == "contractsEnabled" then self.settings.contractsEnabled = value ~= false end
+                elseif key == "contractsEnabled" then self.settings.contractsEnabled = value ~= false
+                elseif key == "saleMargin" then self.settings.saleMargin = value end
             end,
         })
         bound = true
@@ -908,12 +1251,20 @@ function DairyCoreManager:_serializeBarns()
     for barnId, b in pairs(self.barns) do
         local fields = {}
         for fid in pairs(b.feedSourceFields) do fields[#fields + 1] = fid end
+        local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
         out[tostring(barnId)] = {
             herdHealthScore = b.herdHealthScore, milkQualityTier = b.milkQualityTier,
             spoilageStatus = b.spoilageStatus, lastCollectionDay = b.lastCollectionDay,
             feedSourceFields = fields, mycotoxinPenalty = b.mycotoxinPenalty,
             mycotoxinDaysLeft = b.mycotoxinDaysLeft, collectionInterval = b.collectionInterval,
             assignedWorkerId = b.assignedWorkerId, activeContractId = b.activeContractId,
+            nextCollectionDue = b.nextCollectionDue,
+            -- DC-9: milk-round state. lastCollectionLitres is per-fill type; MILK is
+            -- the only fill type the mod tracks today.
+            lastCollectionHours = b.lastCollectionHours,
+            lastCollectionSource = b.lastCollectionSource,
+            rotaState = b.rotaState,
+            lastCollectionLitres = b.lastCollectionLitres and b.lastCollectionLitres[milkFill],
         }
     end
     return out
@@ -933,8 +1284,22 @@ function DairyCoreManager:_deserializeBarns(data)
         b.collectionInterval = s.collectionInterval or self.settings.defaultCollectionInterval
         b.assignedWorkerId = s.assignedWorkerId
         b.activeContractId = s.activeContractId
+        b.nextCollectionDue = s.nextCollectionDue
         b.feedSourceFields = {}
         for _, fid in ipairs(s.feedSourceFields or {}) do b.feedSourceFields[fid] = true end
+        -- DC-9 state + repair 2: a restored nextCollectionDue that has landed ahead
+        -- of the clock would wedge forever, so clamp it to one interval ahead.
+        b.lastCollectionHours = s.lastCollectionHours
+        b.lastCollectionSource = s.lastCollectionSource
+        b.rotaState = s.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+        b.lastCollectionLitres = {}
+        if s.lastCollectionLitres ~= nil then
+            b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] = s.lastCollectionLitres
+        end
+        if b.nextCollectionDue ~= nil then
+            b.nextCollectionDue = math.min(b.nextCollectionDue,
+                self:_nowHours() + (b.collectionInterval or 24))
+        end
         self.barns[barnId] = b
     end
 end
@@ -1030,7 +1395,7 @@ function DairyCoreManager:_onReadBarnState(arr)
             b._spoilageTierDrop  = arr[i+3]
             b.mycotoxinPenalty   = arr[i+4]
             b.collectionInterval = arr[i+5]
-            b.assignedWorkerId   = arr[i+6] ~= net.NONE_STRING and arr[i+6] or nil
+            b.assignedWorkerId   = arr[i+6] ~= net.NONE_STRING and (tonumber(arr[i+6]) or arr[i+6]) or nil
             b.lastCollectionDay  = arr[i+7] ~= net.NONE_NUMBER and arr[i+7] or nil
             b.nextCollectionDue  = arr[i+8] ~= net.NONE_NUMBER and arr[i+8] or nil
             b.feedSourceFields   = {}
@@ -1087,6 +1452,14 @@ function DairyCoreManager:_saveOwnFile()
         xml:setFloat(key .. "#nextCol", b.nextCollectionDue or OWN_FILE_NONE_NUMBER)
         xml:setString(key .. "#worker",
             b.assignedWorkerId ~= nil and tostring(b.assignedWorkerId) or OWN_FILE_NONE_STRING)
+        -- DC-9 milk-round state.
+        xml:setFloat(key .. "#lastColH", b.lastCollectionHours or OWN_FILE_NONE_NUMBER)
+        xml:setString(key .. "#lastSrc",
+            b.lastCollectionSource ~= nil and tostring(b.lastCollectionSource) or OWN_FILE_NONE_STRING)
+        xml:setString(key .. "#rota", b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED)
+        xml:setFloat(key .. "#lastLitres",
+            (b.lastCollectionLitres and b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE])
+            or OWN_FILE_NONE_NUMBER)
         xml:setInt(key .. "#contract",
             b.activeContractId ~= nil and math.floor(b.activeContractId) or OWN_FILE_NONE_NUMBER)
         local fs = {}
@@ -1137,7 +1510,21 @@ function DairyCoreManager:_loadOwnFile()
         local lastCol  = xml:getInt(key .. "#lastCol", OWN_FILE_NONE_NUMBER)
         local nextCol  = xml:getFloat(key .. "#nextCol", OWN_FILE_NONE_NUMBER)
         local worker   = xml:getString(key .. "#worker", OWN_FILE_NONE_STRING)
+        local lastColH = xml:getFloat(key .. "#lastColH", OWN_FILE_NONE_NUMBER)
+        local lastSrc  = xml:getString(key .. "#lastSrc", OWN_FILE_NONE_STRING)
+        local rota     = xml:getString(key .. "#rota", DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED)
+        local lastLit  = xml:getFloat(key .. "#lastLitres", OWN_FILE_NONE_NUMBER)
         local contract = xml:getInt(key .. "#contract", OWN_FILE_NONE_NUMBER)
+
+        -- DC-9 repair 2: a restored nextCollectionDue ahead of the clock wedges the
+        -- round forever; clamp it to one interval ahead of now.
+        if nextCol >= 0 then
+            nextCol = math.min(nextCol, self:_nowHours() + (xml:getInt(key .. "#interval",
+                self.settings.defaultCollectionInterval)))
+        end
+        local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
+        local lastLitres = {}
+        if lastLit >= 0 then lastLitres[milkFill] = lastLit end
 
         local b = {
             barnId              = id,
@@ -1152,12 +1539,19 @@ function DairyCoreManager:_loadOwnFile()
             collectionInterval  = xml:getInt(key .. "#interval", self.settings.defaultCollectionInterval),
             lastCollectionDay   = lastCol  >= 0 and lastCol or nil,
             nextCollectionDue   = nextCol  >= 0 and nextCol or nil,
-            assignedWorkerId    = worker   ~= OWN_FILE_NONE_STRING and worker or nil,
+            -- DC-9 repair 4: the worker id is stringified on the own-file path; convert
+            -- it back so server and client agree on type (tonumber(x) or x precedent).
+            assignedWorkerId    = worker   ~= OWN_FILE_NONE_STRING and (tonumber(worker) or worker) or nil,
             activeContractId    = contract >= 0 and contract or nil,
             feedSourceFields    = {},
             feedDiseaseFlag     = false,
             feedDiseaseCropName = nil,
             ritterMode          = RLBridge.active,
+            lastCollectionHours  = lastColH >= 0 and lastColH or nil,
+            lastCollectionSource = lastSrc ~= OWN_FILE_NONE_STRING and lastSrc or nil,
+            rotaState            = rota,
+            lastCollectionLitres = lastLitres,
+            lastKnownMilkLevel   = {},
         }
         for fid in string.gmatch(xml:getString(key .. "#feedFields", OWN_FILE_NONE_STRING), "([^,]+)") do
             b.feedSourceFields[tonumber(fid) or fid] = true
@@ -1219,7 +1613,16 @@ function DairyCoreManager:getBarnRows()
             spoilage = b.spoilageStatus, spoilageClockStarted = b.lastCollectionDay ~= nil,
             feedDiseaseFlag = b.feedDiseaseFlag == true,
             feedDiseaseCropName = b.feedDiseaseCropName, mycotoxin = b.mycotoxinPenalty or 0,
-            contractId = b.activeContractId }
+            contractId = b.activeContractId,
+            -- DC-9 contract: the rota state, the last collection's source and hour,
+            -- and the litres that left in it (DC-10 asks for the litres).
+            rotaState = b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED,
+            rotaWorkerName = b.assignedWorkerId,
+            lastCollectionSource = b.lastCollectionSource,
+            lastCollectionHours = b.lastCollectionHours,
+            nextCollectionDue = b.nextCollectionDue,
+            lastCollectionLitres = b.lastCollectionLitres
+                and b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] or nil }
         if b.ritterMode then
             local counts = RLBridge:getHerdCounts(barnId, b.farmId)
             if counts ~= nil then row.counts = counts end
