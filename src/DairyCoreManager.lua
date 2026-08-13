@@ -1641,9 +1641,58 @@ function DairyCoreManager:consoleCommandStatus()
         tostring(self.bedrockBound)))
     for barnId, b in pairs(self.barns) do
         local eff = self:getEffectiveQualityTier(b)
+        local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
         table.insert(lines, string.format("  barn %s: health=%d tier=%s spoilage=%s myc=%d contract=%s",
             tostring(barnId), math.floor(b.herdHealthScore or 0), eff.name, b.spoilageStatus,
             b.mycotoxinPenalty or 0, tostring(b.activeContractId)))
+        -- DC-9: the milk-round view, so a tanker drain or a rota run is actually
+        -- observable in game rather than only in the save.
+        table.insert(lines, string.format("    rota=%s worker=%s",
+            tostring(b.rotaState or "unassigned"),
+            tostring(b.assignedWorkerId or "none")))
+        table.insert(lines, string.format("    lastColDay=%s hours=%s source=%s litres=%s nextDue=%s",
+            tostring(b.lastCollectionDay or "-"),
+            tostring(b.lastCollectionHours or "-"),
+            tostring(b.lastCollectionSource or "-"),
+            tostring((b.lastCollectionLitres and b.lastCollectionLitres[milkFill]) or "-"),
+            tostring(b.nextCollectionDue or "-")))
     end
     return table.concat(lines, "\n")
+end
+
+-- ── Console test commands (server-only; the rota and sale have no UI surface yet,
+-- so these exist so the in-game pass can exercise them). ──
+
+function DairyCoreManager:consoleAssignRota(barnId, workerId)
+    if not self:_isServer() then return "server only" end
+    local ok = self:assignCollectionWorker(barnId, workerId)
+    if ok then
+        local barn = self.barns[barnId]
+        if barn ~= nil and barn.nextCollectionDue ~= nil then
+            return string.format("assigned %s to barn %s; next window at hour %s",
+                tostring(workerId), tostring(barnId), tostring(barn.nextCollectionDue))
+        end
+        return "assigned " .. tostring(workerId) .. " to barn " .. tostring(barnId)
+    end
+    return "assign failed (server-only; check barn id)"
+end
+
+function DairyCoreManager:consoleUnassignRota(barnId)
+    if not self:_isServer() then return "server only" end
+    return self:unassignCollectionWorker(barnId) and "unassigned" or "failed"
+end
+
+function DairyCoreManager:consoleSellMilk(barnId, litres)
+    if not self:_isServer() then return "server only" end
+    local removed, status = self:sellMilk(barnId, litres)
+    if removed ~= nil then
+        return string.format("sold %d L (source office, %s)", math.floor(removed), status)
+    end
+    return "no sale: " .. tostring(status or "unknown")
+end
+
+function DairyCoreManager:consoleCollectionTick()
+    if not self:_isServer() then return "server only" end
+    self:onCollectionHourTick({ monotonicDay = self:_monotonicDay() })
+    return "collection hour tick run"
 end
