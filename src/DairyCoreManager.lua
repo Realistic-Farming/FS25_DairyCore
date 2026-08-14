@@ -234,7 +234,7 @@ function DairyCoreManager:_getOrCreateBarn(barnId, farmId, placeable)
             milkQualityTier = "standard",
             milkLitresAvailable = 0,
             lastCollectionDay = nil,
-            spoilageStatus = "Fresh",
+            spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key,
             feedSourceFields = {},
             feedDiseaseFlag = false,
             feedDiseaseCropName = nil,
@@ -424,9 +424,10 @@ function DairyCoreManager:updateAllBarns(currentDay)
     for _, barn in pairs(self.barns) do
         self:_updateBarnHealth(barn)
         self:_decayMycotoxin(barn)
-        if self.settings.spoilageEnabled then
-            self:_updateSpoilage(barn, currentDay)
-        end
+        -- DC-8: spoilage no longer lives on the day tick. It evaluates once per
+        -- in-game hour on the hour tick, where the fractional elapsed-time read
+        -- has the hours it needs. The day tick keeps herd health and the mycotoxin
+        -- countdown, and nothing here competes with the hour tick.
     end
 end
 
@@ -543,49 +544,43 @@ function DairyCoreManager:_spoilageStage(daysSince)
     else return sp.STAGES.condemned end
 end
 
--- Advance one spoilage stage by moving lastCollectionDay across the next
--- stage threshold (comment contract: one stage per crossed missed window).
--- Starts the clock on first miss when lastCollectionDay was nil.
-function DairyCoreManager:_advanceSpoilageOneStage(barn, currentDay)
-    local sp = DairyConstants.SPOILAGE
-    local freshDays = sp.FRESH_DAYS
-    if self:_proStaffLevel() >= 18 then
-        freshDays = freshDays + (sp.L18_FRESH_BONUS_HOURS / 24)
-    end
-    local daysSince = 0
-    if barn.lastCollectionDay ~= nil then
-        daysSince = math.max(0, currentDay - barn.lastCollectionDay)
-    end
-    local targetDays
-    if daysSince < freshDays then
-        targetDays = freshDays
-    elseif daysSince < sp.AGEING_DAYS then
-        targetDays = sp.AGEING_DAYS
-    elseif daysSince < sp.ATRISK_DAYS then
-        targetDays = sp.ATRISK_DAYS
-    else
-        -- Already condemned; keep ageing from current lastCollectionDay.
-        self:_updateSpoilage(barn, currentDay)
-        return
-    end
-    barn.lastCollectionDay = currentDay - targetDays
-    self:_updateSpoilage(barn, currentDay)
-    self:_markBarnsDirty()
-end
-
-function DairyCoreManager:_updateSpoilage(barn, currentDay)
-    -- Nil lastCollectionDay means the clock has never started. Do NOT treat
-    -- that as "collected today" (forever-Fresh). Stay Fresh with zero drop
-    -- until markCollected or a missed window starts the clock.
+-- DC-8: the spoilage clock runs on ELAPSED TIME, not on flags. Evaluated once per
+-- in-game hour on the hour tick, daysSince is the FRACTIONAL days between the last
+-- collection's monotonic hour and now, so a barn collected on a precise 24h cadence
+-- reads Fresh for the whole round instead of jumping at midnight. A barn that is
+-- never collected advances continuously through Ageing and At Risk to Condemned.
+-- Old saves carry lastCollectionDay but not the hour; the day is read as the
+-- start-of-day hour so a legacy barn still ages instead of freezing.
+function DairyCoreManager:_updateSpoilage(barn, nowHours)
     if barn.lastCollectionDay == nil then
-        barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.name
+        -- Clock has never started (no collection, no missed window). Do NOT treat
+        -- that as "collected today" (forever-Fresh). Stay Fresh with zero drop
+        -- until a collection is recorded.
+        barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key
         barn._spoilageTierDrop = 0
         return
     end
-    local daysSince = math.max(0, currentDay - barn.lastCollectionDay)
+    local lastHours = barn.lastCollectionHours
+    if lastHours == nil then lastHours = barn.lastCollectionDay * 24 end
+    local hoursSince = math.max(0, (nowHours or 0) - lastHours)
+    local daysSince = hoursSince / 24.0
     local stage = self:_spoilageStage(daysSince)
-    barn.spoilageStatus = stage.name
+    barn.spoilageStatus = stage.key
     barn._spoilageTierDrop = stage.tierDrop
+end
+
+-- Map a stored spoilage value to the canonical key, migrating the English display
+-- names old saves carry. Anything unrecognised degrades to fresh.
+function DairyCoreManager:_normalizeSpoilageKey(value)
+    if type(value) ~= "string" then return DairyConstants.SPOILAGE.STAGES.fresh.key end
+    local byEnglish = {
+        Fresh = "fresh", Ageing = "ageing", ["At Risk"] = "atrisk", Condemned = "condemned",
+    }
+    if byEnglish[value] then return byEnglish[value] end
+    for _, st in pairs(DairyConstants.SPOILAGE.STAGES) do
+        if st.key == value then return value end
+    end
+    return DairyConstants.SPOILAGE.STAGES.fresh.key
 end
 
 -- Effective sale tier = herd quality tier dropped by the spoilage stage.
@@ -602,9 +597,8 @@ function DairyCoreManager:markCollected(barn, currentDay, nowHours, source)
     barn.lastCollectionDay = currentDay
     if nowHours ~= nil then barn.lastCollectionHours = nowHours end
     if source ~= nil then barn.lastCollectionSource = source end
-    barn.spoilageStatus = "Fresh"
+    barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key
     barn._spoilageTierDrop = 0
-    barn._missedWindow = nil
     self:_markBarnsDirty()
 end
 
@@ -859,6 +853,13 @@ function DairyCoreManager:onCollectionHourTick(ctx)
         -- DC-9: notice milk that left since the last tick (tanker, AI haul).
         self:_observeBarnLevels(barn, nowHours, monotonicDay)
 
+        -- DC-8: spoilage evaluates every hour from elapsed time since the last
+        -- collection. A missed window needs no flag any more: the clock is time,
+        -- so a barn nobody collected simply ages continuously.
+        if self.settings.spoilageEnabled then
+            self:_updateSpoilage(barn, nowHours)
+        end
+
         -- Refresh the rota state from the live roster (three-way lifecycle sort).
         if barn.assignedWorkerId ~= nil then
             barn.rotaState = self:_workerRotaState(barn)
@@ -868,13 +869,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
         elseif nowHours >= barn.nextCollectionDue then
             -- A scheduled window has arrived. If no worker is assigned the window is
-            -- MISSED -> spoilage advances one stage (once per crossed window).
-            if barn.assignedWorkerId == nil then
-                barn._missedWindow = true
-                DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
-                self:_advanceSpoilageOneStage(barn, monotonicDay)
-                barn._missedWindow = nil
-            else
+            -- MISSED: the milk ages on, which the elapsed-time clock already shows.
+            if barn.assignedWorkerId ~= nil then
                 -- DC-9 3.4: the rota is ACTIVE, not passive. It calls DC-21's
                 -- internal sale mechanism directly on the server (source rota),
                 -- which actually removes, prices and credits the milk.
@@ -884,6 +880,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
                 if removed and removed > 0 then
                     barn._lastRunSpeedMod = skill.speedMod
                 end
+            else
+                DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
             end
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
         end
@@ -1008,7 +1006,11 @@ function DairyCoreManager:_settleContractDay(contractId, sctx)
         if c.settled then break end
         -- Estimate the day's delivery from the barn herd (gated placeholder rate).
         local herd = self:_barnHerdCount(barn)
-        local qualityFactor = self:_qualityTierForScore(barn.herdHealthScore).priceMod
+        -- DC-8 (F102, DC-10's written acceptance): the contract is paid on the
+        -- EFFECTIVE tier, which carries the spoilage penalty. Reading the earned
+        -- tier here let a barn with Condemned milk sell at Premium if the herd was
+        -- healthy, so spoilage never reached money.
+        local qualityFactor = self:getEffectiveQualityTier(barn).priceMod
         c.delivered = c.delivered + herd * PER_COW_LITRES_DAY * qualityFactor
         -- OM-211: accumulate the barn's mean organic-feed credit per accrual day.
         -- The pay line averages these over organicDays, so a contract that spends
@@ -1254,7 +1256,9 @@ function DairyCoreManager:_serializeBarns()
         local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
         out[tostring(barnId)] = {
             herdHealthScore = b.herdHealthScore, milkQualityTier = b.milkQualityTier,
-            spoilageStatus = b.spoilageStatus, lastCollectionDay = b.lastCollectionDay,
+            spoilageStatus = self:_normalizeSpoilageKey(b.spoilageStatus),
+            _spoilageTierDrop = b._spoilageTierDrop or 0,
+            lastCollectionDay = b.lastCollectionDay,
             feedSourceFields = fields, mycotoxinPenalty = b.mycotoxinPenalty,
             mycotoxinDaysLeft = b.mycotoxinDaysLeft, collectionInterval = b.collectionInterval,
             assignedWorkerId = b.assignedWorkerId, activeContractId = b.activeContractId,
@@ -1277,7 +1281,8 @@ function DairyCoreManager:_deserializeBarns(data)
         local b = self.barns[barnId] or { barnId = barnId, farmId = 0, feedSourceFields = {} }
         b.herdHealthScore = s.herdHealthScore or 60
         b.milkQualityTier = s.milkQualityTier or "standard"
-        b.spoilageStatus = s.spoilageStatus or "Fresh"
+        b.spoilageStatus = self:_normalizeSpoilageKey(s.spoilageStatus)
+        b._spoilageTierDrop = s._spoilageTierDrop or 0
         b.lastCollectionDay = s.lastCollectionDay
         b.mycotoxinPenalty = s.mycotoxinPenalty or 0
         b.mycotoxinDaysLeft = s.mycotoxinDaysLeft or 0
@@ -1443,7 +1448,7 @@ function DairyCoreManager:_saveOwnFile()
         xml:setString(key .. "#tier", b.milkQualityTier or "standard")
         xml:setInt(key .. "#myc", math.floor(b.mycotoxinPenalty or 0))
         xml:setInt(key .. "#mycDays", math.floor(b.mycotoxinDaysLeft or 0))
-        xml:setString(key .. "#spoilage", b.spoilageStatus or "Fresh")
+        xml:setString(key .. "#spoilage", self:_normalizeSpoilageKey(b.spoilageStatus))
         xml:setInt(key .. "#spoilageDrop", math.floor(b._spoilageTierDrop or 0))
         xml:setInt(key .. "#interval",
             math.floor(b.collectionInterval or self.settings.defaultCollectionInterval))
@@ -1534,7 +1539,7 @@ function DairyCoreManager:_loadOwnFile()
             milkLitresAvailable = 0,
             mycotoxinPenalty    = xml:getInt(key .. "#myc", 0),
             mycotoxinDaysLeft   = xml:getInt(key .. "#mycDays", 0),
-            spoilageStatus      = xml:getString(key .. "#spoilage", "Fresh"),
+            spoilageStatus      = self:_normalizeSpoilageKey(xml:getString(key .. "#spoilage", "Fresh")),
             _spoilageTierDrop   = xml:getInt(key .. "#spoilageDrop", 0),
             collectionInterval  = xml:getInt(key .. "#interval", self.settings.defaultCollectionInterval),
             lastCollectionDay   = lastCol  >= 0 and lastCol or nil,
@@ -1601,9 +1606,10 @@ end
 -- =========================================================
 
 -- Read-only per-barn rows for Esc RF PDA / FarmTablet surfaces (autoDetect model).
--- spoilageClockStarted: true after markCollected OR after a missed window starts
--- the clock via _advanceSpoilageOneStage. Idle (nil lastCollectionDay) stays Fresh
--- without faking "collected today". assignedWorkerId still has no writer here.
+-- spoilageClockStarted: true after the first collection starts the clock. Idle
+-- (nil lastCollectionDay) stays Fresh without faking "collected today". spoilage
+-- carries the l10n KEY (dc_spoilage_*), never English display text (DC-14
+-- invariant 3); a surface translates it. assignedWorkerId still has no writer here.
 function DairyCoreManager:getBarnRows()
     local rows = {}
     for barnId, b in pairs(self.barns) do
