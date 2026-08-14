@@ -2,7 +2,7 @@
 
 **Realistic Farming - Dairy Core** is a per-barn dairy management layer for the Realistic Farming mod ecosystem. It reads the ecosystem (SoilFertilizer, MarketDynamics, RandomWorldEvents, WorkerCosts, FuelCosts, NPCFavor, TaxMod, ProStaff, and Ritter's Realistic Livestock) and rides the shared **Time Guard** economic clock. Every cross-mod edge is handle-gated and pcall-wrapped, so it degrades gracefully when a companion mod is absent.
 
-**Version:** 1.0.1.0
+**Version:** 1.0.4.0
 
 ## What it does
 
@@ -15,6 +15,7 @@
 - **The office sale (DC-21)**: sell milk from an admin action without a truck. Reads the level, prices it through the spot market, applies a tunable administrative margin (SettingsHub), removes the milk by the standard removal path and credits the money.
 - **Administrative collection scheduling** with a WorkerCosts skill read (no AI pathing).
 - **Feed-source fields**: player-designated per barn, with the SF `diseaseDiscovered` reveal gate (a free flag names *which* field is at risk; the disease name surfaces only after a scout or the paid report).
+- **Feed provenance (FP-1, authority #5)**: the one feed-tracking model, owned and persisted by DairyCore. A per-farm per-fill-type fraction vector (contaminated and organic), blended by one formula at every combine point. Grain harvests seed it from SoilFertilizer's harvest bus (contamination from the field's disease pressure, organic from its certification). Contaminated heals toward zero each in-game day; organic never decays. The contract's organic milk premium reads the provenance when the farm has harvest data.
 - **Read-only mycotoxin penalty** to herd health (both modes), received from the disease broadcast.
 - **Dairy contracts** (4 types) that settle on the Time Guard clock via `registerAccrual`: server-only, idempotent across save/reload. Base-game `addMoney` pays the income; TaxMod `recordExpense` is audit-only.
 
