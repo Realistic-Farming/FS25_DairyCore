@@ -127,6 +127,24 @@ DairyConstants.CONTRACTS = {
             volumeTarget = 8000,  termDays = 30, premiumRate = 1.12, qualityRequired = nil,
             prostaffLevel = 0,
         },
+        spot_run = {
+            -- DC-16: a short, high-premium contract for cash now. 14 days at the spot
+            -- rate plus 15% for taking short-contract risk. PROVISIONAL from the
+            -- design; the prostaffLevel gate is SDS-unpinned and defaults here to the
+            -- ladder base (0, same as the shipped standard archetype).
+            key = "spot_run", name = "Spot Run Dairy Contract",
+            volumeTarget = 4000, termDays = 14, premiumRate = 1.15, qualityRequired = nil,
+            prostaffLevel = 0,
+        },
+        standing_order = {
+            -- DC-16: a long, low-premium contract for the floor to matter over a bad
+            -- season. 60 days at the term rate minus 8% for the floor's protection.
+            -- PROVISIONAL from the design; the prostaffLevel gate is SDS-unpinned and
+            -- defaults here to the ladder base (0, same as the shipped standard row).
+            key = "standing_order", name = "Standing Order Dairy Contract",
+            volumeTarget = 16000, termDays = 60, premiumRate = 0.92, qualityRequired = nil,
+            prostaffLevel = 0,
+        },
         premium_quality = {
             key = "premium_quality", name = "Premium Quality Contract",
             volumeTarget = 21000, termDays = 45, premiumRate = 1.18, qualityRequired = "standard",
