@@ -7,7 +7,7 @@
 --   * The five repairs the member carries (skill normalisation, the nextCollectionDue
 --     clamp, the worker-id type round trips) are pinned so they cannot regress.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
 
 local MILK = DairyConstants.CONTRACTS.MILK_FILLTYPE
 local SRC   = DairyConstants.COLLECTION.SOURCES

@@ -36,6 +36,8 @@ function DairyCoreManager.new()
         contractsEnabled        = true,
         saleMargin              = DairyConstants.SALE.DEFAULT_MARGIN,
     }
+    -- FP-1: the feed provenance ledger (authority #5). DairyCore is the sole writer.
+    self.feedProvenance = FeedProvenance.new(self)
     return self
 end
 
@@ -62,6 +64,9 @@ function DairyCoreManager:onMissionLoaded()
     self:_subscribeClock()
     self:_bindActions()
     self:discoverBarns()
+    -- FP-1: subscribe to SF's soilHarvestBus on the server so grain harvests seed
+    -- the farm's feed provenance. Delegate-when-present and read-only.
+    self:_bindHarvestBus()
 
     -- Trailer-transfer completion (Ritter mode, Integration 29C): base-game event.
     pcall(function()
@@ -79,6 +84,7 @@ function DairyCoreManager:onMissionDelete()
     if self.animalMoveBound and g_messageCenter ~= nil then
         pcall(function() g_messageCenter:unsubscribeAll(self) end)
     end
+    self:_unbindHarvestBus()
     self.bedrockBound = false
     self.clockBound   = false
 end
@@ -234,7 +240,7 @@ function DairyCoreManager:_getOrCreateBarn(barnId, farmId, placeable)
             milkQualityTier = "standard",
             milkLitresAvailable = 0,
             lastCollectionDay = nil,
-            spoilageStatus = "Fresh",
+            spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key,
             feedSourceFields = {},
             feedDiseaseFlag = false,
             feedDiseaseCropName = nil,
@@ -424,9 +430,10 @@ function DairyCoreManager:updateAllBarns(currentDay)
     for _, barn in pairs(self.barns) do
         self:_updateBarnHealth(barn)
         self:_decayMycotoxin(barn)
-        if self.settings.spoilageEnabled then
-            self:_updateSpoilage(barn, currentDay)
-        end
+        -- DC-8: spoilage no longer lives on the day tick. It evaluates once per
+        -- in-game hour on the hour tick, where the fractional elapsed-time read
+        -- has the hours it needs. The day tick keeps herd health and the mycotoxin
+        -- countdown, and nothing here competes with the hour tick.
     end
 end
 
@@ -543,49 +550,43 @@ function DairyCoreManager:_spoilageStage(daysSince)
     else return sp.STAGES.condemned end
 end
 
--- Advance one spoilage stage by moving lastCollectionDay across the next
--- stage threshold (comment contract: one stage per crossed missed window).
--- Starts the clock on first miss when lastCollectionDay was nil.
-function DairyCoreManager:_advanceSpoilageOneStage(barn, currentDay)
-    local sp = DairyConstants.SPOILAGE
-    local freshDays = sp.FRESH_DAYS
-    if self:_proStaffLevel() >= 18 then
-        freshDays = freshDays + (sp.L18_FRESH_BONUS_HOURS / 24)
-    end
-    local daysSince = 0
-    if barn.lastCollectionDay ~= nil then
-        daysSince = math.max(0, currentDay - barn.lastCollectionDay)
-    end
-    local targetDays
-    if daysSince < freshDays then
-        targetDays = freshDays
-    elseif daysSince < sp.AGEING_DAYS then
-        targetDays = sp.AGEING_DAYS
-    elseif daysSince < sp.ATRISK_DAYS then
-        targetDays = sp.ATRISK_DAYS
-    else
-        -- Already condemned; keep ageing from current lastCollectionDay.
-        self:_updateSpoilage(barn, currentDay)
-        return
-    end
-    barn.lastCollectionDay = currentDay - targetDays
-    self:_updateSpoilage(barn, currentDay)
-    self:_markBarnsDirty()
-end
-
-function DairyCoreManager:_updateSpoilage(barn, currentDay)
-    -- Nil lastCollectionDay means the clock has never started. Do NOT treat
-    -- that as "collected today" (forever-Fresh). Stay Fresh with zero drop
-    -- until markCollected or a missed window starts the clock.
+-- DC-8: the spoilage clock runs on ELAPSED TIME, not on flags. Evaluated once per
+-- in-game hour on the hour tick, daysSince is the FRACTIONAL days between the last
+-- collection's monotonic hour and now, so a barn collected on a precise 24h cadence
+-- reads Fresh for the whole round instead of jumping at midnight. A barn that is
+-- never collected advances continuously through Ageing and At Risk to Condemned.
+-- Old saves carry lastCollectionDay but not the hour; the day is read as the
+-- start-of-day hour so a legacy barn still ages instead of freezing.
+function DairyCoreManager:_updateSpoilage(barn, nowHours)
     if barn.lastCollectionDay == nil then
-        barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.name
+        -- Clock has never started (no collection, no missed window). Do NOT treat
+        -- that as "collected today" (forever-Fresh). Stay Fresh with zero drop
+        -- until a collection is recorded.
+        barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key
         barn._spoilageTierDrop = 0
         return
     end
-    local daysSince = math.max(0, currentDay - barn.lastCollectionDay)
+    local lastHours = barn.lastCollectionHours
+    if lastHours == nil then lastHours = barn.lastCollectionDay * 24 end
+    local hoursSince = math.max(0, (nowHours or 0) - lastHours)
+    local daysSince = hoursSince / 24.0
     local stage = self:_spoilageStage(daysSince)
-    barn.spoilageStatus = stage.name
+    barn.spoilageStatus = stage.key
     barn._spoilageTierDrop = stage.tierDrop
+end
+
+-- Map a stored spoilage value to the canonical key, migrating the English display
+-- names old saves carry. Anything unrecognised degrades to fresh.
+function DairyCoreManager:_normalizeSpoilageKey(value)
+    if type(value) ~= "string" then return DairyConstants.SPOILAGE.STAGES.fresh.key end
+    local byEnglish = {
+        Fresh = "fresh", Ageing = "ageing", ["At Risk"] = "atrisk", Condemned = "condemned",
+    }
+    if byEnglish[value] then return byEnglish[value] end
+    for _, st in pairs(DairyConstants.SPOILAGE.STAGES) do
+        if st.key == value then return value end
+    end
+    return DairyConstants.SPOILAGE.STAGES.fresh.key
 end
 
 -- Effective sale tier = herd quality tier dropped by the spoilage stage.
@@ -602,9 +603,8 @@ function DairyCoreManager:markCollected(barn, currentDay, nowHours, source)
     barn.lastCollectionDay = currentDay
     if nowHours ~= nil then barn.lastCollectionHours = nowHours end
     if source ~= nil then barn.lastCollectionSource = source end
-    barn.spoilageStatus = "Fresh"
+    barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key
     barn._spoilageTierDrop = 0
-    barn._missedWindow = nil
     self:_markBarnsDirty()
 end
 
@@ -859,6 +859,13 @@ function DairyCoreManager:onCollectionHourTick(ctx)
         -- DC-9: notice milk that left since the last tick (tanker, AI haul).
         self:_observeBarnLevels(barn, nowHours, monotonicDay)
 
+        -- DC-8: spoilage evaluates every hour from elapsed time since the last
+        -- collection. A missed window needs no flag any more: the clock is time,
+        -- so a barn nobody collected simply ages continuously.
+        if self.settings.spoilageEnabled then
+            self:_updateSpoilage(barn, nowHours)
+        end
+
         -- Refresh the rota state from the live roster (three-way lifecycle sort).
         if barn.assignedWorkerId ~= nil then
             barn.rotaState = self:_workerRotaState(barn)
@@ -868,13 +875,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
         elseif nowHours >= barn.nextCollectionDue then
             -- A scheduled window has arrived. If no worker is assigned the window is
-            -- MISSED -> spoilage advances one stage (once per crossed window).
-            if barn.assignedWorkerId == nil then
-                barn._missedWindow = true
-                DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
-                self:_advanceSpoilageOneStage(barn, monotonicDay)
-                barn._missedWindow = nil
-            else
+            -- MISSED: the milk ages on, which the elapsed-time clock already shows.
+            if barn.assignedWorkerId ~= nil then
                 -- DC-9 3.4: the rota is ACTIVE, not passive. It calls DC-21's
                 -- internal sale mechanism directly on the server (source rota),
                 -- which actually removes, prices and credits the milk.
@@ -884,6 +886,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
                 if removed and removed > 0 then
                     barn._lastRunSpeedMod = skill.speedMod
                 end
+            else
+                DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
             end
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
         end
@@ -921,16 +925,24 @@ function DairyCoreManager:applyFeedContaminationPenalty(barnId, severity)
 end
 
 -- Refresh the which-field feed-disease flag (reveal gate: name only when the field's
--- diseaseDiscovered is true; otherwise which-field-only).
+-- diseaseDiscovered is true; otherwise which-field-only). DC-14 also derives a
+-- severity band from the raw ungated diseasePressure of the designated feed fields
+-- (the max across them), so the published feed signal can say how bad, not only
+-- that something is there.
 function DairyCoreManager:_refreshFeedDiseaseFlag(barn)
     barn.feedDiseaseFlag = false
     barn.feedDiseaseCropName = nil
+    barn.feedDiseaseSeverity = 0
     for fieldId in pairs(barn.feedSourceFields) do
         local info = self:_getFieldInfo(fieldId)
         if info ~= nil and info.activeDisease ~= nil then
             barn.feedDiseaseFlag = true
             if info.diseaseDiscovered == true then
                 barn.feedDiseaseCropName = info.activeDisease
+            end
+            local severity = info.diseasePressure or 0
+            if severity > barn.feedDiseaseSeverity then
+                barn.feedDiseaseSeverity = math.floor(severity)
             end
         end
     end
@@ -1008,7 +1020,11 @@ function DairyCoreManager:_settleContractDay(contractId, sctx)
         if c.settled then break end
         -- Estimate the day's delivery from the barn herd (gated placeholder rate).
         local herd = self:_barnHerdCount(barn)
-        local qualityFactor = self:_qualityTierForScore(barn.herdHealthScore).priceMod
+        -- DC-8 (F102, DC-10's written acceptance): the contract is paid on the
+        -- EFFECTIVE tier, which carries the spoilage penalty. Reading the earned
+        -- tier here let a barn with Condemned milk sell at Premium if the herd was
+        -- healthy, so spoilage never reached money.
+        local qualityFactor = self:getEffectiveQualityTier(barn).priceMod
         c.delivered = c.delivered + herd * PER_COW_LITRES_DAY * qualityFactor
         -- OM-211: accumulate the barn's mean organic-feed credit per accrual day.
         -- The pay line averages these over organicDays, so a contract that spends
@@ -1034,14 +1050,21 @@ function DairyCoreManager:_barnHerdCount(barn)
     return math.max(1, count)
 end
 
---- OM-211: mean organic credit of the barn's designated feed fields, 0..1.
---- Reads SoilFertilizer's shipped OrganicCertification authority
---- (g_SoilFertilityManager.organic, delegate-when-present). SF absent, no
---- designations, or no readable fields => 0, so the pay factor stays 1.0.
---- Certified return shape: { state, daysAccrued, transitionDaysNeeded, certified, breaches }.
+--- OM-211 / FP-1: mean organic credit of the barn's feed, 0..1.
+--- FP-1 (authority #5): when the farm's harvest provenance holds data, the credit
+--- comes from it (the amount-weighted organic fraction of the farm's harvested
+--- feed) instead of a live field read, because organic rides the feed, not the
+--- field. Otherwise it reads SoilFertilizer's shipped OrganicCertification
+--- (g_SoilFertilityManager.organic, delegate-when-present) over the barn's
+--- designated feed fields. SF absent, no provenance, no designations, or no
+--- readable fields => 0, so the pay factor stays 1.0.
 ---@param barn table
----@return number  mean organic credit 0..1 (0 when SF is absent or unreadable)
+---@return number  mean organic credit 0..1 (0 when no source is readable)
 function DairyCoreManager:_barnOrganicFraction(barn)
+    local fp = self.feedProvenance
+    if fp ~= nil and fp:hasData(barn.farmId) then
+        return fp:organicFeedFraction(barn.farmId)
+    end
     local mgr = g_SoilFertilityManager
     if mgr == nil or mgr.organic == nil or mgr.organic.getFieldOrganicState == nil then return 0 end
     local sum, n = 0, 0
@@ -1173,6 +1196,10 @@ function DairyCoreManager:onDayTick(ctx)
     end
     local currentDay = ctx.monotonicDay or 0
     self:updateAllBarns(currentDay)
+    -- FP-1: the provenance's contaminated fraction heals on the calendar, server-side.
+    if self.feedProvenance ~= nil then
+        self.feedProvenance:decayContaminated()
+    end
     self:_markBarnsDirty()
 end
 
@@ -1185,6 +1212,34 @@ function DairyCoreManager:_markBarnsDirty()
     if ns ~= nil and self:_isServer() and ns.markDirty ~= nil then
         ns:markDirty(DairyConstants.NETWORK.CHANNEL_BARNS)
     end
+end
+
+-- FP-1: subscribe to SoilFertilizer's harvest bus (server only). The payload shape
+-- is certified: { fieldId, fruitTypeIndex, liters (incremental), area,
+-- diseasePressure, activeDisease, activeDiseaseSeverity }. Subscribe is keyed by
+-- name, so re-registering replaces our own listener rather than stacking.
+function DairyCoreManager:_bindHarvestBus()
+    if self.harvestBound then return end
+    if not self:_isServer() then return end
+    local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
+    if bus == nil or bus.subscribe == nil then return end
+    local ok = pcall(function()
+        return bus:subscribe("DairyCore_FeedProvenance", function(payload)
+            if self.feedProvenance ~= nil then
+                self.feedProvenance:onHarvestCut(payload)
+            end
+        end)
+    end)
+    if ok then self.harvestBound = true end
+end
+
+function DairyCoreManager:_unbindHarvestBus()
+    if not self.harvestBound then return end
+    local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
+    if bus ~= nil and bus.unsubscribe ~= nil then
+        pcall(function() bus:unsubscribe("DairyCore_FeedProvenance") end)
+    end
+    self.harvestBound = false
 end
 
 function DairyCoreManager:_bindBedrock()
@@ -1200,6 +1255,11 @@ function DairyCoreManager:_bindBedrock()
         ledger:registerModule(DairyCoreManager.LEDGER_CONTRACTS, {
             serialize   = function() return self:_serializeContracts() end,
             deserialize = function(data) self:_deserializeContracts(data) end,
+        })
+        -- FP-1: the feed provenance ledger (authority #5).
+        ledger:registerModule(DairyConstants.FEED_PROVENANCE.LEDGER, {
+            serialize   = function() return self.feedProvenance:serialize() end,
+            deserialize = function(data) self.feedProvenance:deserialize(data) end,
         })
         bound = true
     end
@@ -1254,7 +1314,9 @@ function DairyCoreManager:_serializeBarns()
         local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
         out[tostring(barnId)] = {
             herdHealthScore = b.herdHealthScore, milkQualityTier = b.milkQualityTier,
-            spoilageStatus = b.spoilageStatus, lastCollectionDay = b.lastCollectionDay,
+            spoilageStatus = self:_normalizeSpoilageKey(b.spoilageStatus),
+            _spoilageTierDrop = b._spoilageTierDrop or 0,
+            lastCollectionDay = b.lastCollectionDay,
             feedSourceFields = fields, mycotoxinPenalty = b.mycotoxinPenalty,
             mycotoxinDaysLeft = b.mycotoxinDaysLeft, collectionInterval = b.collectionInterval,
             assignedWorkerId = b.assignedWorkerId, activeContractId = b.activeContractId,
@@ -1277,7 +1339,8 @@ function DairyCoreManager:_deserializeBarns(data)
         local b = self.barns[barnId] or { barnId = barnId, farmId = 0, feedSourceFields = {} }
         b.herdHealthScore = s.herdHealthScore or 60
         b.milkQualityTier = s.milkQualityTier or "standard"
-        b.spoilageStatus = s.spoilageStatus or "Fresh"
+        b.spoilageStatus = self:_normalizeSpoilageKey(s.spoilageStatus)
+        b._spoilageTierDrop = s._spoilageTierDrop or 0
         b.lastCollectionDay = s.lastCollectionDay
         b.mycotoxinPenalty = s.mycotoxinPenalty or 0
         b.mycotoxinDaysLeft = s.mycotoxinDaysLeft or 0
@@ -1334,14 +1397,61 @@ function DairyCoreManager:_deserializeContracts(data)
     end
 end
 
+-- DC-14: the barn's own milk store-full state, read from the husbandry methods the
+-- base game ships (getHusbandryFillLevel against getHusbandryCapacity). A STATE and
+-- not a litre count: the base game already prints litres in the placeable info box.
+function DairyCoreManager:_storeFull(b)
+    local p = b ~= nil and b._placeable
+    if p == nil or p.getHusbandryFillLevel == nil or p.getHusbandryCapacity == nil then
+        return false
+    end
+    local full = false
+    pcall(function()
+        local ftm = g_fillTypeManager
+        local ft = ftm ~= nil and ftm:getFillTypeIndexByName(DairyConstants.CONTRACTS.MILK_FILLTYPE) or 0
+        local level = p:getHusbandryFillLevel(ft)
+        local cap = p:getHusbandryCapacity(ft)
+        if type(level) == "number" and type(cap) == "number" and cap > 0 then
+            full = level >= cap
+        end
+    end)
+    return full
+end
+
+-- DC-14: the contract progress band, server-side. On track when the delivered
+-- fraction is within ON_TRACK_TOL of the term position, behind within BEHIND_TOL,
+-- otherwise the contract will not make its volume. No active contract reads NONE.
+function DairyCoreManager:_contractProgress(b)
+    local c = self.contracts[b.activeContractId]
+    if c == nil or c.settled then return DairyConstants.CONTRACT_PROGRESS.NONE end
+    local expected = 1 - (c.daysRemaining or 0) / math.max(1, c.termDays or 1)
+    local actual = (c.delivered or 0) / math.max(1, c.volumeTarget or 1)
+    local cp = DairyConstants.CONTRACT_PROGRESS
+    if actual >= expected - cp.ON_TRACK_TOL then return cp.ON_TRACK end
+    if actual >= expected - cp.BEHIND_TOL then return cp.BEHIND end
+    return cp.WILL_NOT_MAKE
+end
+
 -- Compact barn state for MP. Exactly BARN_STRIDE flat scalars per barn, in order:
---    1 barnId (string)             2 herd health score (int)
---    3 quality tier index (int)    4 spoilage tier drop (int)
---    5 mycotoxin penalty (int)     6 collection interval hours (int)
+--    1 barnId (string)                 2 herd health score (int)
+--    3 quality tier index (int)        4 spoilage tier drop (int)
+--    5 mycotoxin penalty (int)         6 collection interval hours (int)
 --    7 assignedWorkerId (string, NONE_STRING when unassigned)
 --    8 lastCollectionDay (int, NONE_NUMBER when never collected)
 --    9 nextCollectionDue (number, NONE_NUMBER when unscheduled)
 --   10 feedSourceFields (comma-joined ids, NONE_STRING when none)
+--   11 activeContractId (int, NONE_NUMBER when no contract)
+--   12 contractProgress (int: 0 none, 1 on track, 2 behind, 3 will not make)
+--   13 spoilageKey (string: dc_spoilage_* key)
+--   14 storeFull (int 0/1)
+--   15 farmId (int)
+--   16 feedDiseaseFlag (int 0/1)
+--   17 feedDiseaseSeverity (int 0-100)
+--   18 feedDiseaseCropName (string, NONE_STRING when gated or absent)
+--   19 rotaState (string)
+--   20 lastCollectionHours (number, NONE_NUMBER when never collected)
+--   21 lastCollectionSource (string, NONE_STRING when none)
+--   22 lastCollectionLitres (number, NONE_NUMBER when none)
 --
 -- Two rules the shape exists to enforce, both of which this record used to break.
 -- A nil is never appended: `arr[#arr+1] = nil` neither writes a slot nor advances
@@ -1357,6 +1467,8 @@ function DairyCoreManager:_onWriteBarnState()
         for fid in pairs(b.feedSourceFields or {}) do feedFields[#feedFields + 1] = tostring(fid) end
         table.sort(feedFields)  -- pairs order is arbitrary; keep the payload stable
 
+        local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
+        local lastLitres = b.lastCollectionLitres and b.lastCollectionLitres[milkFill]
         arr[#arr + 1] = tostring(barnId)
         arr[#arr + 1] = math.floor(b.herdHealthScore or 60)
         arr[#arr + 1] = self:_tierIndexByKey(b.milkQualityTier)
@@ -1367,6 +1479,19 @@ function DairyCoreManager:_onWriteBarnState()
         arr[#arr + 1] = b.lastCollectionDay ~= nil and math.floor(b.lastCollectionDay) or net.NONE_NUMBER
         arr[#arr + 1] = b.nextCollectionDue or net.NONE_NUMBER
         arr[#arr + 1] = table.concat(feedFields, ",")
+        -- DC-14 slots.
+        arr[#arr + 1] = b.activeContractId ~= nil and math.floor(b.activeContractId) or net.NONE_NUMBER
+        arr[#arr + 1] = self:_contractProgress(b)
+        arr[#arr + 1] = self:_normalizeSpoilageKey(b.spoilageStatus)
+        arr[#arr + 1] = self:_storeFull(b) and 1 or 0
+        arr[#arr + 1] = math.floor(b.farmId or 0)
+        arr[#arr + 1] = b.feedDiseaseFlag == true and 1 or 0
+        arr[#arr + 1] = math.floor(b.feedDiseaseSeverity or 0)
+        arr[#arr + 1] = b.feedDiseaseCropName ~= nil and tostring(b.feedDiseaseCropName) or net.NONE_STRING
+        arr[#arr + 1] = b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+        arr[#arr + 1] = b.lastCollectionHours or net.NONE_NUMBER
+        arr[#arr + 1] = b.lastCollectionSource ~= nil and tostring(b.lastCollectionSource) or net.NONE_STRING
+        arr[#arr + 1] = lastLitres ~= nil and lastLitres or net.NONE_NUMBER
     end
     return arr
 end
@@ -1390,6 +1515,10 @@ function DairyCoreManager:_onReadBarnState(arr)
         local barnId = tonumber(arr[i]) or arr[i]
         local b = self.barns[barnId]
         if b ~= nil then
+            -- DC-14: every field that arrives over the wire is the SERVER's book,
+            -- never a local default. The record marks the receipt so getBarnRows
+            -- can mark the row's fields `server` instead of `unknown`.
+            b._wireReceived      = true
             b.herdHealthScore    = arr[i+1]
             b.milkQualityTier    = (DairyConstants.QUALITY.TIERS[arr[i+2]] or DairyConstants.QUALITY.TIERS[2]).key
             b._spoilageTierDrop  = arr[i+3]
@@ -1401,6 +1530,24 @@ function DairyCoreManager:_onReadBarnState(arr)
             b.feedSourceFields   = {}
             for fid in string.gmatch(tostring(arr[i+9] or ""), "([^,]+)") do
                 b.feedSourceFields[tonumber(fid) or fid] = true
+            end
+            -- DC-14 slots.
+            b.activeContractId   = arr[i+10] ~= net.NONE_NUMBER and arr[i+10] or nil
+            b.contractProgress   = arr[i+11]
+            b.spoilageStatus     = self:_normalizeSpoilageKey(arr[i+12])
+            b.storeFull          = arr[i+13] == 1
+            if b.farmId == nil or b.farmId == 0 then
+                b.farmId = arr[i+14]
+            end
+            b.feedDiseaseFlag    = arr[i+15] == 1
+            b.feedDiseaseSeverity = arr[i+16]
+            b.feedDiseaseCropName = arr[i+17] ~= net.NONE_STRING and arr[i+17] or nil
+            b.rotaState          = arr[i+18] or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+            b.lastCollectionHours = arr[i+19] ~= net.NONE_NUMBER and arr[i+19] or nil
+            b.lastCollectionSource = arr[i+20] ~= net.NONE_STRING and arr[i+20] or nil
+            b.lastCollectionLitres = {}
+            if arr[i+21] ~= net.NONE_NUMBER then
+                b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] = arr[i+21]
             end
         end
     end
@@ -1443,7 +1590,7 @@ function DairyCoreManager:_saveOwnFile()
         xml:setString(key .. "#tier", b.milkQualityTier or "standard")
         xml:setInt(key .. "#myc", math.floor(b.mycotoxinPenalty or 0))
         xml:setInt(key .. "#mycDays", math.floor(b.mycotoxinDaysLeft or 0))
-        xml:setString(key .. "#spoilage", b.spoilageStatus or "Fresh")
+        xml:setString(key .. "#spoilage", self:_normalizeSpoilageKey(b.spoilageStatus))
         xml:setInt(key .. "#spoilageDrop", math.floor(b._spoilageTierDrop or 0))
         xml:setInt(key .. "#interval",
             math.floor(b.collectionInterval or self.settings.defaultCollectionInterval))
@@ -1487,6 +1634,23 @@ function DairyCoreManager:_saveOwnFile()
             xml:setFloat(key .. "#organicSum", c.organicSum or 0)
             xml:setInt(key .. "#organicDays", math.floor(c.organicDays or 0))
             j = j + 1
+        end
+    end
+
+    -- FP-1: the feed provenance ledger, flattened per (farm, fill type).
+    if self.feedProvenance ~= nil then
+        local k = 0
+        for farmId, byFt in pairs(self.feedProvenance.provenance) do
+            for ft, p in pairs(byFt) do
+                local key = string.format("dairyCore.provenance(%d)", k)
+                xml:setInt(key .. "#farmId", math.floor(farmId))
+                xml:setString(key .. "#ft", tostring(ft))
+                xml:setFloat(key .. "#c", p.contaminated or 0)
+                xml:setFloat(key .. "#o", p.organic or 0)
+                xml:setFloat(key .. "#s",
+                    (self.feedProvenance.accum[farmId] and self.feedProvenance.accum[farmId][ft]) or 0)
+                k = k + 1
+            end
         end
     end
 
@@ -1534,7 +1698,7 @@ function DairyCoreManager:_loadOwnFile()
             milkLitresAvailable = 0,
             mycotoxinPenalty    = xml:getInt(key .. "#myc", 0),
             mycotoxinDaysLeft   = xml:getInt(key .. "#mycDays", 0),
-            spoilageStatus      = xml:getString(key .. "#spoilage", "Fresh"),
+            spoilageStatus      = self:_normalizeSpoilageKey(xml:getString(key .. "#spoilage", "Fresh")),
             _spoilageTierDrop   = xml:getInt(key .. "#spoilageDrop", 0),
             collectionInterval  = xml:getInt(key .. "#interval", self.settings.defaultCollectionInterval),
             lastCollectionDay   = lastCol  >= 0 and lastCol or nil,
@@ -1593,6 +1757,18 @@ function DairyCoreManager:_loadOwnFile()
         end
     end)
 
+    -- FP-1: restore the feed provenance ledger from the own-file section.
+    if self.feedProvenance ~= nil then
+        xml:iterate("dairyCore.provenance", function(_, key)
+            local farmId = xml:getInt(key .. "#farmId", 0)
+            local ft = xml:getString(key .. "#ft", OWN_FILE_NONE_STRING)
+            if farmId > 0 and ft ~= OWN_FILE_NONE_STRING then
+                self.feedProvenance:blend(farmId, ft, xml:getFloat(key .. "#s", 0),
+                    xml:getFloat(key .. "#c", 0), xml:getFloat(key .. "#o", 0))
+            end
+        end)
+    end
+
     xml:delete()
 end
 
@@ -1601,33 +1777,77 @@ end
 -- =========================================================
 
 -- Read-only per-barn rows for Esc RF PDA / FarmTablet surfaces (autoDetect model).
--- spoilageClockStarted: true after markCollected OR after a missed window starts
--- the clock via _advanceSpoilageOneStage. Idle (nil lastCollectionDay) stays Fresh
--- without faking "collected today". assignedWorkerId still has no writer here.
+-- spoilageClockStarted: true after the first collection starts the clock. Idle
+-- (nil lastCollectionDay) stays Fresh without faking "collected today". spoilage
+-- carries the l10n KEY (dc_spoilage_*), never English display text (DC-14
+-- invariant 3); a surface translates it. assignedWorkerId still has no writer here.
+-- DC-14: the three-state marking for a published row. On the server every field is
+-- the server's own book (`server`). On a client a field is `server` only when it
+-- arrived over the wire; farmId is read from the local placeable and so is `local`;
+-- anything never received is `unknown` (a default a surface must not present as a
+-- fact). Shape is the contract's; the exact fields marked are the row's public ones.
+function DairyCoreManager:_rowTrust(b)
+    local t = {}
+    local wireFields = {
+        "herdHealth", "qualityTier", "spoilage", "spoilageClockStarted",
+        "feedDiseaseFlag", "feedDiseaseCropName", "feedDiseaseSeverity",
+        "mycotoxin", "contractId", "contractProgress", "rotaState", "rotaWorkerName",
+        "lastCollectionSource", "lastCollectionHours", "nextCollectionDue",
+        "lastCollectionLitres", "storeFull",
+    }
+    local server = self:_isServer()
+    local wire = b._wireReceived == true
+    for _, k in ipairs(wireFields) do
+        t[k] = server and DairyConstants.TRUST.SERVER
+            or (wire and DairyConstants.TRUST.SERVER or DairyConstants.TRUST.UNKNOWN)
+    end
+    t.barnId = DairyConstants.TRUST.SERVER
+    t.ritterMode = DairyConstants.TRUST.SERVER
+    t.farmId = server and DairyConstants.TRUST.SERVER or DairyConstants.TRUST.LOCAL
+    return t
+end
+
 function DairyCoreManager:getBarnRows()
     local rows = {}
     for barnId, b in pairs(self.barns) do
-        local eff = self:getEffectiveQualityTier(b)
-        local row = { barnId = barnId, ritterMode = b.ritterMode == true,
-            herdHealth = math.floor(b.herdHealthScore or 0), qualityTier = eff.name,
-            spoilage = b.spoilageStatus, spoilageClockStarted = b.lastCollectionDay ~= nil,
-            feedDiseaseFlag = b.feedDiseaseFlag == true,
-            feedDiseaseCropName = b.feedDiseaseCropName, mycotoxin = b.mycotoxinPenalty or 0,
-            contractId = b.activeContractId,
-            -- DC-9 contract: the rota state, the last collection's source and hour,
-            -- and the litres that left in it (DC-10 asks for the litres).
-            rotaState = b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED,
-            rotaWorkerName = b.assignedWorkerId,
-            lastCollectionSource = b.lastCollectionSource,
-            lastCollectionHours = b.lastCollectionHours,
-            nextCollectionDue = b.nextCollectionDue,
-            lastCollectionLitres = b.lastCollectionLitres
-                and b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] or nil }
-        if b.ritterMode then
-            local counts = RLBridge:getHerdCounts(barnId, b.farmId)
-            if counts ~= nil then row.counts = counts end
+        -- DC-14 3c: a row is a claim that the thing it describes still exists. A
+        -- barn proven dead (placeable unresolved across two discovery passes) is a
+        -- ghost; the contract does not publish it. The removal repair itself is
+        -- DC-1's frame; this is the contract refusing to lie while it runs.
+        if not b._probeDead then
+            local eff = self:getEffectiveQualityTier(b)
+            -- DC-14 invariant 3: the contract carries a KEY, never English display
+            -- text. qualityTier and spoilage are keys; a surface translates them.
+            local row = { barnId = barnId, ritterMode = b.ritterMode == true,
+                herdHealth = math.floor(b.herdHealthScore or 0), qualityTier = eff.key,
+                spoilage = self:_normalizeSpoilageKey(b.spoilageStatus),
+                spoilageClockStarted = b.lastCollectionDay ~= nil,
+                feedDiseaseFlag = b.feedDiseaseFlag == true,
+                feedDiseaseCropName = b.feedDiseaseCropName,
+                feedDiseaseSeverity = b.feedDiseaseSeverity or 0,
+                mycotoxin = b.mycotoxinPenalty or 0,
+                contractId = b.activeContractId,
+                contractProgress = b.contractProgress or DairyConstants.CONTRACT_PROGRESS.NONE,
+                storeFull = b.storeFull == true,
+                -- DC-14 3b.6: the farm the row belongs to, on the row.
+                farmId = b.farmId,
+                -- DC-9 contract: the rota state, the last collection's source and hour,
+                -- and the litres that left in it (DC-10 asks for the litres).
+                rotaState = b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED,
+                rotaWorkerName = b.assignedWorkerId,
+                lastCollectionSource = b.lastCollectionSource,
+                lastCollectionHours = b.lastCollectionHours,
+                nextCollectionDue = b.nextCollectionDue,
+                lastCollectionLitres = b.lastCollectionLitres
+                    and b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] or nil }
+            -- DC-14 3a: every field declares where it came from.
+            row.trust = self:_rowTrust(b)
+            if b.ritterMode then
+                local counts = RLBridge:getHerdCounts(barnId, b.farmId)
+                if counts ~= nil then row.counts = counts end
+            end
+            rows[#rows + 1] = row
         end
-        rows[#rows + 1] = row
     end
     return rows
 end
@@ -1695,4 +1915,9 @@ function DairyCoreManager:consoleCollectionTick()
     if not self:_isServer() then return "server only" end
     self:onCollectionHourTick({ monotonicDay = self:_monotonicDay() })
     return "collection hour tick run"
+end
+
+function DairyCoreManager:consoleFeedProvenance()
+    if self.feedProvenance == nil then return "feed provenance not initialised" end
+    return self.feedProvenance:consoleDump()
 end

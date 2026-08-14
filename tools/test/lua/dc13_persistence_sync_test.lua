@@ -21,7 +21,7 @@
 -- on a client is locally computed, AND no field reports another barn's value. The
 -- second half exists because the first does not catch a mis-aligned read.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
 
 local NET = DairyConstants.NETWORK
 local STRIDE = NET.BARN_STRIDE

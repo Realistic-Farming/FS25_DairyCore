@@ -24,18 +24,23 @@ DairyConstants.QUALITY = {
     },
 }
 
--- Time-based spoilage. Stages are keyed off in-game days since last collection.
--- tierDrop reduces the quality tier by N steps; "Condemned" forces Poor.
+-- Time-based spoilage. Stages are keyed off in-game days since last collection,
+-- evaluated continuously on the hour tick from fractional elapsed days (DC-8).
+-- `spoilageStatus` stores the stable l10n KEY (`key`), never English display text
+-- (DC-14 invariant 3). `name` is the English fallback for a surface with no
+-- translation, kept for reference. tierDrop reduces the quality tier by N steps;
+-- "Condemned" forces Poor. The magnitudes are as shipped; DC-8's brief keeps the
+-- thresholds and recommends a re-derivation pass only once the clock runs real.
 DairyConstants.SPOILAGE = {
     FRESH_DAYS       = 1.0,   -- < 1 day: Fresh
     AGEING_DAYS      = 2.0,   -- 1-2 days: Ageing (-1 tier)
     ATRISK_DAYS      = 3.0,   -- 2-3 days: At Risk (-2 tiers)
     -- 3+ days: Condemned (Poor regardless)
     STAGES = {
-        fresh     = { name = "Fresh",     tierDrop = 0 },
-        ageing    = { name = "Ageing",    tierDrop = 1 },
-        atrisk    = { name = "At Risk",   tierDrop = 2 },
-        condemned = { name = "Condemned", tierDrop = 99 },
+        fresh     = { name = "Fresh",     key = "fresh",     tierDrop = 0 },
+        ageing    = { name = "Ageing",    key = "ageing",    tierDrop = 1 },
+        atrisk    = { name = "At Risk",   key = "atrisk",    tierDrop = 2 },
+        condemned = { name = "Condemned", key = "condemned", tierDrop = 99 },
     },
     -- ProStaff L18 extends the Fresh window by this many in-game hours.
     L18_FRESH_BONUS_HOURS = 6,
@@ -161,6 +166,19 @@ DairyConstants.MYCOTOXIN = {
     MAX_DAYS = 5,
 }
 
+-- Feed Provenance (authority #5, FP-1). The per-farm per-fill-type fraction vector.
+-- Numbers ride the Option-Scaling Spine once it exists; these are the neutral
+-- values the design ratified. CONTAMINATED_DECAY_PER_DAY is the fraction of the
+-- remaining contamination healed each in-game day (Biological dial, neutral here).
+-- ORGANIC_THRESHOLD is the share of the consumed organic fraction above which a
+-- diet classifies organic (the ratified THRESHOLD default; strictness rides the
+-- Livestock dial, neutral here).
+DairyConstants.FEED_PROVENANCE = {
+    LEDGER = "DairyCore_FeedProvenance",
+    CONTAMINATED_DECAY_PER_DAY = 0.15,
+    ORGANIC_THRESHOLD = 0.8,
+}
+
 -- ProStaff ladder multipliers DairyCore reads (all neutral 1.0 when absent).
 DairyConstants.PROSTAFF = {
     L3_LOGISTICS = 1.05,
@@ -180,12 +198,42 @@ DairyConstants.PROSTAFF = {
 -- absent value travels as an explicit sentinel. Writer and reader must agree on
 -- BARN_STRIDE exactly: a record one slot short reads every later barn at the wrong
 -- offset, which puts one barn's numbers into another barn's typed fields.
+-- DC-14 grew the record from 10 to 22 slots: the read contract now carries the
+-- fields the published row must be able to state on a client without guessing
+-- (activeContractId, the contract progress band, the spoilage KEY, the store-full
+-- state, the owning farm, the feed signal with its severity, and the milk-round
+-- fields). Every new slot obeys the same scalar-and-sentinel rules.
 DairyConstants.NETWORK = {
     CHANNEL_BARNS = "DairyCore_BarnState",
     CHANNEL_COLLECTIONS = "DairyCore_Collections",
-    BARN_STRIDE = 10,
+    BARN_STRIDE = 22,
     NONE_STRING = "",   -- absent string slot (worker id, feed field list)
     NONE_NUMBER = -1,   -- absent numeric slot (last collection day, next due)
+}
+
+-- DC-14: a published row field declares WHICH machine produced it. The marking
+-- exists so a surface never presents a default as a fact: `server` is the server's
+-- own books (or the server's value as received over the wire), `local` is a read
+-- this machine made itself and may disagree about, `unknown` is no value at all.
+DairyConstants.TRUST = {
+    SERVER  = "server",
+    LOCAL   = "local",
+    UNKNOWN = "unknown",
+}
+
+-- DC-14: the contract progress band published on each row, computed server-side.
+-- 0 = no active contract. The three live bands answer the farmer's decision, not
+-- the whole record: is this contract on track, slipping, or not going to make it.
+DairyConstants.CONTRACT_PROGRESS = {
+    NONE          = 0,
+    ON_TRACK      = 1,
+    BEHIND        = 2,
+    WILL_NOT_MAKE = 3,
+    -- Tolerances for the band read: within ON_TRACK_TOL the contract is on track,
+    -- within BEHIND_TOL it is behind, beyond that it will not make it. Fractions of
+    -- delivered volume versus the term position. Tuning values, not a contract.
+    ON_TRACK_TOL  = 0.10,
+    BEHIND_TOL    = 0.30,
 }
 
 -- NetworkSync admin-gated actions (all default adminOnly = true; DC-9 and DC-21
