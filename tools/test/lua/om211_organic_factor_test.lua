@@ -2,7 +2,7 @@
 -- Verifies _barnOrganicFraction (the mapping table + nil rules), the per-accrual-day
 -- accumulation in _settleContractDay, the pay-line factor (never below 1.0, scaled by
 -- the mean organic credit, neutral 1.0 ship value), and the save round-trip.
---!load: src/Logger.lua, src/DairyConstants.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
 
 local PREMIUM_MAX = DairyConstants.CONTRACTS.ORGANIC_MILK_PREMIUM_MAX
 
