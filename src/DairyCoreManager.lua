@@ -36,6 +36,8 @@ function DairyCoreManager.new()
         contractsEnabled        = true,
         saleMargin              = DairyConstants.SALE.DEFAULT_MARGIN,
     }
+    -- FP-1: the feed provenance ledger (authority #5). DairyCore is the sole writer.
+    self.feedProvenance = FeedProvenance.new(self)
     return self
 end
 
@@ -62,6 +64,9 @@ function DairyCoreManager:onMissionLoaded()
     self:_subscribeClock()
     self:_bindActions()
     self:discoverBarns()
+    -- FP-1: subscribe to SF's soilHarvestBus on the server so grain harvests seed
+    -- the farm's feed provenance. Delegate-when-present and read-only.
+    self:_bindHarvestBus()
 
     -- Trailer-transfer completion (Ritter mode, Integration 29C): base-game event.
     pcall(function()
@@ -79,6 +84,7 @@ function DairyCoreManager:onMissionDelete()
     if self.animalMoveBound and g_messageCenter ~= nil then
         pcall(function() g_messageCenter:unsubscribeAll(self) end)
     end
+    self:_unbindHarvestBus()
     self.bedrockBound = false
     self.clockBound   = false
 end
@@ -1036,14 +1042,21 @@ function DairyCoreManager:_barnHerdCount(barn)
     return math.max(1, count)
 end
 
---- OM-211: mean organic credit of the barn's designated feed fields, 0..1.
---- Reads SoilFertilizer's shipped OrganicCertification authority
---- (g_SoilFertilityManager.organic, delegate-when-present). SF absent, no
---- designations, or no readable fields => 0, so the pay factor stays 1.0.
---- Certified return shape: { state, daysAccrued, transitionDaysNeeded, certified, breaches }.
+--- OM-211 / FP-1: mean organic credit of the barn's feed, 0..1.
+--- FP-1 (authority #5): when the farm's harvest provenance holds data, the credit
+--- comes from it (the amount-weighted organic fraction of the farm's harvested
+--- feed) instead of a live field read, because organic rides the feed, not the
+--- field. Otherwise it reads SoilFertilizer's shipped OrganicCertification
+--- (g_SoilFertilityManager.organic, delegate-when-present) over the barn's
+--- designated feed fields. SF absent, no provenance, no designations, or no
+--- readable fields => 0, so the pay factor stays 1.0.
 ---@param barn table
----@return number  mean organic credit 0..1 (0 when SF is absent or unreadable)
+---@return number  mean organic credit 0..1 (0 when no source is readable)
 function DairyCoreManager:_barnOrganicFraction(barn)
+    local fp = self.feedProvenance
+    if fp ~= nil and fp:hasData(barn.farmId) then
+        return fp:organicFeedFraction(barn.farmId)
+    end
     local mgr = g_SoilFertilityManager
     if mgr == nil or mgr.organic == nil or mgr.organic.getFieldOrganicState == nil then return 0 end
     local sum, n = 0, 0
@@ -1175,6 +1188,10 @@ function DairyCoreManager:onDayTick(ctx)
     end
     local currentDay = ctx.monotonicDay or 0
     self:updateAllBarns(currentDay)
+    -- FP-1: the provenance's contaminated fraction heals on the calendar, server-side.
+    if self.feedProvenance ~= nil then
+        self.feedProvenance:decayContaminated()
+    end
     self:_markBarnsDirty()
 end
 
@@ -1187,6 +1204,34 @@ function DairyCoreManager:_markBarnsDirty()
     if ns ~= nil and self:_isServer() and ns.markDirty ~= nil then
         ns:markDirty(DairyConstants.NETWORK.CHANNEL_BARNS)
     end
+end
+
+-- FP-1: subscribe to SoilFertilizer's harvest bus (server only). The payload shape
+-- is certified: { fieldId, fruitTypeIndex, liters (incremental), area,
+-- diseasePressure, activeDisease, activeDiseaseSeverity }. Subscribe is keyed by
+-- name, so re-registering replaces our own listener rather than stacking.
+function DairyCoreManager:_bindHarvestBus()
+    if self.harvestBound then return end
+    if not self:_isServer() then return end
+    local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
+    if bus == nil or bus.subscribe == nil then return end
+    local ok = pcall(function()
+        return bus:subscribe("DairyCore_FeedProvenance", function(payload)
+            if self.feedProvenance ~= nil then
+                self.feedProvenance:onHarvestCut(payload)
+            end
+        end)
+    end)
+    if ok then self.harvestBound = true end
+end
+
+function DairyCoreManager:_unbindHarvestBus()
+    if not self.harvestBound then return end
+    local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
+    if bus ~= nil and bus.unsubscribe ~= nil then
+        pcall(function() bus:unsubscribe("DairyCore_FeedProvenance") end)
+    end
+    self.harvestBound = false
 end
 
 function DairyCoreManager:_bindBedrock()
@@ -1202,6 +1247,11 @@ function DairyCoreManager:_bindBedrock()
         ledger:registerModule(DairyCoreManager.LEDGER_CONTRACTS, {
             serialize   = function() return self:_serializeContracts() end,
             deserialize = function(data) self:_deserializeContracts(data) end,
+        })
+        -- FP-1: the feed provenance ledger (authority #5).
+        ledger:registerModule(DairyConstants.FEED_PROVENANCE.LEDGER, {
+            serialize   = function() return self.feedProvenance:serialize() end,
+            deserialize = function(data) self.feedProvenance:deserialize(data) end,
         })
         bound = true
     end
@@ -1495,6 +1545,23 @@ function DairyCoreManager:_saveOwnFile()
         end
     end
 
+    -- FP-1: the feed provenance ledger, flattened per (farm, fill type).
+    if self.feedProvenance ~= nil then
+        local k = 0
+        for farmId, byFt in pairs(self.feedProvenance.provenance) do
+            for ft, p in pairs(byFt) do
+                local key = string.format("dairyCore.provenance(%d)", k)
+                xml:setInt(key .. "#farmId", math.floor(farmId))
+                xml:setString(key .. "#ft", tostring(ft))
+                xml:setFloat(key .. "#c", p.contaminated or 0)
+                xml:setFloat(key .. "#o", p.organic or 0)
+                xml:setFloat(key .. "#s",
+                    (self.feedProvenance.accum[farmId] and self.feedProvenance.accum[farmId][ft]) or 0)
+                k = k + 1
+            end
+        end
+    end
+
     xml:save()
     xml:delete()
 end
@@ -1597,6 +1664,18 @@ function DairyCoreManager:_loadOwnFile()
             self.nextContractId = numericId + 1
         end
     end)
+
+    -- FP-1: restore the feed provenance ledger from the own-file section.
+    if self.feedProvenance ~= nil then
+        xml:iterate("dairyCore.provenance", function(_, key)
+            local farmId = xml:getInt(key .. "#farmId", 0)
+            local ft = xml:getString(key .. "#ft", OWN_FILE_NONE_STRING)
+            if farmId > 0 and ft ~= OWN_FILE_NONE_STRING then
+                self.feedProvenance:blend(farmId, ft, xml:getFloat(key .. "#s", 0),
+                    xml:getFloat(key .. "#c", 0), xml:getFloat(key .. "#o", 0))
+            end
+        end)
+    end
 
     xml:delete()
 end
@@ -1701,4 +1780,9 @@ function DairyCoreManager:consoleCollectionTick()
     if not self:_isServer() then return "server only" end
     self:onCollectionHourTick({ monotonicDay = self:_monotonicDay() })
     return "collection hour tick run"
+end
+
+function DairyCoreManager:consoleFeedProvenance()
+    if self.feedProvenance == nil then return "feed provenance not initialised" end
+    return self.feedProvenance:consoleDump()
 end

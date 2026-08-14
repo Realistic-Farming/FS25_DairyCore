@@ -16,6 +16,7 @@ local modDirectory = g_currentModDirectory
 source(modDirectory .. "src/Logger.lua")
 source(modDirectory .. "src/DairyConstants.lua")
 source(modDirectory .. "src/RLBridge.lua")
+source(modDirectory .. "src/FeedProvenance.lua")
 source(modDirectory .. "src/DairyCoreManager.lua")
 
 -- Esc RF PDA framework joiner (NO-HOST).
@@ -81,6 +82,8 @@ if addConsoleCommand ~= nil then
         "consoleSellMilk", dairyCore)
     addConsoleCommand("dcCollectionTick", "DC-9: force one collection hour tick (testing)",
         "consoleCollectionTick", dairyCore)
+    addConsoleCommand("dcFeedProvenance", "FP-1: show the farm feed provenance ledger (server only)",
+        "consoleFeedProvenance", dairyCore)
 end
 
 
