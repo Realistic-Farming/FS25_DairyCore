@@ -311,6 +311,32 @@ function DairyCoreManager:_milkSpotPrice()
     return price or 1.0
 end
 
+-- MarketDynamics crash-proof BASE price snapshot for milk; base-game price when
+-- absent. entry.base is the vanilla base price MarketDynamics snapshots at init and
+-- refreshes daily from the seasonal curve, so a market crash (which only moves the
+-- volatility factor on top of base, clamped to [0.50, 2.00]) cannot drag it down.
+-- DC-16 anchors the settlement floor here, read as a pull at pay time, never a
+-- subscription and never a live spot read.
+function DairyCoreManager:_milkBasePrice()
+    local base = nil
+    pcall(function()
+        local md = g_currentMission ~= nil and g_currentMission.MarketDynamics
+        local ftm = g_fillTypeManager
+        local ftIndex = ftm ~= nil and ftm:getFillTypeIndexByName(DairyConstants.CONTRACTS.MILK_FILLTYPE) or nil
+        if ftIndex ~= nil then
+            if md ~= nil and md.marketEngine ~= nil and md.marketEngine.prices ~= nil then
+                local entry = md.marketEngine.prices[ftIndex]
+                if entry ~= nil and entry.base ~= nil then base = entry.base end
+            end
+            if base == nil then
+                local desc = ftm:getFillTypeByIndex(ftIndex)
+                base = desc ~= nil and desc.pricePerLiter or nil
+            end
+        end
+    end)
+    return base or 1.0
+end
+
 -- RandomWorldEvents: the new top-level getActiveEvent() -> {name,intensity,category,remainingMs}.
 function DairyCoreManager:_rweActiveEvent()
     local ev = nil
@@ -1089,15 +1115,19 @@ function DairyCoreManager:_payContract(c)
     local spot = self:_milkSpotPrice()
     local premium = c.premiumRate or 1.0
 
-    -- Sovereign floor (ProStaff L20): floor the effective per-litre at 85% of base price.
-    if self:_proStaffLevel() >= 20 then
-        local floor = spot * DairyConstants.CONTRACTS.TYPES.sovereign_floor.floorFraction
-        if spot * premium < floor then premium = floor / spot end
-    end
+    -- Sovereign floor (DC-16 fold): floor the effective per-litre at floorFraction
+    -- of the crash-proof BASE price (entry.base), read as a pull at pay time, never
+    -- the live spot. max() composes two independently arrived-at numbers, the
+    -- contract's own rate arithmetic and a base anchor, so a market crash cannot
+    -- drag the floor down with it (the deleted block floored the spot it divided
+    -- by, which crashed exactly when the floor was needed). No ProStaff read: the
+    -- L20 gate waits on the family barn.farmId plumbing (DC-6/DC-7).
+    local effectivePrice = math.max(spot * premium,
+        self:_milkBasePrice() * DairyConstants.CONTRACTS.TYPES.sovereign_floor.floorFraction)
 
     -- DairyCore's own livestock-boom milk premium (keyed on the MD event id).
     if self:_mdEventActive("livestock_boom") then
-        premium = premium * DairyConstants.CONTRACTS.LIVESTOCK_BOOM_MILK_BONUS
+        effectivePrice = effectivePrice * DairyConstants.CONTRACTS.LIVESTOCK_BOOM_MILK_BONUS
     end
 
     -- OM-211: organic-feed milk premium, AFTER the sovereign floor, beside the
@@ -1108,11 +1138,11 @@ function DairyCoreManager:_payContract(c)
     if (c.organicDays and c.organicDays > 0) and
        (c.organicSum and c.organicSum > 0) then
         local organicFactor = c.organicSum / c.organicDays
-        premium = premium * (1 + organicFactor * (DairyConstants.CONTRACTS.ORGANIC_MILK_PREMIUM_MAX - 1))
+        effectivePrice = effectivePrice * (1 + organicFactor * (DairyConstants.CONTRACTS.ORGANIC_MILK_PREMIUM_MAX - 1))
     end
 
     local litres = math.min(c.delivered, c.volumeTarget)
-    local income = math.floor(litres * spot * premium)
+    local income = math.floor(litres * effectivePrice)
     if income <= 0 then return end
 
     pcall(function()
