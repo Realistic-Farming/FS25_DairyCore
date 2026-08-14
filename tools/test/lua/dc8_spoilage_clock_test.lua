@@ -6,7 +6,7 @@
 -- continuously to Condemned. The tier drop reaches MONEY (F102) because the
 -- contract settlement reads the effective tier. The band travels as an l10n KEY.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
 
 local MILK = DairyConstants.CONTRACTS.MILK_FILLTYPE
 local STAGES = DairyConstants.SPOILAGE.STAGES

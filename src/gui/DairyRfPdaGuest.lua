@@ -295,8 +295,10 @@ function DairyRfPdaGuest.onShow(container, lightOnly)
             -- George HOLD getName=rename-only: soft-try human fields, else truncate barnId.
             setText(a, barnLabel(r))
             setText(b, tostring(r.herdHealth or 0))
-            -- Live qualityTier is already effective / post-spoilage sale tier.
-            setText(c, tostring(r.qualityTier or "--"))
+            -- Live qualityTier is already effective / post-spoilage sale tier. The
+            -- row carries the KEY (dc_tier_*); translate it here (DC-14 invariant 3).
+            local tierKey = tostring(r.qualityTier or "")
+            setText(c, tr("dc_tier_" .. tierKey, tierKey ~= "" and tierKey or "--"))
             -- Honesty: Fresh with clock not started means spoilage path is inert, not a live timer.
             -- The row carries the spoilage KEY (DC-8/DC-14 invariant 3); translate it here.
             local spoilKey = tostring(r.spoilage or "")
