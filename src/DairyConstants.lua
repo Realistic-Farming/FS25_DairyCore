@@ -24,18 +24,23 @@ DairyConstants.QUALITY = {
     },
 }
 
--- Time-based spoilage. Stages are keyed off in-game days since last collection.
--- tierDrop reduces the quality tier by N steps; "Condemned" forces Poor.
+-- Time-based spoilage. Stages are keyed off in-game days since last collection,
+-- evaluated continuously on the hour tick from fractional elapsed days (DC-8).
+-- `spoilageStatus` stores the stable l10n KEY (`key`), never English display text
+-- (DC-14 invariant 3). `name` is the English fallback for a surface with no
+-- translation, kept for reference. tierDrop reduces the quality tier by N steps;
+-- "Condemned" forces Poor. The magnitudes are as shipped; DC-8's brief keeps the
+-- thresholds and recommends a re-derivation pass only once the clock runs real.
 DairyConstants.SPOILAGE = {
     FRESH_DAYS       = 1.0,   -- < 1 day: Fresh
     AGEING_DAYS      = 2.0,   -- 1-2 days: Ageing (-1 tier)
     ATRISK_DAYS      = 3.0,   -- 2-3 days: At Risk (-2 tiers)
     -- 3+ days: Condemned (Poor regardless)
     STAGES = {
-        fresh     = { name = "Fresh",     tierDrop = 0 },
-        ageing    = { name = "Ageing",    tierDrop = 1 },
-        atrisk    = { name = "At Risk",   tierDrop = 2 },
-        condemned = { name = "Condemned", tierDrop = 99 },
+        fresh     = { name = "Fresh",     key = "fresh",     tierDrop = 0 },
+        ageing    = { name = "Ageing",    key = "ageing",    tierDrop = 1 },
+        atrisk    = { name = "At Risk",   key = "atrisk",    tierDrop = 2 },
+        condemned = { name = "Condemned", key = "condemned", tierDrop = 99 },
     },
     -- ProStaff L18 extends the Fresh window by this many in-game hours.
     L18_FRESH_BONUS_HOURS = 6,
