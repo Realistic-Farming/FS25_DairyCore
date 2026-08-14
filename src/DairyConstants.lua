@@ -166,6 +166,19 @@ DairyConstants.MYCOTOXIN = {
     MAX_DAYS = 5,
 }
 
+-- Feed Provenance (authority #5, FP-1). The per-farm per-fill-type fraction vector.
+-- Numbers ride the Option-Scaling Spine once it exists; these are the neutral
+-- values the design ratified. CONTAMINATED_DECAY_PER_DAY is the fraction of the
+-- remaining contamination healed each in-game day (Biological dial, neutral here).
+-- ORGANIC_THRESHOLD is the share of the consumed organic fraction above which a
+-- diet classifies organic (the ratified THRESHOLD default; strictness rides the
+-- Livestock dial, neutral here).
+DairyConstants.FEED_PROVENANCE = {
+    LEDGER = "DairyCore_FeedProvenance",
+    CONTAMINATED_DECAY_PER_DAY = 0.15,
+    ORGANIC_THRESHOLD = 0.8,
+}
+
 -- ProStaff ladder multipliers DairyCore reads (all neutral 1.0 when absent).
 DairyConstants.PROSTAFF = {
     L3_LOGISTICS = 1.05,

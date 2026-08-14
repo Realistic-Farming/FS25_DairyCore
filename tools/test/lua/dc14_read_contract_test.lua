@@ -5,7 +5,7 @@
 -- the fields a client would otherwise guess at, the contract publishes keys not
 -- English display text, and a row is a claim the thing it describes still exists.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
 
 local MILK = DairyConstants.CONTRACTS.MILK_FILLTYPE
 local TRUST = DairyConstants.TRUST
