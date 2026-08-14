@@ -261,6 +261,9 @@ function DairyCoreManager:_getOrCreateBarn(barnId, farmId, placeable)
             _suppressDetection = false,  -- transient: an active rota/office sale is mid-flight
             activeContractId = nil,
             ritterMode = RLBridge.active,
+            -- DC-17: sub-state of ritterMode. True only when this barn's score
+            -- actually included the deeper genetics-weighted read this pass.
+            herdHealthScore_RitterSource = false,
         }
         self.barns[barnId] = barn
     end
@@ -468,10 +471,42 @@ function DairyCoreManager:_updateBarnHealth(barn)
     if RLBridge.active then
         score = RLBridge:computeHerdScore(barn.barnId, barn.farmId)
         barn.ritterMode = true
+        -- DC-17 3.7.5: RL is present this pass. Clear the save-scoped announce
+        -- latch so a FUTURE uninstall is announced anew (acceptance item 5).
+        barn._fallbackAnnounced = false
     end
     if score == nil then
         score = self:_herdScoreStandard(barn)
         barn.ritterMode = false
+    end
+
+    -- DC-17 3.7.5: the uninstall fallback. Decided on the barn's STORED flag,
+    -- before this pass overwrites it: the barn was scored with the deeper
+    -- genetics last load and RL is gone now. Fall back to the Standard resolution
+    -- above and publish a one-time message (save-scoped latch, one per uninstall
+    -- event, never twice per barn).
+    if not RLBridge.active and barn.herdHealthScore_RitterSource == true and barn._fallbackAnnounced ~= true then
+        barn._fallbackAnnounced = true
+        DCLogger.warning("DC-17: RealisticLivestock unavailable - barn %s reverted to Standard mode",
+            tostring(barn.barnId))
+    end
+
+    -- DC-17: the deeper genetics weighting, a strict sub-state of Ritter mode. When
+    -- the atomic per-animal read succeeded for at least one animal, add the
+    -- weighted herd-average productivity gene (RLBridge owns the read, the flag
+    -- lives here) and mark the source. Otherwise the score stands as DC-12 resolved
+    -- it and the flag is false: Ritter present but no usable genetics, or Ritter
+    -- absent. Never restates or overwrites ritterMode.
+    if barn.ritterMode then
+        local contribution = RLBridge:computeGeneticsContribution(barn.barnId, barn.farmId)
+        if contribution ~= nil and contribution.contributing > 0 then
+            score = score + contribution.term
+            barn.herdHealthScore_RitterSource = true
+        else
+            barn.herdHealthScore_RitterSource = false
+        end
+    else
+        barn.herdHealthScore_RitterSource = false
     end
 
     -- ProStaff global effectiveness (L20 supersedes L19; do not stack).
@@ -1344,6 +1379,7 @@ function DairyCoreManager:_serializeBarns()
         local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
         out[tostring(barnId)] = {
             herdHealthScore = b.herdHealthScore, milkQualityTier = b.milkQualityTier,
+            herdHealthScore_RitterSource = b.herdHealthScore_RitterSource == true,
             spoilageStatus = self:_normalizeSpoilageKey(b.spoilageStatus),
             _spoilageTierDrop = b._spoilageTierDrop or 0,
             lastCollectionDay = b.lastCollectionDay,
@@ -1369,6 +1405,7 @@ function DairyCoreManager:_deserializeBarns(data)
         local b = self.barns[barnId] or { barnId = barnId, farmId = 0, feedSourceFields = {} }
         b.herdHealthScore = s.herdHealthScore or 60
         b.milkQualityTier = s.milkQualityTier or "standard"
+        b.herdHealthScore_RitterSource = s.herdHealthScore_RitterSource == true
         b.spoilageStatus = self:_normalizeSpoilageKey(s.spoilageStatus)
         b._spoilageTierDrop = s._spoilageTierDrop or 0
         b.lastCollectionDay = s.lastCollectionDay
@@ -1482,6 +1519,7 @@ end
 --   20 lastCollectionHours (number, NONE_NUMBER when never collected)
 --   21 lastCollectionSource (string, NONE_STRING when none)
 --   22 lastCollectionLitres (number, NONE_NUMBER when none)
+--   23 herdHealthScore_RitterSource (int 0/1; DC-17 sub-state flag)
 --
 -- Two rules the shape exists to enforce, both of which this record used to break.
 -- A nil is never appended: `arr[#arr+1] = nil` neither writes a slot nor advances
@@ -1522,6 +1560,7 @@ function DairyCoreManager:_onWriteBarnState()
         arr[#arr + 1] = b.lastCollectionHours or net.NONE_NUMBER
         arr[#arr + 1] = b.lastCollectionSource ~= nil and tostring(b.lastCollectionSource) or net.NONE_STRING
         arr[#arr + 1] = lastLitres ~= nil and lastLitres or net.NONE_NUMBER
+        arr[#arr + 1] = b.herdHealthScore_RitterSource == true and 1 or 0
     end
     return arr
 end
@@ -1579,6 +1618,7 @@ function DairyCoreManager:_onReadBarnState(arr)
             if arr[i+21] ~= net.NONE_NUMBER then
                 b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] = arr[i+21]
             end
+            b.herdHealthScore_RitterSource = arr[i+22] == 1
         end
     end
 end
@@ -1618,6 +1658,7 @@ function DairyCoreManager:_saveOwnFile()
         xml:setString(key .. "#id", tostring(barnId))
         xml:setFloat(key .. "#score", b.herdHealthScore or 60)
         xml:setString(key .. "#tier", b.milkQualityTier or "standard")
+        xml:setInt(key .. "#rSrc", b.herdHealthScore_RitterSource == true and 1 or 0)
         xml:setInt(key .. "#myc", math.floor(b.mycotoxinPenalty or 0))
         xml:setInt(key .. "#mycDays", math.floor(b.mycotoxinDaysLeft or 0))
         xml:setString(key .. "#spoilage", self:_normalizeSpoilageKey(b.spoilageStatus))
@@ -1725,6 +1766,7 @@ function DairyCoreManager:_loadOwnFile()
             farmId              = 0,   -- resolved by discoverBarns on this machine
             herdHealthScore     = xml:getFloat(key .. "#score", 60),
             milkQualityTier     = xml:getString(key .. "#tier", "standard"),
+            herdHealthScore_RitterSource = xml:getInt(key .. "#rSrc", 0) == 1,
             milkLitresAvailable = 0,
             mycotoxinPenalty    = xml:getInt(key .. "#myc", 0),
             mycotoxinDaysLeft   = xml:getInt(key .. "#mycDays", 0),
@@ -1823,7 +1865,7 @@ function DairyCoreManager:_rowTrust(b)
         "feedDiseaseFlag", "feedDiseaseCropName", "feedDiseaseSeverity",
         "mycotoxin", "contractId", "contractProgress", "rotaState", "rotaWorkerName",
         "lastCollectionSource", "lastCollectionHours", "nextCollectionDue",
-        "lastCollectionLitres", "storeFull",
+        "lastCollectionLitres", "storeFull", "ritterSource",
     }
     local server = self:_isServer()
     local wire = b._wireReceived == true
@@ -1849,6 +1891,9 @@ function DairyCoreManager:getBarnRows()
             -- DC-14 invariant 3: the contract carries a KEY, never English display
             -- text. qualityTier and spoilage are keys; a surface translates them.
             local row = { barnId = barnId, ritterMode = b.ritterMode == true,
+                -- DC-17: the deeper-genetics sub-state, for a surface that wants to
+                -- say which model computed the current score.
+                ritterSource = b.herdHealthScore_RitterSource == true,
                 herdHealth = math.floor(b.herdHealthScore or 0), qualityTier = eff.key,
                 spoilage = self:_normalizeSpoilageKey(b.spoilageStatus),
                 spoilageClockStarted = b.lastCollectionDay ~= nil,
@@ -1892,9 +1937,10 @@ function DairyCoreManager:consoleCommandStatus()
     for barnId, b in pairs(self.barns) do
         local eff = self:getEffectiveQualityTier(b)
         local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
-        table.insert(lines, string.format("  barn %s: health=%d tier=%s spoilage=%s myc=%d contract=%s",
+        table.insert(lines, string.format("  barn %s: health=%d tier=%s spoilage=%s myc=%d contract=%s ritterSrc=%s",
             tostring(barnId), math.floor(b.herdHealthScore or 0), eff.name, b.spoilageStatus,
-            b.mycotoxinPenalty or 0, tostring(b.activeContractId)))
+            b.mycotoxinPenalty or 0, tostring(b.activeContractId),
+            tostring(b.herdHealthScore_RitterSource == true)))
         -- DC-9: the milk-round view, so a tanker drain or a rota run is actually
         -- observable in game rather than only in the save.
         table.insert(lines, string.format("    rota=%s worker=%s",

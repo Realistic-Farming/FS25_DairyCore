@@ -1,4 +1,4 @@
-# TODO: FS25_DairyCore
+﻿# TODO: FS25_DairyCore
 
 > Ecosystem role: **Dairy and Husbandry** - Part of the Realistic Farming connected suite
 > Status: FILLED from the ecosystem audit/baseline, kept current.
@@ -43,3 +43,38 @@
 ## Blocked / waiting on
 - [!] ProStaff-gated floor eligibility (waits on: the family `barn.farmId` plumbing
   from DC-6/DC-7, named in DC-11's SDS). Until then settlement uses no ProStaff read.
+
+## 2026-08-14 (Fred) - open after the DC-17 build
+
+- [ ] **In-game acceptance for DC-17 (a person, with the game running).** The bench
+      cannot see these: a mixed-genetics herd shows the AVERAGE in the grade, a
+      season of breeding climbs the tier gradually, and the uninstall/reinstall
+      cycle announces once and re-announces on the second uninstall (acceptance
+      items 1, 2, 4, 5 of the DC-17 brief).
+- [ ] **In-game pass owed on DC-8, DC-14, FP-1** (built 2026-08-14, none observed
+      in a running game yet).
+- [ ] **DC-12's bounded-retry defect still lands.** `RLBridge.safeRead` still
+      latches `self.active = false` on the first pcall failure. DC-17 assumed the
+      fix; the bridge should retry with a counter and announce once, not latch.
+      Also the mode-change event (DC-12 section 3.2) is still log-only.
+- [ ] **The DC-11 feed-field designation surface ships callerless** (designed
+      state); when FP-1 or a contamination reader wires to it, re-verify the
+      placement ruling: the feed-field bonuses currently sit inside the Standard
+      score path (`_herdScoreStandard`), so a Ritter farm misses them. Latent
+      today, zero callers; fix the placement before the first consumer wires.
+- [ ] **`undesignateFeedField` does not mark the barn dirty** while
+      `designateFeedField` does, five lines apart. Two-minute fix when someone is
+      in that file.
+- [ ] **The mod README still carries committed merge-conflict markers** (the
+      DC-14/FP-1 PR wave committed them to `development`). Needs its own fix
+      branch; not part of any member build.
+- [ ] **The farm-business modifier layer for Ritter mode** (mycotoxin, feed-field
+      NPK/OM/weed/legume, ProStaff L12 currently only apply in Standard mode).
+      This is Defect C of DC-12's fold; DC-17's flag gives a surface the truth to
+      show while it is missing.
+- [ ] **F12 contract economics:** the per-cow daily yield placeholder (22 L/day)
+      is about 15 percent of the SDK's 150 L/day curve; DC-10's volume targets are
+      calibrated to the placeholder. Gated on Tyson.
+- [ ] **FarmTablet Dairy tab:** the DC-14 read contract currently has no consuming
+      app on a client.
+

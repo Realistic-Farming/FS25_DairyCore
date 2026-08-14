@@ -57,6 +57,16 @@ DairyConstants.HERD = {
     PEST_PRESSURE_LIMIT = 50,  -- pest pressure above this: herd health event risk
     WEED_QUALITY_PEN  = 10,
     LEGUME_QUALITY_FLOOR_BONUS = 5,  -- legume rotation on a feed field: +5 quality floor
+    -- DC-17: the deeper genetics-weighted term (Ritter mode). DC-12's blended
+    -- per-animal figure weights genetics.productivity at 0.4 of a 0..1 base; this
+    -- member ADDS a term of RITTER_GENETICS_WEIGHT times the herd-average
+    -- normalized productivity gene on top of DC-12's base score, so a season of
+    -- deliberate breeding shows up in the barn's milk grade. The magnitude is an
+    -- Engineering tuning value, NOT a measured constant: the default makes a
+    -- genuinely better herd clearly visible (up to ~22 score points for an elite
+    -- herd, a few points per breeding season for a typical one) without saturating
+    -- the tier ladder. Tune against real RL data at Engineering, not here.
+    RITTER_GENETICS_WEIGHT = 25,
     SCORE_MIN = 0,
     SCORE_MAX = 100,
 }
@@ -220,11 +230,14 @@ DairyConstants.PROSTAFF = {
 -- fields the published row must be able to state on a client without guessing
 -- (activeContractId, the contract progress band, the spoilage KEY, the store-full
 -- state, the owning farm, the feed signal with its severity, and the milk-round
--- fields). Every new slot obeys the same scalar-and-sentinel rules.
+-- fields). DC-17 grew it to 23: slot 23 is herdHealthScore_RitterSource, the
+-- sub-state flag that tells a surface whether a Ritter-mode barn's score included
+-- the deeper genetics-weighted read. Every new slot obeys the same
+-- scalar-and-sentinel rules.
 DairyConstants.NETWORK = {
     CHANNEL_BARNS = "DairyCore_BarnState",
     CHANNEL_COLLECTIONS = "DairyCore_Collections",
-    BARN_STRIDE = 22,
+    BARN_STRIDE = 23,
     NONE_STRING = "",   -- absent string slot (worker id, feed field list)
     NONE_NUMBER = -1,   -- absent numeric slot (last collection day, next due)
 }
