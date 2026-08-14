@@ -10,7 +10,7 @@
   - *Standard*: the base-game `getGlobalProductionFactor()` plus SoilFertilizer feed-field modifiers (organic matter, N/P/K balance, weed/pest pressure, legume rotation).
   - *Ritter*: a per-animal genetics + health composite via `RLBridge` when Realistic Livestock is present. Any read failure trips cleanly back to Standard (F13: DairyCore never writes into Ritter).
 - **Milk quality tiers** (Premium / Standard / Reduced / Poor) from the herd health score.
-- **Time-based spoilage** (Fresh / Ageing / At Risk / Condemned) on the Time Guard day tick; a missed collection window advances it one stage.
+- **Time-based spoilage** (Fresh / Ageing / At Risk / Condemned), evaluated on the Time Guard hour tick from fractional elapsed days since the last collection (DC-8). A barn on a precise 24h cadence stays Fresh the whole round; a barn nobody collects ages continuously to Condemned. The band crosses as an l10n key, and the contract settlement pays the effective (post-spoilage) tier.
 - **The milk round (DC-9)**: the mod now NOTICES milk leaving a barn whichever way it went. A tanker or an AI haul is detected from the raw storage level (ungated, F108-safe) and credited as `self`/`hauled`; a standing rota (a WorkerCosts worker assigned per barn, admin-gated) and the office sale actively remove, price and credit milk with their own sources (`rota`/`office`). The freshness clock now actually ticks.
 - **The office sale (DC-21)**: sell milk from an admin action without a truck. Reads the level, prices it through the spot market, applies a tunable administrative margin (SettingsHub), removes the milk by the standard removal path and credits the money.
 - **Administrative collection scheduling** with a WorkerCosts skill read (no AI pathing).
