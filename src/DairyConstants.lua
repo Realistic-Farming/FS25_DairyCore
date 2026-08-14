@@ -185,12 +185,42 @@ DairyConstants.PROSTAFF = {
 -- absent value travels as an explicit sentinel. Writer and reader must agree on
 -- BARN_STRIDE exactly: a record one slot short reads every later barn at the wrong
 -- offset, which puts one barn's numbers into another barn's typed fields.
+-- DC-14 grew the record from 10 to 22 slots: the read contract now carries the
+-- fields the published row must be able to state on a client without guessing
+-- (activeContractId, the contract progress band, the spoilage KEY, the store-full
+-- state, the owning farm, the feed signal with its severity, and the milk-round
+-- fields). Every new slot obeys the same scalar-and-sentinel rules.
 DairyConstants.NETWORK = {
     CHANNEL_BARNS = "DairyCore_BarnState",
     CHANNEL_COLLECTIONS = "DairyCore_Collections",
-    BARN_STRIDE = 10,
+    BARN_STRIDE = 22,
     NONE_STRING = "",   -- absent string slot (worker id, feed field list)
     NONE_NUMBER = -1,   -- absent numeric slot (last collection day, next due)
+}
+
+-- DC-14: a published row field declares WHICH machine produced it. The marking
+-- exists so a surface never presents a default as a fact: `server` is the server's
+-- own books (or the server's value as received over the wire), `local` is a read
+-- this machine made itself and may disagree about, `unknown` is no value at all.
+DairyConstants.TRUST = {
+    SERVER  = "server",
+    LOCAL   = "local",
+    UNKNOWN = "unknown",
+}
+
+-- DC-14: the contract progress band published on each row, computed server-side.
+-- 0 = no active contract. The three live bands answer the farmer's decision, not
+-- the whole record: is this contract on track, slipping, or not going to make it.
+DairyConstants.CONTRACT_PROGRESS = {
+    NONE          = 0,
+    ON_TRACK      = 1,
+    BEHIND        = 2,
+    WILL_NOT_MAKE = 3,
+    -- Tolerances for the band read: within ON_TRACK_TOL the contract is on track,
+    -- within BEHIND_TOL it is behind, beyond that it will not make it. Fractions of
+    -- delivered volume versus the term position. Tuning values, not a contract.
+    ON_TRACK_TOL  = 0.10,
+    BEHIND_TOL    = 0.30,
 }
 
 -- NetworkSync admin-gated actions (all default adminOnly = true; DC-9 and DC-21

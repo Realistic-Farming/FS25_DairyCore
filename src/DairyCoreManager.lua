@@ -919,16 +919,24 @@ function DairyCoreManager:applyFeedContaminationPenalty(barnId, severity)
 end
 
 -- Refresh the which-field feed-disease flag (reveal gate: name only when the field's
--- diseaseDiscovered is true; otherwise which-field-only).
+-- diseaseDiscovered is true; otherwise which-field-only). DC-14 also derives a
+-- severity band from the raw ungated diseasePressure of the designated feed fields
+-- (the max across them), so the published feed signal can say how bad, not only
+-- that something is there.
 function DairyCoreManager:_refreshFeedDiseaseFlag(barn)
     barn.feedDiseaseFlag = false
     barn.feedDiseaseCropName = nil
+    barn.feedDiseaseSeverity = 0
     for fieldId in pairs(barn.feedSourceFields) do
         local info = self:_getFieldInfo(fieldId)
         if info ~= nil and info.activeDisease ~= nil then
             barn.feedDiseaseFlag = true
             if info.diseaseDiscovered == true then
                 barn.feedDiseaseCropName = info.activeDisease
+            end
+            local severity = info.diseasePressure or 0
+            if severity > barn.feedDiseaseSeverity then
+                barn.feedDiseaseSeverity = math.floor(severity)
             end
         end
     end
@@ -1339,14 +1347,61 @@ function DairyCoreManager:_deserializeContracts(data)
     end
 end
 
+-- DC-14: the barn's own milk store-full state, read from the husbandry methods the
+-- base game ships (getHusbandryFillLevel against getHusbandryCapacity). A STATE and
+-- not a litre count: the base game already prints litres in the placeable info box.
+function DairyCoreManager:_storeFull(b)
+    local p = b ~= nil and b._placeable
+    if p == nil or p.getHusbandryFillLevel == nil or p.getHusbandryCapacity == nil then
+        return false
+    end
+    local full = false
+    pcall(function()
+        local ftm = g_fillTypeManager
+        local ft = ftm ~= nil and ftm:getFillTypeIndexByName(DairyConstants.CONTRACTS.MILK_FILLTYPE) or 0
+        local level = p:getHusbandryFillLevel(ft)
+        local cap = p:getHusbandryCapacity(ft)
+        if type(level) == "number" and type(cap) == "number" and cap > 0 then
+            full = level >= cap
+        end
+    end)
+    return full
+end
+
+-- DC-14: the contract progress band, server-side. On track when the delivered
+-- fraction is within ON_TRACK_TOL of the term position, behind within BEHIND_TOL,
+-- otherwise the contract will not make its volume. No active contract reads NONE.
+function DairyCoreManager:_contractProgress(b)
+    local c = self.contracts[b.activeContractId]
+    if c == nil or c.settled then return DairyConstants.CONTRACT_PROGRESS.NONE end
+    local expected = 1 - (c.daysRemaining or 0) / math.max(1, c.termDays or 1)
+    local actual = (c.delivered or 0) / math.max(1, c.volumeTarget or 1)
+    local cp = DairyConstants.CONTRACT_PROGRESS
+    if actual >= expected - cp.ON_TRACK_TOL then return cp.ON_TRACK end
+    if actual >= expected - cp.BEHIND_TOL then return cp.BEHIND end
+    return cp.WILL_NOT_MAKE
+end
+
 -- Compact barn state for MP. Exactly BARN_STRIDE flat scalars per barn, in order:
---    1 barnId (string)             2 herd health score (int)
---    3 quality tier index (int)    4 spoilage tier drop (int)
---    5 mycotoxin penalty (int)     6 collection interval hours (int)
+--    1 barnId (string)                 2 herd health score (int)
+--    3 quality tier index (int)        4 spoilage tier drop (int)
+--    5 mycotoxin penalty (int)         6 collection interval hours (int)
 --    7 assignedWorkerId (string, NONE_STRING when unassigned)
 --    8 lastCollectionDay (int, NONE_NUMBER when never collected)
 --    9 nextCollectionDue (number, NONE_NUMBER when unscheduled)
 --   10 feedSourceFields (comma-joined ids, NONE_STRING when none)
+--   11 activeContractId (int, NONE_NUMBER when no contract)
+--   12 contractProgress (int: 0 none, 1 on track, 2 behind, 3 will not make)
+--   13 spoilageKey (string: dc_spoilage_* key)
+--   14 storeFull (int 0/1)
+--   15 farmId (int)
+--   16 feedDiseaseFlag (int 0/1)
+--   17 feedDiseaseSeverity (int 0-100)
+--   18 feedDiseaseCropName (string, NONE_STRING when gated or absent)
+--   19 rotaState (string)
+--   20 lastCollectionHours (number, NONE_NUMBER when never collected)
+--   21 lastCollectionSource (string, NONE_STRING when none)
+--   22 lastCollectionLitres (number, NONE_NUMBER when none)
 --
 -- Two rules the shape exists to enforce, both of which this record used to break.
 -- A nil is never appended: `arr[#arr+1] = nil` neither writes a slot nor advances
@@ -1362,6 +1417,8 @@ function DairyCoreManager:_onWriteBarnState()
         for fid in pairs(b.feedSourceFields or {}) do feedFields[#feedFields + 1] = tostring(fid) end
         table.sort(feedFields)  -- pairs order is arbitrary; keep the payload stable
 
+        local milkFill = DairyConstants.CONTRACTS.MILK_FILLTYPE
+        local lastLitres = b.lastCollectionLitres and b.lastCollectionLitres[milkFill]
         arr[#arr + 1] = tostring(barnId)
         arr[#arr + 1] = math.floor(b.herdHealthScore or 60)
         arr[#arr + 1] = self:_tierIndexByKey(b.milkQualityTier)
@@ -1372,6 +1429,19 @@ function DairyCoreManager:_onWriteBarnState()
         arr[#arr + 1] = b.lastCollectionDay ~= nil and math.floor(b.lastCollectionDay) or net.NONE_NUMBER
         arr[#arr + 1] = b.nextCollectionDue or net.NONE_NUMBER
         arr[#arr + 1] = table.concat(feedFields, ",")
+        -- DC-14 slots.
+        arr[#arr + 1] = b.activeContractId ~= nil and math.floor(b.activeContractId) or net.NONE_NUMBER
+        arr[#arr + 1] = self:_contractProgress(b)
+        arr[#arr + 1] = self:_normalizeSpoilageKey(b.spoilageStatus)
+        arr[#arr + 1] = self:_storeFull(b) and 1 or 0
+        arr[#arr + 1] = math.floor(b.farmId or 0)
+        arr[#arr + 1] = b.feedDiseaseFlag == true and 1 or 0
+        arr[#arr + 1] = math.floor(b.feedDiseaseSeverity or 0)
+        arr[#arr + 1] = b.feedDiseaseCropName ~= nil and tostring(b.feedDiseaseCropName) or net.NONE_STRING
+        arr[#arr + 1] = b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+        arr[#arr + 1] = b.lastCollectionHours or net.NONE_NUMBER
+        arr[#arr + 1] = b.lastCollectionSource ~= nil and tostring(b.lastCollectionSource) or net.NONE_STRING
+        arr[#arr + 1] = lastLitres ~= nil and lastLitres or net.NONE_NUMBER
     end
     return arr
 end
@@ -1395,6 +1465,10 @@ function DairyCoreManager:_onReadBarnState(arr)
         local barnId = tonumber(arr[i]) or arr[i]
         local b = self.barns[barnId]
         if b ~= nil then
+            -- DC-14: every field that arrives over the wire is the SERVER's book,
+            -- never a local default. The record marks the receipt so getBarnRows
+            -- can mark the row's fields `server` instead of `unknown`.
+            b._wireReceived      = true
             b.herdHealthScore    = arr[i+1]
             b.milkQualityTier    = (DairyConstants.QUALITY.TIERS[arr[i+2]] or DairyConstants.QUALITY.TIERS[2]).key
             b._spoilageTierDrop  = arr[i+3]
@@ -1406,6 +1480,24 @@ function DairyCoreManager:_onReadBarnState(arr)
             b.feedSourceFields   = {}
             for fid in string.gmatch(tostring(arr[i+9] or ""), "([^,]+)") do
                 b.feedSourceFields[tonumber(fid) or fid] = true
+            end
+            -- DC-14 slots.
+            b.activeContractId   = arr[i+10] ~= net.NONE_NUMBER and arr[i+10] or nil
+            b.contractProgress   = arr[i+11]
+            b.spoilageStatus     = self:_normalizeSpoilageKey(arr[i+12])
+            b.storeFull          = arr[i+13] == 1
+            if b.farmId == nil or b.farmId == 0 then
+                b.farmId = arr[i+14]
+            end
+            b.feedDiseaseFlag    = arr[i+15] == 1
+            b.feedDiseaseSeverity = arr[i+16]
+            b.feedDiseaseCropName = arr[i+17] ~= net.NONE_STRING and arr[i+17] or nil
+            b.rotaState          = arr[i+18] or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+            b.lastCollectionHours = arr[i+19] ~= net.NONE_NUMBER and arr[i+19] or nil
+            b.lastCollectionSource = arr[i+20] ~= net.NONE_STRING and arr[i+20] or nil
+            b.lastCollectionLitres = {}
+            if arr[i+21] ~= net.NONE_NUMBER then
+                b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] = arr[i+21]
             end
         end
     end
@@ -1610,30 +1702,73 @@ end
 -- (nil lastCollectionDay) stays Fresh without faking "collected today". spoilage
 -- carries the l10n KEY (dc_spoilage_*), never English display text (DC-14
 -- invariant 3); a surface translates it. assignedWorkerId still has no writer here.
+-- DC-14: the three-state marking for a published row. On the server every field is
+-- the server's own book (`server`). On a client a field is `server` only when it
+-- arrived over the wire; farmId is read from the local placeable and so is `local`;
+-- anything never received is `unknown` (a default a surface must not present as a
+-- fact). Shape is the contract's; the exact fields marked are the row's public ones.
+function DairyCoreManager:_rowTrust(b)
+    local t = {}
+    local wireFields = {
+        "herdHealth", "qualityTier", "spoilage", "spoilageClockStarted",
+        "feedDiseaseFlag", "feedDiseaseCropName", "feedDiseaseSeverity",
+        "mycotoxin", "contractId", "contractProgress", "rotaState", "rotaWorkerName",
+        "lastCollectionSource", "lastCollectionHours", "nextCollectionDue",
+        "lastCollectionLitres", "storeFull",
+    }
+    local server = self:_isServer()
+    local wire = b._wireReceived == true
+    for _, k in ipairs(wireFields) do
+        t[k] = server and DairyConstants.TRUST.SERVER
+            or (wire and DairyConstants.TRUST.SERVER or DairyConstants.TRUST.UNKNOWN)
+    end
+    t.barnId = DairyConstants.TRUST.SERVER
+    t.ritterMode = DairyConstants.TRUST.SERVER
+    t.farmId = server and DairyConstants.TRUST.SERVER or DairyConstants.TRUST.LOCAL
+    return t
+end
+
 function DairyCoreManager:getBarnRows()
     local rows = {}
     for barnId, b in pairs(self.barns) do
-        local eff = self:getEffectiveQualityTier(b)
-        local row = { barnId = barnId, ritterMode = b.ritterMode == true,
-            herdHealth = math.floor(b.herdHealthScore or 0), qualityTier = eff.name,
-            spoilage = b.spoilageStatus, spoilageClockStarted = b.lastCollectionDay ~= nil,
-            feedDiseaseFlag = b.feedDiseaseFlag == true,
-            feedDiseaseCropName = b.feedDiseaseCropName, mycotoxin = b.mycotoxinPenalty or 0,
-            contractId = b.activeContractId,
-            -- DC-9 contract: the rota state, the last collection's source and hour,
-            -- and the litres that left in it (DC-10 asks for the litres).
-            rotaState = b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED,
-            rotaWorkerName = b.assignedWorkerId,
-            lastCollectionSource = b.lastCollectionSource,
-            lastCollectionHours = b.lastCollectionHours,
-            nextCollectionDue = b.nextCollectionDue,
-            lastCollectionLitres = b.lastCollectionLitres
-                and b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] or nil }
-        if b.ritterMode then
-            local counts = RLBridge:getHerdCounts(barnId, b.farmId)
-            if counts ~= nil then row.counts = counts end
+        -- DC-14 3c: a row is a claim that the thing it describes still exists. A
+        -- barn proven dead (placeable unresolved across two discovery passes) is a
+        -- ghost; the contract does not publish it. The removal repair itself is
+        -- DC-1's frame; this is the contract refusing to lie while it runs.
+        if not b._probeDead then
+            local eff = self:getEffectiveQualityTier(b)
+            -- DC-14 invariant 3: the contract carries a KEY, never English display
+            -- text. qualityTier and spoilage are keys; a surface translates them.
+            local row = { barnId = barnId, ritterMode = b.ritterMode == true,
+                herdHealth = math.floor(b.herdHealthScore or 0), qualityTier = eff.key,
+                spoilage = self:_normalizeSpoilageKey(b.spoilageStatus),
+                spoilageClockStarted = b.lastCollectionDay ~= nil,
+                feedDiseaseFlag = b.feedDiseaseFlag == true,
+                feedDiseaseCropName = b.feedDiseaseCropName,
+                feedDiseaseSeverity = b.feedDiseaseSeverity or 0,
+                mycotoxin = b.mycotoxinPenalty or 0,
+                contractId = b.activeContractId,
+                contractProgress = b.contractProgress or DairyConstants.CONTRACT_PROGRESS.NONE,
+                storeFull = b.storeFull == true,
+                -- DC-14 3b.6: the farm the row belongs to, on the row.
+                farmId = b.farmId,
+                -- DC-9 contract: the rota state, the last collection's source and hour,
+                -- and the litres that left in it (DC-10 asks for the litres).
+                rotaState = b.rotaState or DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED,
+                rotaWorkerName = b.assignedWorkerId,
+                lastCollectionSource = b.lastCollectionSource,
+                lastCollectionHours = b.lastCollectionHours,
+                nextCollectionDue = b.nextCollectionDue,
+                lastCollectionLitres = b.lastCollectionLitres
+                    and b.lastCollectionLitres[DairyConstants.CONTRACTS.MILK_FILLTYPE] or nil }
+            -- DC-14 3a: every field declares where it came from.
+            row.trust = self:_rowTrust(b)
+            if b.ritterMode then
+                local counts = RLBridge:getHerdCounts(barnId, b.farmId)
+                if counts ~= nil then row.counts = counts end
+            end
+            rows[#rows + 1] = row
         end
-        rows[#rows + 1] = row
     end
     return rows
 end
