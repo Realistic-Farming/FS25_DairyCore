@@ -5,6 +5,9 @@
 > Convention: `[ ]` open - `[~]` in progress - `[x]` done - `[!]` blocked. Newest at the top of each section.
 
 ## Features / enhancements
+
+- [x] Esc framework table freeze (Dairy guest, #30): shared grid restated per show; 1.0.5.4.
+- [~] In-game: Dairy table keeps its columns after visiting another Esc guest in the same session.
 ## Features / enhancements
 - [x] Co-op herd advisory (DC-19, **DairyCore half**, 2026-08-14, modDesc 1.0.5.2):
   the gate flag `hasHerdAdvisory` read through the existing `_proStaff` accessor

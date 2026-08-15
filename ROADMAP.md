@@ -17,6 +17,8 @@
   to neutral when a mod is absent.
 
 ## Near-term (next release cycle)
+
+- [x] Esc framework table freeze (Dairy guest, #30, 2026-08-15): the shared 4-bay column grid is restated on every show. Merged; 1.0.5.4.
 - [x] Co-op herd advisory (DC-19, **DairyCore half**, 2026-08-14): the gate flag
   `hasHerdAdvisory` is read through the existing `_proStaff` accessor (neutral-false when
   absent); `getHerdAdvisories(farmId)` returns one advisory string per barn needing
