@@ -69,3 +69,45 @@
 ## Deferred / parked
 - ProStaff-gated floor eligibility: parked by design until the family plumbing
   lands; settlement is neutral (no ProStaff read) until then.
+
+## DATED ADDITION 2026-08-14 (Fred): DC-17 RITTER GENETICS BUILT
+
+**DC-17, DEEPER USE OF RITTER GENETICS, IS BUILT (modDesc 1.0.5.1).** Milk from
+breeding: a dairy farmer who breeds good animals within RealisticLivestock now
+sees it in his barn's milk grade, not only in Ritter's animal screen.
+
+**The mechanism (re-scoped fold 2026-08-05):** on each barn's daily tick, when
+`RLBridge.active` is true, DC-17 attempts one atomic per-animal read of `health`
+and `genetics.productivity` together. If either field fails to read for an animal,
+that animal contributes NOTHING to the genetics-weighted average this pass
+(all-or-nothing, never partial credit); DC-12's own base score still covers every
+animal. When both succeed, the animal's normalized productivity gene enters the
+herd average, and the barn score gains
+`DairyConstants.HERD.RITTER_GENETICS_WEIGHT` (Engineering-tuned, not measured;
+default 25) times that average. The barn is graded on the AVERAGE, not the peak,
+so one prize cow does not carry a mediocre herd. The two nonexistent pre-fold
+mechanisms (reproduction state, age bands) and the meat-side `genetics.quality`
+are CUT, exactly as the fold ruled.
+
+**The flag.** `barn.herdHealthScore_RitterSource` is a strict sub-state of DC-12's
+`barn.ritterMode`: true only when the deeper genetics were actually read for at
+least one animal. It persists (both save paths and the wire, slot 23 of the 22-to-
+23 record) so a surface can distinguish "Ritter supplied the score" from "Ritter
+supplied the score AND the deeper genetics were read", and so the uninstall
+fallback can detect a barn that lost its source between loads.
+
+**The fallbacks.** All animals missing the atomic read: the score is DC-12's base
+score with no genetics term, the flag is false, no divide-by-zero. Ritter removed
+mid-save: a barn whose stored flag is true falls back to Standard mode and
+publishes a one-time message (save-scoped latch, one per uninstall event, never
+twice per barn; a second uninstall/reinstall announces anew).
+
+**F13 read-only fence untouched:** DC-17 adds zero writes into RealisticLivestock.
+The per-animal pcall in `RLBridge:computeGeneticsContribution` is deliberately
+NOT `safeRead`, so one bad animal cannot trip the whole bridge to Standard mode.
+
+**Bench:** `dc17_ritter_genetics_test.lua`, 32 assertions, 0 failed. Full suite
+358/0 across 7 files. **Not yet observed in a running game; in-game acceptance
+owed** (mixed-genetics herd, season-by-season breeding climb, uninstall/reinstall
+cycle).
+
