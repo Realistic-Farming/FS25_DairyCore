@@ -1,10 +1,17 @@
-# TODO: FS25_DairyCore
+﻿# TODO: FS25_DairyCore
 
 > Ecosystem role: **Dairy and Husbandry** - Part of the Realistic Farming connected suite
 > Status: FILLED from the ecosystem audit/baseline, kept current.
 > Convention: `[ ]` open - `[~]` in progress - `[x]` done - `[!]` blocked. Newest at the top of each section.
 
 ## Features / enhancements
+## Features / enhancements
+- [x] Co-op herd advisory (DC-19, **DairyCore half**, 2026-08-14, modDesc 1.0.5.2):
+  the gate flag `hasHerdAdvisory` read through the existing `_proStaff` accessor
+  (neutral-false when absent), the `getHerdAdvisories(farmId)` getter, and the per-barn
+  herd-advisory state computation (health at/below the Standard tier boundary, or spoilage
+  stage Ageing/worse). Advisory-only: no write, no money, no economics. 28 assertions in
+  `dc19_coop_herd_advisory_test.lua`. Branch `feat/DC-19-coop-herd-advisory` pushed; no PR.
 - [x] Contract archetypes + sovereign floor anchor (DC-16, 2026-08-14): two new
   contract rows in `CONTRACTS.TYPES` (spot_run 14d/1.15x, standing_order 60d/0.92x),
   both gated by `prostaffLevel` like the shipped standard row; the settlement floor

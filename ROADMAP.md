@@ -1,4 +1,4 @@
-# Roadmap: FS25_DairyCore
+﻿# Roadmap: FS25_DairyCore
 
 > Ecosystem role: **Dairy and Husbandry** - Part of the Realistic Farming connected suite
 > Status: FILLED from the ecosystem audit/baseline.
@@ -17,6 +17,21 @@
   to neutral when a mod is absent.
 
 ## Near-term (next release cycle)
+- [x] Co-op herd advisory (DC-19, **DairyCore half**, 2026-08-14): the gate flag
+  `hasHerdAdvisory` is read through the existing `_proStaff` accessor (neutral-false when
+  absent); `getHerdAdvisories(farmId)` returns one advisory string per barn needing
+  attention, or an empty list below the gate. A barn is flagged when its herd health is at
+  or below the needs-attention cutoff (reused from the QUALITY tiering constant, never a
+  new number) or its spoilage stage is Ageing or worse (DC-8 lifecycle). Advisory-only: a
+  formatted read of state that already exists; no writes, no money, no economics. The
+  strings live in `DairyConstants.HERD_ADVISORY`. Bench: 28 assertions in
+  `dc19_coop_herd_advisory_test.lua`. **The ProStaff half remains:** the one-row
+  `hasHerdAdvisory = 12` FLAGS row + the `ProStaffManager:hasHerdAdvisory` getter on the
+  ProStaffCoOp side (SF-40 shape), and the ProStaffApp "Dairy & Logistics" render wiring.
+- [ ] FarmTablet Dairy tab / DairyRfPdaGuest consumption of the read model.
+- [ ] Contract economics confirmations (DC-10/DC-13): SDK per-cow yield curve, the
+  conversion-chain hooks, the exact storage aggregate, the trough consumption trigger.
+
 - [x] Contract archetypes + the sovereign floor anchor (DC-16, 2026-08-14): two new
   contract types are pure data rows in `CONTRACTS.TYPES` (spot_run: 14 days at 1.15x,
   standing_order: 60 days at 0.92x), each gated by `prostaffLevel` like the shipped

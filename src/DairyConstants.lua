@@ -24,6 +24,29 @@ DairyConstants.QUALITY = {
     },
 }
 
+-- DC-19: the co-op herd advisory. A formatted read of state that already exists,
+-- gated by ProStaff's hasHerdAdvisory flag (L12). Advisory-only: it NEVER writes
+-- state, moves money or applies economics. The health cutoff REUSES a tier
+-- boundary from QUALITY.TIERS (by key) rather than inventing a number, so the
+-- advisory language cannot drift from what _qualityTierForScore / the Financial
+-- Cockpit already show. SPOILAGE_STAGES names the DC-8 lifecycle stages that
+-- count as "Ageing or worse". The sentence and reason strings are dumb formatted
+-- reads that live here, never in logic.
+DairyConstants.HERD_ADVISORY = {
+    -- The tier whose minScore is the "needs attention" health cutoff. A barn at
+    -- or below this boundary is flagged. Referenced by key so the value is the
+    -- SAME number the tiering constant already defines (reuse, not a copy).
+    HEALTH_CUTOFF_TIER = "standard",
+    -- DC-8 spoilage keys that qualify as terminal (Ageing or worse).
+    SPOILAGE_STAGES = {
+        ageing = true, atrisk = true, condemned = true,
+    },
+    SENTENCE = "Barn %s: %s",
+    HEALTH   = "herd health trending down, check feed quality",
+    SPOILAGE = "near spoilage risk, collection overdue",
+    JOIN     = "; ",
+}
+
 -- Time-based spoilage. Stages are keyed off in-game days since last collection,
 -- evaluated continuously on the hour tick from fractional elapsed days (DC-8).
 -- `spoilageStatus` stores the stable l10n KEY (`key`), never English display text

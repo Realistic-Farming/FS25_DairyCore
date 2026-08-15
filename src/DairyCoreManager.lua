@@ -1882,6 +1882,71 @@ function DairyCoreManager:getBarnRows()
     return rows
 end
 
+-- =========================================================
+-- DC-19: the co-op herd advisory (read-only, gated by the ProStaff flag)
+-- =========================================================
+
+-- The gate flag: has the farm's co-op reached the level that publishes the herd
+-- advisory? Read through the shared ProStaff accessor with NO farmId, deliberately
+-- inheriting the farmId-blind read the DC-6/DC-7 read architecture fixes once (the
+-- same class as F75; a local patch here would leave two patches for one bug). The
+-- flag's level gate lives in the ProStaffCoOp callback itself (false below L12);
+-- DairyCore never checks a level. Neutral-false when ProStaffCoOp is absent, so the
+-- advisory stays off until the flag exists. farmId is accepted for the published
+-- getter contract and matches the ProStaff flag's own signature; the read itself is
+-- farmId-blind by design.
+function DairyCoreManager:hasHerdAdvisory(farmId)
+    return self:_proStaff("hasHerdAdvisory", false)
+end
+
+-- The public advisory getter: a list of advisory strings, one per barn of the farm
+-- that needs attention, or an empty list when the gate does not apply. Advisory-only:
+-- formats state that already exists (herdHealthScore and the spoilage stage), NEVER
+-- writes state, moves money or applies economics. farmId filters to that farm's barns;
+-- nil returns every barn (the optional-farm convention the ProStaff getters use).
+function DairyCoreManager:getHerdAdvisories(farmId)
+    if not self:hasHerdAdvisory(farmId) then return {} end
+    local out = {}
+    for barnId, barn in pairs(self.barns) do
+        if farmId == nil or barn.farmId == nil or barn.farmId == farmId then
+            local sentence = self:_herdAdvisoryForBarn(barn)
+            if sentence ~= nil then out[#out + 1] = sentence end
+        end
+    end
+    return out
+end
+
+-- The advisory sentence for one barn, or nil when the barn needs no attention.
+-- EITHER condition qualifies: herd health at or below the needs-attention cutoff
+-- (the Standard tier's minScore, reused from QUALITY.TIERS so the language cannot
+-- drift from what _qualityTierForScore / the Financial Cockpit show), or a spoilage
+-- stage that is Ageing or worse (DC-8 lifecycle). Both reasons join into one sentence.
+function DairyCoreManager:_herdAdvisoryForBarn(barn)
+    local reasons = {}
+    if (barn.herdHealthScore or 0) <= self:_herdAdvisoryCutoff() then
+        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.HEALTH
+    end
+    local stage = self:_normalizeSpoilageKey(barn.spoilageStatus)
+    if DairyConstants.HERD_ADVISORY.SPOILAGE_STAGES[stage] then
+        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.SPOILAGE
+    end
+    if #reasons == 0 then return nil end
+    return string.format(DairyConstants.HERD_ADVISORY.SENTENCE, tostring(barn.barnId),
+        table.concat(reasons, DairyConstants.HERD_ADVISORY.JOIN))
+end
+
+-- The needs-attention health cutoff: the minScore of the tier named by
+-- HEALTH_CUTOFF_TIER, read from the SAME table _qualityTierForScore reads, so the
+-- advisory uses the tiering constant and never a copied magic number.
+function DairyCoreManager:_herdAdvisoryCutoff()
+    for _, tier in ipairs(DairyConstants.QUALITY.TIERS) do
+        if tier.key == DairyConstants.HERD_ADVISORY.HEALTH_CUTOFF_TIER then
+            return tier.minScore
+        end
+    end
+    return 60
+end
+
 function DairyCoreManager:consoleCommandStatus()
     local lines = {}
     table.insert(lines, string.format("DairyCore: %s, mode=%s, barns=%d, contracts=%d, bedrock=%s",
