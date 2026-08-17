@@ -16,6 +16,7 @@ local modDirectory = g_currentModDirectory
 source(modDirectory .. "src/Logger.lua")
 source(modDirectory .. "src/DairyConstants.lua")
 source(modDirectory .. "src/RLBridge.lua")
+source(modDirectory .. "src/FeedProvenance.lua")
 source(modDirectory .. "src/DairyCoreManager.lua")
 
 -- Esc RF PDA framework joiner (NO-HOST).
@@ -73,6 +74,16 @@ FSBaseMission.delete = Utils.prependedFunction(FSBaseMission.delete, onMissionDe
 if addConsoleCommand ~= nil then
     addConsoleCommand("dairyStatus", "Show DairyCore barns, mode, contracts",
         "consoleCommandStatus", dairyCore)
+    addConsoleCommand("dcAssignRota", "DC-9: assign a collection worker to a barn: dcAssignRota <barnId> <workerId>",
+        "consoleAssignRota", dairyCore)
+    addConsoleCommand("dcUnassignRota", "DC-9: clear a barn's rota: dcUnassignRota <barnId>",
+        "consoleUnassignRota", dairyCore)
+    addConsoleCommand("dcSellMilk", "DC-21: office-sell a barn's milk: dcSellMilk <barnId> [litres]",
+        "consoleSellMilk", dairyCore)
+    addConsoleCommand("dcCollectionTick", "DC-9: force one collection hour tick (testing)",
+        "consoleCollectionTick", dairyCore)
+    addConsoleCommand("dcFeedProvenance", "FP-1: show the farm feed provenance ledger (server only)",
+        "consoleFeedProvenance", dairyCore)
 end
 
 

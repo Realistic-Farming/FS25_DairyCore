@@ -101,6 +101,46 @@ function RLBridge:computeHerdScore(barnId, farmId)
     end, nil)
 end
 
+-- DC-17: the deeper genetics-weighted contribution to a Ritter-mode barn score.
+--
+-- One atomic per-animal read of `health` and `genetics.productivity` TOGETHER. If
+-- either field fails to read (absent, wrong type, or a throw caught by pcall),
+-- that animal contributes NOTHING to the herd average this pass: all-or-nothing,
+-- never partial credit. The weighted contribution is the named
+-- DairyConstants.HERD.RITTER_GENETICS_WEIGHT times the herd-average normalized
+-- productivity gene, so breeding good genetics is visible in the milk grade and
+-- one elite animal does not carry a mediocre herd (milk is a blend, the herd is
+-- graded on its average). Returns { term, contributing, total } or nil when no
+-- animal exposes usable genetics. F13 read-only fence: this reads RL fields only,
+-- never writes. The per-animal pcall is deliberately NOT safeRead: a single bad
+-- animal must not trip the whole bridge to Standard mode.
+function RLBridge:computeGeneticsContribution(barnId, farmId)
+    local animals = self:getBarnAnimals(barnId, farmId)
+    if animals == nil then return nil end
+
+    local sum, contributing, total = 0, 0, 0
+    for _, animal in ipairs(animals) do
+        total = total + 1
+        local ok, health, prodRaw = pcall(function()
+            local h = animal.health
+            local p = (animal.genetics ~= nil) and animal.genetics.productivity or nil
+            if type(h) ~= "number" or type(p) ~= "number" then return nil, nil end
+            return h, p
+        end)
+        if ok and type(health) == "number" and type(prodRaw) == "number" then
+            local prodGene = math.max(0, math.min(1, (prodRaw - 0.25) / 1.5))
+            sum = sum + prodGene
+            contributing = contributing + 1
+        end
+    end
+    if contributing == 0 then return nil end
+    return {
+        term = DairyConstants.HERD.RITTER_GENETICS_WEIGHT * (sum / contributing),
+        contributing = contributing,
+        total = total,
+    }
+end
+
 -- Per-barn count summary for the FarmTablet Ritter view.
 function RLBridge:getHerdCounts(barnId, farmId)
     local animals = self:getBarnAnimals(barnId, farmId)

@@ -24,18 +24,46 @@ DairyConstants.QUALITY = {
     },
 }
 
--- Time-based spoilage. Stages are keyed off in-game days since last collection.
--- tierDrop reduces the quality tier by N steps; "Condemned" forces Poor.
+-- DC-19: the co-op herd advisory. A formatted read of state that already exists,
+-- gated by ProStaff's hasHerdAdvisory flag (L12). Advisory-only: it NEVER writes
+-- state, moves money or applies economics. The health cutoff REUSES a tier
+-- boundary from QUALITY.TIERS (by key) rather than inventing a number, so the
+-- advisory language cannot drift from what _qualityTierForScore / the Financial
+-- Cockpit already show. SPOILAGE_STAGES names the DC-8 lifecycle stages that
+-- count as "Ageing or worse". The sentence and reason strings are dumb formatted
+-- reads that live here, never in logic.
+DairyConstants.HERD_ADVISORY = {
+    -- The tier whose minScore is the "needs attention" health cutoff. A barn at
+    -- or below this boundary is flagged. Referenced by key so the value is the
+    -- SAME number the tiering constant already defines (reuse, not a copy).
+    HEALTH_CUTOFF_TIER = "standard",
+    -- DC-8 spoilage keys that qualify as terminal (Ageing or worse).
+    SPOILAGE_STAGES = {
+        ageing = true, atrisk = true, condemned = true,
+    },
+    SENTENCE = "Barn %s: %s",
+    HEALTH   = "herd health trending down, check feed quality",
+    SPOILAGE = "near spoilage risk, collection overdue",
+    JOIN     = "; ",
+}
+
+-- Time-based spoilage. Stages are keyed off in-game days since last collection,
+-- evaluated continuously on the hour tick from fractional elapsed days (DC-8).
+-- `spoilageStatus` stores the stable l10n KEY (`key`), never English display text
+-- (DC-14 invariant 3). `name` is the English fallback for a surface with no
+-- translation, kept for reference. tierDrop reduces the quality tier by N steps;
+-- "Condemned" forces Poor. The magnitudes are as shipped; DC-8's brief keeps the
+-- thresholds and recommends a re-derivation pass only once the clock runs real.
 DairyConstants.SPOILAGE = {
     FRESH_DAYS       = 1.0,   -- < 1 day: Fresh
     AGEING_DAYS      = 2.0,   -- 1-2 days: Ageing (-1 tier)
     ATRISK_DAYS      = 3.0,   -- 2-3 days: At Risk (-2 tiers)
     -- 3+ days: Condemned (Poor regardless)
     STAGES = {
-        fresh     = { name = "Fresh",     tierDrop = 0 },
-        ageing    = { name = "Ageing",    tierDrop = 1 },
-        atrisk    = { name = "At Risk",   tierDrop = 2 },
-        condemned = { name = "Condemned", tierDrop = 99 },
+        fresh     = { name = "Fresh",     key = "fresh",     tierDrop = 0 },
+        ageing    = { name = "Ageing",    key = "ageing",    tierDrop = 1 },
+        atrisk    = { name = "At Risk",   key = "atrisk",    tierDrop = 2 },
+        condemned = { name = "Condemned", key = "condemned", tierDrop = 99 },
     },
     -- ProStaff L18 extends the Fresh window by this many in-game hours.
     L18_FRESH_BONUS_HOURS = 6,
@@ -52,6 +80,16 @@ DairyConstants.HERD = {
     PEST_PRESSURE_LIMIT = 50,  -- pest pressure above this: herd health event risk
     WEED_QUALITY_PEN  = 10,
     LEGUME_QUALITY_FLOOR_BONUS = 5,  -- legume rotation on a feed field: +5 quality floor
+    -- DC-17: the deeper genetics-weighted term (Ritter mode). DC-12's blended
+    -- per-animal figure weights genetics.productivity at 0.4 of a 0..1 base; this
+    -- member ADDS a term of RITTER_GENETICS_WEIGHT times the herd-average
+    -- normalized productivity gene on top of DC-12's base score, so a season of
+    -- deliberate breeding shows up in the barn's milk grade. The magnitude is an
+    -- Engineering tuning value, NOT a measured constant: the default makes a
+    -- genuinely better herd clearly visible (up to ~22 score points for an elite
+    -- herd, a few points per breeding season for a typical one) without saturating
+    -- the tier ladder. Tune against real RL data at Engineering, not here.
+    RITTER_GENETICS_WEIGHT = 25,
     SCORE_MIN = 0,
     SCORE_MAX = 100,
 }
@@ -67,6 +105,50 @@ DairyConstants.COLLECTION = {
         master      = { speedMod = 0.85, fuelMod = 1.00, earlyFlag = true  },  -- flags low feed/water early
         legendary   = { speedMod = 0.80, fuelMod = 1.00, earlyFlag = true  },  -- + herd-decline flag at ProStaff L16
     },
+    -- The four ways milk can leave a barn (DC-9). `self` and `hauled` are detected
+    -- passively from the level; `rota` and `office` are the mod's own active paths
+    -- (DC-9's rota and DC-21's office sale) and record the collection themselves.
+    SOURCES = {
+        self   = "self",
+        hauled = "hauled",
+        rota   = "rota",
+        office = "office",
+    },
+    -- The rota's published state. HireHall publishes EIGHT lifecycle states; three
+    -- of them (available/hired/training/injured/onLeave/contract) are still on the
+    -- round, the terminal states mean the man is gone, and anything unknown is
+    -- treated as still on the round (DC-9 3.5).
+    ROTA_STATES = {
+        UNASSIGNED    = "unassigned",
+        ASSIGNED_OK   = "assigned_ok",
+        ASSIGNED_DEPARTED = "assigned_departed",
+    },
+    -- The six HireHall lifecycle values that mean the worker is STILL on the round
+    -- (keys lowercase: lifecycle values are compared lowercased). `injured` and
+    -- `onleave` are deliberately included: HireHallEvolution auto-moves a worker to
+    -- onLeave at fatigue 95, and a two-way read would lapse the round the harder a
+    -- farmer works his best man. The terminal states are the two NOT here.
+    ON_ROUND_STATES = {
+        available = true, hired = true, training = true,
+        injured = true, onleave = true, contract = true,
+    },
+    -- The only KNOWN terminal states. Everything else, recognised or not, is treated
+    -- as still on the round (DC-9 3.5: an unknown lifecycle must not silently lapse
+    -- a round).
+    TERMINAL_STATES = {
+        retired = true, fired = true,
+    },
+}
+
+-- DC-21: administrative milk disposal. The margin is the administrative cost of an
+-- office/rota sale with no truck and no fuel, and its MAGNITUDE is a human ruling.
+-- This default is a RECOMMENDATION (a percentage, because it scales with herd size),
+-- named and tunable via SettingsHub, never hardcoded inline. Pending Arissani's call.
+DairyConstants.SALE = {
+    DEFAULT_MARGIN = 0.05,   -- 5% off the spot price
+    MARGIN_MIN     = 0.0,
+    MARGIN_MAX     = 0.25,
+    INCOME_LABEL   = "Milk Sale (Administrative)",
 }
 
 -- Dairy contracts. termDays are in-game DAYS (Time Guard clock; no "week").
@@ -76,6 +158,24 @@ DairyConstants.CONTRACTS = {
         standard = {
             key = "standard", name = "Standard Dairy Contract",
             volumeTarget = 8000,  termDays = 30, premiumRate = 1.12, qualityRequired = nil,
+            prostaffLevel = 0,
+        },
+        spot_run = {
+            -- DC-16: a short, high-premium contract for cash now. 14 days at the spot
+            -- rate plus 15% for taking short-contract risk. PROVISIONAL from the
+            -- design; the prostaffLevel gate is SDS-unpinned and defaults here to the
+            -- ladder base (0, same as the shipped standard archetype).
+            key = "spot_run", name = "Spot Run Dairy Contract",
+            volumeTarget = 4000, termDays = 14, premiumRate = 1.15, qualityRequired = nil,
+            prostaffLevel = 0,
+        },
+        standing_order = {
+            -- DC-16: a long, low-premium contract for the floor to matter over a bad
+            -- season. 60 days at the term rate minus 8% for the floor's protection.
+            -- PROVISIONAL from the design; the prostaffLevel gate is SDS-unpinned and
+            -- defaults here to the ladder base (0, same as the shipped standard row).
+            key = "standing_order", name = "Standing Order Dairy Contract",
+            volumeTarget = 16000, termDays = 60, premiumRate = 0.92, qualityRequired = nil,
             prostaffLevel = 0,
         },
         premium_quality = {
@@ -117,6 +217,19 @@ DairyConstants.MYCOTOXIN = {
     MAX_DAYS = 5,
 }
 
+-- Feed Provenance (authority #5, FP-1). The per-farm per-fill-type fraction vector.
+-- Numbers ride the Option-Scaling Spine once it exists; these are the neutral
+-- values the design ratified. CONTAMINATED_DECAY_PER_DAY is the fraction of the
+-- remaining contamination healed each in-game day (Biological dial, neutral here).
+-- ORGANIC_THRESHOLD is the share of the consumed organic fraction above which a
+-- diet classifies organic (the ratified THRESHOLD default; strictness rides the
+-- Livestock dial, neutral here).
+DairyConstants.FEED_PROVENANCE = {
+    LEDGER = "DairyCore_FeedProvenance",
+    CONTAMINATED_DECAY_PER_DAY = 0.15,
+    ORGANIC_THRESHOLD = 0.8,
+}
+
 -- ProStaff ladder multipliers DairyCore reads (all neutral 1.0 when absent).
 DairyConstants.PROSTAFF = {
     L3_LOGISTICS = 1.05,
@@ -136,12 +249,53 @@ DairyConstants.PROSTAFF = {
 -- absent value travels as an explicit sentinel. Writer and reader must agree on
 -- BARN_STRIDE exactly: a record one slot short reads every later barn at the wrong
 -- offset, which puts one barn's numbers into another barn's typed fields.
+-- DC-14 grew the record from 10 to 22 slots: the read contract now carries the
+-- fields the published row must be able to state on a client without guessing
+-- (activeContractId, the contract progress band, the spoilage KEY, the store-full
+-- state, the owning farm, the feed signal with its severity, and the milk-round
+-- fields). DC-17 grew it to 23: slot 23 is herdHealthScore_RitterSource, the
+-- sub-state flag that tells a surface whether a Ritter-mode barn's score included
+-- the deeper genetics-weighted read. Every new slot obeys the same
+-- scalar-and-sentinel rules.
 DairyConstants.NETWORK = {
     CHANNEL_BARNS = "DairyCore_BarnState",
     CHANNEL_COLLECTIONS = "DairyCore_Collections",
-    BARN_STRIDE = 10,
+    BARN_STRIDE = 23,
     NONE_STRING = "",   -- absent string slot (worker id, feed field list)
     NONE_NUMBER = -1,   -- absent numeric slot (last collection day, next due)
+}
+
+-- DC-14: a published row field declares WHICH machine produced it. The marking
+-- exists so a surface never presents a default as a fact: `server` is the server's
+-- own books (or the server's value as received over the wire), `local` is a read
+-- this machine made itself and may disagree about, `unknown` is no value at all.
+DairyConstants.TRUST = {
+    SERVER  = "server",
+    LOCAL   = "local",
+    UNKNOWN = "unknown",
+}
+
+-- DC-14: the contract progress band published on each row, computed server-side.
+-- 0 = no active contract. The three live bands answer the farmer's decision, not
+-- the whole record: is this contract on track, slipping, or not going to make it.
+DairyConstants.CONTRACT_PROGRESS = {
+    NONE          = 0,
+    ON_TRACK      = 1,
+    BEHIND        = 2,
+    WILL_NOT_MAKE = 3,
+    -- Tolerances for the band read: within ON_TRACK_TOL the contract is on track,
+    -- within BEHIND_TOL it is behind, beyond that it will not make it. Fractions of
+    -- delivered volume versus the term position. Tuning values, not a contract.
+    ON_TRACK_TOL  = 0.10,
+    BEHIND_TOL    = 0.30,
+}
+
+-- NetworkSync admin-gated actions (all default adminOnly = true; DC-9 and DC-21
+-- take the default rather than overriding it).
+DairyConstants.ACTIONS = {
+    SELL_MILK     = "DairyCore_SellMilk",      -- DC-21 office sale (args: barnId, quantity)
+    ASSIGN_ROTA   = "DairyCore_AssignRota",    -- DC-9 rota assignment (args: barnId, workerId)
+    UNASSIGN_ROTA = "DairyCore_UnassignRota",  -- DC-9 rota release (args: barnId)
 }
 
 -- Time Guard accrual priorities (lower settles first). Money-moving before reads.
