@@ -92,6 +92,28 @@ end
 function DairyCoreManager:update(dt)
     if not self.bedrockBound then self:_bindBedrock() end
     if not self.clockBound then self:_subscribeClock() end
+    self:_retryDiscovery(dt)
+end
+
+-- DC-32: on a dedicated server and on a client join, onMissionLoaded can fire before the
+-- placeable list is populated, so the first discovery finds 0 barns and nothing re-runs
+-- it until the next day tick (too late for a fresh view). Retry every 500 ms until barns
+-- appear or a 10 s cap is hit, and say which way it went.
+function DairyCoreManager:_retryDiscovery(dt)
+    if self._discoveryRetries ~= nil and self._discoveryRetries >= 20 then return end
+    if self:_countBarns() > 0 then return end
+    self._discoveryTimer = (self._discoveryTimer or 0) + dt
+    if self._discoveryTimer < 500 then return end
+    self._discoveryTimer = 0
+    self._discoveryRetries = (self._discoveryRetries or 0) + 1
+    self:discoverBarns()
+    if self:_countBarns() > 0 then
+        DCLogger.info("DairyCore discovery found %d barn(s) on retry %d",
+            self:_countBarns(), self._discoveryRetries)
+    elseif self._discoveryRetries >= 20 then
+        DCLogger.warning("DairyCore discovery still 0 barn(s) after %d attempts - placeables may not be loaded",
+            self._discoveryRetries)
+    end
 end
 
 function DairyCoreManager:save()
@@ -178,8 +200,7 @@ end
 function DairyCoreManager:discoverBarns()
     if self.disabled then return end
     local mission = g_currentMission
-    if mission == nil or mission.husbandrySystem == nil then return end
-    local hs = mission.husbandrySystem
+    if mission == nil then return end
 
     -- Clear every transient placeable ref so reconcile can tell a barn that was not
     -- re-registered this pass (sold, demolished) from one that was.
@@ -187,17 +208,40 @@ function DairyCoreManager:discoverBarns()
         barn._placeable = nil
     end
 
-    if hs.getPlaceablesByFarm ~= nil then
-        for _, farmId in ipairs(self:_farmIdsToScan()) do
-            local placeables = nil
-            pcall(function() placeables = hs:getPlaceablesByFarm(farmId) end)
-            self:_registerBarnsFrom(placeables, farmId)
+    -- VERIFIED primary path (DC-32): enumerate through the placeable system's own
+    -- list. The game iterates the same table in PlaceableBeehive.lua
+    -- (`for _, existingPlaceable in ipairs(g_currentMission.placeableSystem.placeables)`),
+    -- it works on server and client alike, and it sidesteps the dedicated-server
+    -- farm-id trap entirely because each placeable names its own owner via
+    -- getOwnerFarmId(). The previous enumerator (`husbandrySystem:getPlaceablesByFarm`)
+    -- is present in no game script, LUADOC or reference, and its fallback fields
+    -- (`hs.placeables` / `hs.husbandries`) do not exist on the engine-native system,
+    -- so discovery found 0 barns on every dedicated server.
+    local ps = mission.placeableSystem
+    local placeables = nil
+    if ps ~= nil and ps.placeables ~= nil then
+        placeables = ps.placeables
+    elseif mission.husbandrySystem ~= nil then
+        -- Legacy path, kept for engine builds that expose it: per-farm enumerator if
+        -- present, else the system's own tables. The placeable list above is the
+        -- verified route; this is only reached when it is unavailable.
+        local hs = mission.husbandrySystem
+        if hs.getPlaceablesByFarm ~= nil then
+            local collected = {}
+            for _, farmId in ipairs(self:_farmIdsToScan()) do
+                local got = nil
+                pcall(function() got = hs:getPlaceablesByFarm(farmId) end)
+                for _, p in pairs(got or {}) do
+                    collected[#collected + 1] = p
+                end
+            end
+            placeables = collected
+        else
+            placeables = hs.placeables or hs.husbandries
         end
-    else
-        -- No per-farm enumerator. Take the whole set once and let each placeable name its
-        -- own owner, which is the same question asked a different way.
-        self:_registerBarnsFrom(hs.placeables or hs.husbandries, nil)
     end
+
+    self:_registerBarnsFrom(placeables, nil)
 
     -- DC-9 repair 5 + the milk-round listeners: drop records that are provably dead,
     -- clear the rota on a farm change, and start watching every live barn's storage.

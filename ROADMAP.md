@@ -18,6 +18,7 @@
 
 ## Near-term (next release cycle)
 
+- [x] Dedicated-server barn discovery (DC-32, 2026-08-18): the Dairy tab showed "no barns" on the dedicated server even with barns placed. `discoverBarns` enumerated through `husbandrySystem:getPlaceablesByFarm`, a method present in no game script, LUADOC or reference, with fallbacks (`hs.placeables` / `hs.husbandries`) that do not exist on the engine-native husbandry system, so discovery found 0 barns on every dedicated server and the update-only network sync could not materialise them on clients. Discovery now iterates the placeable system's own list (`g_currentMission.placeableSystem.placeables`, the table the game itself walks in PlaceableBeehive.lua), reads each placeable's owner via `getOwnerFarmId()`, and retries every 500 ms for 10 s when the list is not yet populated (client join / slow loads). F75's per-owning-farm intent is preserved; the enumerator is now the verified one.
 - [x] Esc framework table freeze (Dairy guest, #30, 2026-08-15): the shared 4-bay column grid is restated on every show. Merged; 1.0.5.4.
 - [x] Co-op herd advisory (DC-19, **DairyCore half**, 2026-08-14): the gate flag
   `hasHerdAdvisory` is read through the existing `_proStaff` accessor (neutral-false when
