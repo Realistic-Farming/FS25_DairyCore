@@ -31,6 +31,7 @@
   SDS-owned.
 
 ## Bugs
+- [x] DC-32 (2026-08-18): Dairy tab showed "no barns" on the dedicated server. `discoverBarns` enumerated via `husbandrySystem:getPlaceablesByFarm` (unverifiable, absent from every reference and the game scripts) with fallbacks that do not exist on the engine-native system, so discovery found 0 barns; the network sync is update-only and could not materialise them on clients. Fix: enumerate `g_currentMission.placeableSystem.placeables` (the verified table, walked by PlaceableBeehive.lua), owner from `getOwnerFarmId()`, with a 10 s retry for slow placeable loads. 418 suite assertions green.
 - [x] The sovereign floor floored the live spot and divided by that same spot, so
   the floor crashed exactly when the market crashed (DC-16, 2026-08-14): the floor
   now rides `entry.base`, read as a pull, never the live spot.
