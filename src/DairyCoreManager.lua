@@ -1138,8 +1138,9 @@ function DairyCoreManager:_settleContractDay(contractId, sctx)
         c.organicDays = (c.organicDays or 0) + 1
         c.daysRemaining = c.daysRemaining - 1
         if c.daysRemaining <= 0 then
-            self:_payContract(c)
-            c.settled = true
+            if self:_payContract(c) ~= false then
+                c.settled = true
+            end
         end
     end
     self:_markBarnsDirty()
@@ -1224,14 +1225,19 @@ function DairyCoreManager:_payContract(c)
     local income = math.floor(litres * effectivePrice)
     if income <= 0 then return end
 
-    pcall(function()
+    local ok = pcall(function()
         g_currentMission:addMoney(income, c.farmId, MoneyType.OTHER, true, true)
     end)
+    if not ok then
+        DCLogger.warning("Contract %d payment FAILED for farm %d -- will retry next settlement", c.contractId, c.farmId)
+        return false
+    end
     self:_taxAudit(c.farmId, income, DairyConstants.CONTRACTS.INCOME_LABEL)
     DCLogger.info("Contract %d paid: %d L -> %d (farm %d)", c.contractId, math.floor(litres), income, c.farmId)
 
     local barn = self.barns[c.barnId]
     if barn ~= nil then barn.activeContractId = nil end
+    return true
 end
 
 -- =========================================================
