@@ -1029,6 +1029,32 @@ function DairyCoreManager:applyFeedContaminationPenalty(barnId, severity)
     self:_markBarnsDirty()
 end
 
+-- F105 half: route a harvest cut of a designated feed field into the barn's
+-- mycotoxin penalty. SoilFertilizer's soilHarvestBus is the suite's
+-- neutral-when-absent disease-at-harvest broadcast; this adapter finds every barn
+-- that designated the harvested field and applies the live disease pressure as
+-- the penalty severity. Latent until the DC-11 designation surface gives barns
+-- fields to designate. A clean cut (diseasePressure 0) is not contamination and
+-- does not route: a zero-severity call would still impose MIN_PENALTY for
+-- MIN_DAYS, and a healthy field should never do that.
+function DairyCoreManager:_applyHarvestContamination(payload)
+    if payload == nil then return end
+    local fieldId = payload.fieldId
+    local severity = payload.diseasePressure
+    if fieldId == nil or type(severity) ~= "number" or severity <= 0 then return end
+    local barns = 0
+    for barnId, barn in pairs(self.barns) do
+        if barn.feedSourceFields ~= nil and barn.feedSourceFields[fieldId] ~= nil then
+            self:applyFeedContaminationPenalty(barnId, severity)
+            barns = barns + 1
+        end
+    end
+    if barns > 0 then
+        DCLogger.info("DC-11: harvest contamination %d applied to %d barn(s) from field %s",
+            severity, barns, tostring(fieldId))
+    end
+end
+
 -- Refresh the which-field feed-disease flag (reveal gate: name only when the field's
 -- diseaseDiscovered is true; otherwise which-field-only). DC-14 also derives a
 -- severity band from the raw ungated diseasePressure of the designated feed fields
@@ -1339,10 +1365,17 @@ function DairyCoreManager:_bindHarvestBus()
     local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
     if bus == nil or bus.subscribe == nil then return end
     local ok = pcall(function()
-        return bus:subscribe("DairyCore_FeedProvenance", function(payload)
+        bus:subscribe("DairyCore_FeedProvenance", function(payload)
             if self.feedProvenance ~= nil then
                 self.feedProvenance:onHarvestCut(payload)
             end
+        end)
+        -- DC-11 / F105: the mycotoxin half. Same bus, second listener, keyed by
+        -- name so re-registering replaces rather than stacks. Routes contaminated
+        -- feed-field harvests into the barn's mycotoxin penalty (latent until the
+        -- designation surface gives barns fields).
+        bus:subscribe("DairyCore_FeedContamination", function(payload)
+            self:_applyHarvestContamination(payload)
         end)
     end)
     if ok then self.harvestBound = true end
@@ -1352,7 +1385,10 @@ function DairyCoreManager:_unbindHarvestBus()
     if not self.harvestBound then return end
     local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
     if bus ~= nil and bus.unsubscribe ~= nil then
-        pcall(function() bus:unsubscribe("DairyCore_FeedProvenance") end)
+        pcall(function()
+            bus:unsubscribe("DairyCore_FeedProvenance")
+            bus:unsubscribe("DairyCore_FeedContamination")
+        end)
     end
     self.harvestBound = false
 end

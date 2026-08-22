@@ -68,11 +68,17 @@
       latches `self.active = false` on the first pcall failure. DC-17 assumed the
       fix; the bridge should retry with a counter and announce once, not latch.
       Also the mode-change event (DC-12 section 3.2) is still log-only.
+- [x] **The F105 mycotoxin half: harvest contamination routes into the barn
+      penalty (2026-08-21).** DairyCore's second `soilHarvestBus` listener
+      (`DairyCore_FeedContamination`) routes a harvest cut of a designated feed
+      field into `applyFeedContaminationPenalty`; clean cuts never route. The
+      designation surface is still callerless, so the adapter is latent today.
 - [ ] **The DC-11 feed-field designation surface ships callerless** (designed
-      state); when FP-1 or a contamination reader wires to it, re-verify the
-      placement ruling: the feed-field bonuses currently sit inside the Standard
-      score path (`_herdScoreStandard`), so a Ritter farm misses them. Latent
-      today, zero callers; fix the placement before the first consumer wires.
+      state); now that the F105 contamination reader has wired to it (2026-08-21),
+      the placement ruling is owed: the feed-field bonuses and the mycotoxin
+      penalty currently sit inside the Standard score path (`_herdScoreStandard`),
+      so a Ritter farm misses them. Latent today, zero callers; fix the placement
+      before the first designation lands.
 - [ ] **`undesignateFeedField` does not mark the barn dirty** while
       `designateFeedField` does, five lines apart. Two-minute fix when someone is
       in that file.
