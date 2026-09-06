@@ -55,34 +55,10 @@ end
 
 local function onMissionLoadedFinished()
     dairyCore:onMissionLoaded()
-    -- DC-33: the per-frame driver rides the verified updateable pattern (same
-    -- lifecycle as TaxMod's updateable): g_currentMission:addUpdateable in the
-    -- mission-load-finished hook, removed in the delete hook. The previous carrier,
-    -- an append onto FSBaseMission.update, never fired: the 2026-09-05 session ran
-    -- for close to an hour and the DC-32 retry loop's success and cap lines never
-    -- appeared in log.txt, so discovery stayed at its initial 0-barn pass and the
-    -- Farm Tablet and the RF PDA showed no dairy barns. FSBaseMission.lua is not
-    -- present in any of the reference packs, so the old hook cannot be verified and
-    -- is not kept as a second carrier.
-    local dcUpdateable = {
-        update = function(_, dt)
-            local delta = dt
-            if type(delta) == "table" then
-                delta = delta.dt or delta.deltaTime or 0
-            end
-            dairyCore:update(delta or 0)
-        end,
-        delete = function()
-            DCLogger.info("DairyCore updateable removed")
-        end,
-    }
-    if g_currentMission ~= nil and g_currentMission.addUpdateable ~= nil then
-        g_currentMission:addUpdateable(dcUpdateable)
-        dairyCore.updateable = dcUpdateable
-        DCLogger.info("DairyCore updateable registered (DC-33)")
-    else
-        DCLogger.warning("g_currentMission:addUpdateable unavailable - barn discovery will not retry")
-    end
+end
+
+local function onMissionUpdate(mission, dt)
+    dairyCore:update(dt)
 end
 
 local function onMissionSave()
@@ -91,10 +67,6 @@ end
 
 local function onMissionDelete()
     dairyCore:onMissionDelete()
-    if dairyCore.updateable ~= nil and g_currentMission ~= nil and g_currentMission.removeUpdateable ~= nil then
-        g_currentMission:removeUpdateable(dairyCore.updateable)
-        dairyCore.updateable = nil
-    end
     getfenv(0)["g_dairyCoreManager"] = nil
     if g_currentMission ~= nil then
         g_currentMission.dairyCoreManager = nil
@@ -103,6 +75,14 @@ end
 
 Mission00.load = Utils.appendedFunction(Mission00.load, onMissionLoad)
 Mission00.loadMission00Finished = Utils.appendedFunction(Mission00.loadMission00Finished, onMissionLoadedFinished)
+-- DC-33: the per-frame driver rides FSBaseMission.update (the suite's proven
+-- per-frame carrier: NPC Favor and TaxMod both drive real work from it, and the
+-- player log proves it ticks every frame during gameplay via NPC Favor's
+-- "Update #N" lines). The earlier g_currentMission:addUpdateable fired once and
+-- stopped: it registers on the transient loading mission, not the gameplay
+-- mission. update() normalizes dt (number or table) and runs the frame-counted
+-- discovery retry, so it no longer depends on dt's undocumented shape.
+FSBaseMission.update = Utils.appendedFunction(FSBaseMission.update, onMissionUpdate)
 
 if FSCareerMissionInfo ~= nil and FSCareerMissionInfo.saveToXMLFile ~= nil then
     FSCareerMissionInfo.saveToXMLFile = Utils.appendedFunction(

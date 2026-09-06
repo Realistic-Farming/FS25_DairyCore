@@ -30,6 +30,12 @@ the repo's git history and README.
   discovery, and logs a one-time "update loop live" marker plus a per-pass
   "scanned N placeable(s), M dairy barn(s)" line so the next player log proves
   whether discovery sees the placeables.
+- 1.0.5.22: the per-frame carrier is switched from g_currentMission:addUpdateable
+  to FSBaseMission.update (the suite's proven per-frame hook: NPC Favor and
+  TaxMod both drive real work from it, and the player log proves it ticks every
+  frame during gameplay). The addUpdateable fired once then stopped because it
+  registers on the transient loading mission, not the gameplay mission, so the
+  retry never advanced.
 
 ### Added
 - Changelog file established (suite ruling 2026-08-22).
