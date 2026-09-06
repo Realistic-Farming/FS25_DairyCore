@@ -701,19 +701,6 @@ function RfPdaMenuPage:initialize()
             self:onClickHelpCs()
         end
     }
-    -- Dairy footer Feed Fields (MENU_EXTRA_1): the DC-11 designation surface.
-    -- Deep dialog opened from the glance, no FarmTablet needed.
-    self.btnFeedFields = {
-        inputAction = InputAction.MENU_EXTRA_1,
-        showWhenPaused = true,
-        text = tr("dc_rf_pda_btn_feed_fields", "Feed Fields"),
-        callback = function()
-            local dlg = FeedDesignationDialog
-            if dlg ~= nil and type(dlg.show) == "function" then
-                dlg.show()
-            end
-        end
-    }
 
     -- Back only. Help is Soil-only and _syncHostGuestChrome adds it when the Soil
     -- module is the active one; seeding it here leaked Help onto every module's
@@ -1647,7 +1634,6 @@ function RfPdaMenuPage:_syncHostGuestChrome(activeId)
     local isCs = activeId == "seasonalCropStress"
     local isWc = activeId == "workerCosts"
     local isMd = activeId == "marketDynamics"
-    local isDairy = activeId == "dairy"
     local isFw = activeId == "income" or activeId == "tax" or activeId == "dairy"
             or activeId == "npcFavor" or activeId == "fertilizerDepot"
     local isFwStatus = activeId == "tax"
@@ -1963,13 +1949,6 @@ function RfPdaMenuPage:_syncHostGuestChrome(activeId)
         -- Both dialogs stay registered and still open from the PDA/joiner; only the
         -- duplicate bottom-bar buttons go, since the cards now carry that content.
         self.menuButtonInfo = { self.btnBack, self.btnHelp }
-    elseif isDairy then
-        -- BUILD 06:59 (George CLOSED DESIGN 06:50): Dairy is Back only. Feed Fields was
-        -- the wrong story (soil N/P/K is not feed quality); the cards carry the farm's
-        -- stored-feed readout now. btnFeedFields stays constructed so stale bindings
-        -- resolve, never assigned (same rule as btnCsConsultant). The other eight door
-        -- copies never had this branch and already fall through to Back only.
-        self.menuButtonInfo = { self.btnBack }
     else
         self.menuButtonInfo = { self.btnBack }
     end
