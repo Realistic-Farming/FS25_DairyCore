@@ -287,7 +287,17 @@ function DairyCoreManager:_registerBarnsFrom(placeables, queriedFarmId)
                 if not self:_isRealFarmId(farmId) then farmId = queriedFarmId end
                 if self:_isRealFarmId(farmId) then
                     self:_getOrCreateBarn(barnId, farmId, placeable)
+                elseif self._discoveryRetries == nil then
+                    -- DC-33 diagnostic: a milk husbandry whose owner is a reserved
+                    -- engine farm id is skipped. Say which one, once (first pass only,
+                    -- the retry loop would otherwise repeat it), so a player log can
+                    -- answer "why is my barn not listed" without a debugger.
+                    DCLogger.info("DC-33: milk barn %s skipped, owner farm id %s is not a real farm",
+                        tostring(barnId), tostring(farmId))
                 end
+            elseif self._discoveryRetries == nil then
+                DCLogger.info("DC-33: milk placeable without a unique id skipped (getUniqueId %s)",
+                    tostring(barnId))
             end
         end
     end

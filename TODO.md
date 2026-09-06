@@ -6,6 +6,14 @@
 
 ## Features / enhancements
 
+- [x] Barn discovery per-frame driver repair (DC-33, 2026-09-06): the DC-32
+  discovery retry and the per-frame refresh never ran because their carrier, an
+  append onto FSBaseMission.update, never fired (no retry lines in the 2026-09-05
+  hour-long session log; discovery stayed at its initial 0-barn pass, so the Farm
+  Tablet and the RF PDA showed no dairy barns). The driver now rides the verified
+  g_currentMission:addUpdateable pattern, registered on mission load finish and
+  removed on mission delete. First-pass skip-reason diagnostics name any milk barn
+  passed over. Not yet tested in game.
 - [x] Feed-field designation surface (DC-11 section 3.1, 2026-08-23): deep engine
   dialog opened from the Dairy Esc glance ("Feed Fields" footer button) lists owned
   fields with live SF state and Toggle calls the already-built designate/undesignate.
