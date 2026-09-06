@@ -106,22 +106,46 @@ function DairyCoreManager:onMissionDelete()
 end
 
 function DairyCoreManager:update(dt)
-    if not self.bedrockBound then self:_bindBedrock() end
-    if not self.clockBound then self:_subscribeClock() end
-    self:_retryDiscovery(dt)
-    self:_updateBreedSurfaceFallback(dt)
+    local delta = dt
+    if type(delta) == "table" then delta = delta.dt or delta.deltaTime or 0 end
+    delta = tonumber(delta) or 0
+
+    -- DC-33: one-time marker so the player log proves whether the per-frame driver
+    -- actually fires after registration. Its absence means the updateable carrier
+    -- itself is not being invoked, which changes the fix.
+    if not self._dc33UpdateLive then
+        self._dc33UpdateLive = true
+        DCLogger.info("DC-33: DairyCore per-frame update loop live")
+    end
+
+    -- DC-33: guarded so a companion read can never silently stop discovery. Previous
+    -- versions let a hidden construction (nil companion, an unexpected dt shape) drop
+    -- the retry with no log; if anything throws here, say so instead of stalling.
+    local ok, err = pcall(function()
+        if not self.bedrockBound then self:_bindBedrock() end
+        if not self.clockBound then self:_subscribeClock() end
+        self:_retryDiscovery()
+        self:_updateBreedSurfaceFallback(delta)
+    end)
+    if not ok then
+        DCLogger.warning("DC-33: update loop error: %s", tostring(err))
+    end
 end
 
--- DC-32: on a dedicated server and on a client join, onMissionLoaded can fire before the
--- placeable list is populated, so the first discovery finds 0 barns and nothing re-runs
--- it until the next day tick (too late for a fresh view). Retry every 500 ms until barns
--- appear or a 10 s cap is hit, and say which way it went.
-function DairyCoreManager:_retryDiscovery(dt)
+-- DC-32 (framed by DC-33): on a dedicated server and on a client join, onMissionLoaded
+-- can fire before the placeable list is populated, so the first discovery finds 0 barns
+-- and nothing re-runs it until the next day tick (too late for a fresh view). Retry every
+-- ~30 update ticks (about half a second at 60 fps) until barns appear or a 20-attempt cap
+-- is hit, and say which way it went. Deliberately frame-counted, not wall-time: the shape
+-- of an updateable's dt argument is not documented in any reference pack, and an
+-- accumulator keyed to it can silently stall (a table dt with no recognized field reads
+-- delta 0 and never reaches a threshold), which is why the first shipped retry never ran.
+function DairyCoreManager:_retryDiscovery()
     if self._discoveryRetries ~= nil and self._discoveryRetries >= 20 then return end
     if self:_countBarns() > 0 then return end
-    self._discoveryTimer = (self._discoveryTimer or 0) + dt
-    if self._discoveryTimer < 500 then return end
-    self._discoveryTimer = 0
+    self._retryFrames = (self._retryFrames or 0) + 1
+    if self._retryFrames < 30 then return end
+    self._retryFrames = 0
     self._discoveryRetries = (self._discoveryRetries or 0) + 1
     self:discoverBarns()
     if self:_countBarns() > 0 then
@@ -259,6 +283,18 @@ function DairyCoreManager:discoverBarns()
     end
 
     self:_registerBarnsFrom(placeables, nil)
+
+    -- DC-33: decisive pass summary. Logs how many placeables discovery actually
+    -- saw and how many dairy barns are registered, so a player log proves whether
+    -- the live list was ready and whether the placeables were seen at all. If the
+    -- list is ready and contains cow barns yet none register, the DC-33 skip lines
+    -- above name the owner-farm reason.
+    local scanned = 0
+    if type(placeables) == "table" then
+        for _ in pairs(placeables) do scanned = scanned + 1 end
+    end
+    DCLogger.info("DC-33: discovery pass scanned %d placeable(s), %d dairy barn(s) registered",
+        scanned, self:_countBarns())
 
     -- DC-9 repair 5 + the milk-round listeners: drop records that are provably dead,
     -- clear the rota on a farm change, and start watching every live barn's storage.

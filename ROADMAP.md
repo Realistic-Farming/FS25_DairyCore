@@ -20,7 +20,9 @@
 
 - [x] Barn discovery per-frame driver repair (DC-33, 2026-09-06): discovery and the
   DC-32 retry now actually run per frame via the verified addUpdateable pattern
-  (the old FSBaseMission.update append never fired). In-game retest owed.
+  (the old FSBaseMission.update append never fired). 1.0.5.21 makes the retry
+  frame-counted and pcall-guarded per frame, with a scanned/registered summary log
+  on every pass. In-game retest owed.
 - [x] Feed-field designation surface (DC-11 section 3.1, 2026-08-23): the missing
   player surface that gives barns fields to feed. A deep engine dialog opened from
   the Dairy Esc glance ("Feed Fields" footer button) lists the farm's owned fields

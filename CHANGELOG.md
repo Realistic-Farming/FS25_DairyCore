@@ -20,9 +20,16 @@ the repo's git history and README.
   ran once before the placeable list was ready and stayed at 0 barns. The driver
   now uses the verified g_currentMission:addUpdateable pattern (same lifecycle as
   TaxMod's updateable): registered on mission load finish, removed on mission
-  delete. Discovery retries every 500 ms up to 10 s (DC-32), and a first-pass
-  skip-reason diagnostic (DC-33) logs any milk barn passed over so a player log
-  answers "why is my barn not listed" without a debugger. 1.0.5.20.
+  delete. Discovery retries (DC-32) until barns appear or a 20-attempt cap, and a
+  first-pass skip-reason diagnostic (DC-33) logs any milk barn passed over so a
+  player log answers "why is my barn not listed" without a debugger. 1.0.5.20.
+- 1.0.5.21: the retry is now frame-counted (every ~30 update ticks) instead of
+  keyed to wall-time dt, because the shape of an updateable's dt argument is not
+  documented in any reference pack and an accumulator could stall at delta 0. The
+  per-frame path is pcall-guarded so a hidden construction cannot silently stop
+  discovery, and logs a one-time "update loop live" marker plus a per-pass
+  "scanned N placeable(s), M dairy barn(s)" line so the next player log proves
+  whether discovery sees the placeables.
 
 ### Added
 - Changelog file established (suite ruling 2026-08-22).

@@ -13,7 +13,9 @@
   Tablet and the RF PDA showed no dairy barns). The driver now rides the verified
   g_currentMission:addUpdateable pattern, registered on mission load finish and
   removed on mission delete. First-pass skip-reason diagnostics name any milk barn
-  passed over. Not yet tested in game.
+  passed over. 1.0.5.21 makes the retry frame-counted (not dt-keyed), pcall-guards
+  the per-frame path, and logs a decisive per-pass scanned/skipped summary line.
+  Diagnostic unit test dc33_discovery_contract_test.lua. In-game retest owed.
 - [x] Feed-field designation surface (DC-11 section 3.1, 2026-08-23): deep engine
   dialog opened from the Dairy Esc glance ("Feed Fields" footer button) lists owned
   fields with live SF state and Toggle calls the already-built designate/undesignate.
