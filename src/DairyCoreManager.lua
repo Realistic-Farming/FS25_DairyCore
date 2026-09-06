@@ -110,17 +110,17 @@ function DairyCoreManager:update(dt)
     if type(delta) == "table" then delta = delta.dt or delta.deltaTime or 0 end
     delta = tonumber(delta) or 0
 
-    -- DC-33: raw frame counter. Logs every 60th call with the live placeable count
-    -- so the player log proves unambiguously whether update() repeats during
-    -- gameplay and what the list contains at that time. This is the single
-    -- diagnostic that decides the next fix; it is intentionally unconditional.
+    -- DC-33: raw frame counter. Logs the first 120 calls every frame, then every
+    -- 60th call, with the live placeable count. This proves unambiguously whether
+    -- update() repeats during gameplay and what the list contains. The single
+    -- diagnostic that decides the next fix; intentionally unconditional.
     self._dc33Frame = (self._dc33Frame or 0) + 1
-    if self._dc33Frame % 60 == 0 then
-        local n = 0
-        local ps = g_currentMission ~= nil and g_currentMission.placeableSystem
-        if ps ~= nil and ps.placeables ~= nil then
-            for _ in pairs(ps.placeables) do n = n + 1 end
-        end
+    local n = 0
+    local ps = g_currentMission ~= nil and g_currentMission.placeableSystem
+    if ps ~= nil and ps.placeables ~= nil then
+        for _ in pairs(ps.placeables) do n = n + 1 end
+    end
+    if self._dc33Frame <= 120 or self._dc33Frame % 60 == 0 then
         DCLogger.info("DC-33: frame %d, placeableSystem.placeables = %d, barns registered = %d",
             self._dc33Frame, n, self:_countBarns())
     end
