@@ -13,6 +13,8 @@
 -- soil N/P/K as feed, no Feed Fields footer), the freed Field slot carries the farm's
 -- stored-feed readout from FeedProvenance (WAITING until the farm has harvest data), and
 -- the side rail gets its Dairy teach back. Same XML, same ids; positions unchanged.
+-- BUILD 11:40 (Ash, George CLOSED DESIGN 11:25): no breed chips. Herd now / Milk in tank are
+-- in-card SmoothLists (the NPC Favor nest); extra rows stay in the table and scroll.
 -- =========================================================
 
 DairyRfPdaGuest = DairyRfPdaGuest or {}
@@ -600,209 +602,130 @@ local function stripButtonGlyph(btn)
 end
 
 -- ============================================================
--- BUILD 07:47: the card paint and the in-card breed pager.
+-- BUILD 11:40 (George CLOSED DESIGN 11:25): the in-card herd / milk breed lists. No breed
+-- chips: extra rows stay in the table and scroll. The NPC Favor nest and data source, copied:
+-- eight SmoothLists (rfDairyCardNHerdList / rfDairyCardNMilkList) in the ten-door XML, one
+-- data source told apart by list id, rows from the {name, value} pairs herdTable / milkTable
+-- already return. setDataSource once per list, setDelegate explicitly, reloadData only on a
+-- full show and only once the list is loaded (the thrash fence).
 -- ============================================================
-local _lastContainer = nil
-local _pageRows = {}      -- slot -> row painted there on the last show
-local _breedPage = {}     -- barnId -> breed page, kept while the cards page turns
+local _cardRows = {}      -- slot -> { herd = rows, milk = rows }
+local _cardBarn = {}      -- slot -> barn key the headers and lists were last painted for
 
-local function breedPagesFor(herdRows, milkRows)
-    local n = math.max(#herdRows, #milkRows)
-    if n <= TABLE_ROWS then return 1 end
-    return math.ceil(n / TABLE_ROWS)
+--- Slot and part from a list id: "rfDairyCard2MilkList" -> 2, "milk".
+local function listSlotPart(list)
+    local id = list ~= nil and list.id or nil
+    if type(id) ~= "string" then return nil, nil end
+    local slot, part = id:match("^rfDairyCard(%d)(%a+)List$")
+    if slot == nil then return nil, nil end
+    return tonumber(slot), string.lower(part)
 end
 
-local function breedPageOf(r, pages)
-    local key = tostring(r.barnId or "?")
-    local p = math.floor(tonumber(_breedPage[key]) or 1)
-    if p > pages then p = pages end
-    if p < 1 then p = 1 end
-    _breedPage[key] = p
-    return p
+local function listRows(list)
+    local slot, part = listSlotPart(list)
+    local card = slot ~= nil and _cardRows[slot] or nil
+    local rows = card ~= nil and card[part] or nil
+    if type(rows) ~= "table" then return {} end
+    return rows
 end
 
---- One breed page of a table into its two columns, one line per row, same pitch on both.
-local function tableColumns(rows, page)
-    local names, vals = {}, {}
-    local first = (page - 1) * TABLE_ROWS
-    for i = first + 1, first + TABLE_ROWS do
-        local row = rows[i]
-        if row ~= nil then
-            names[#names + 1] = row[1]
-            vals[#vals + 1] = row[2]
+--- The one data source for the eight in-card SmoothLists (engine contract, SmoothListElement.lua:
+--- one section by default, getNumberOfItemsInSection, populateCellForItemInSection; the single
+--- ListItem template is the singular cell). Cells are the engine's clones of the XML template:
+--- nothing is created here, only text set by name. A row pick paints nothing (read-only cards).
+local dairyListSource = {}
+
+function dairyListSource:getNumberOfItemsInSection(list, section)
+    return #listRows(list)
+end
+
+function dairyListSource:populateCellForItemInSection(list, section, index, cell)
+    if cell == nil or type(cell.getDescendantByName) ~= "function" then return end
+    local row = listRows(list)[index]
+    if row == nil then return end
+    setText(cell:getDescendantByName("rfDairyBreedName"), row[1])
+    setText(cell:getDescendantByName("rfDairyBreedVal"), row[2])
+end
+
+function dairyListSource:onListSelectionChanged(list, section, index)
+end
+
+--- setDataSource once per list element, by identity: the list is re-sourced only when its
+--- dataSource is not this chunk's table (a flag on the element would outlive a re-sourced chunk);
+--- setDelegate explicitly (the XML loader made the host page the delegate, the NPC Favor lesson);
+--- reloadData only when asked and only once the engine has loaded the list (list.isLoaded).
+local function syncList(container, id, reload)
+    local list = findOnPage(container, id)
+    if list == nil then return nil end
+    if list.dataSource ~= dairyListSource and type(list.setDataSource) == "function" then
+        list:setDataSource(dairyListSource)
+        if type(list.setDelegate) == "function" then
+            list:setDelegate(dairyListSource)
         end
+        list._rfDairySourced = true
     end
-    return table.concat(names, "\n"), table.concat(vals, "\n")
-end
-
-local function paintTable(container, slot, part, header, rows, page)
-    setText(cardEl(container, slot, part .. "Head"), header)
-    local names, vals = tableColumns(rows, page)
-    setText(cardEl(container, slot, part .. "Names"), names)
-    setText(cardEl(container, slot, part .. "Vals"), vals)
-end
-
-local function repaint()
-    pcall(DairyRfPdaGuest.onShow, _lastContainer, true)
-end
-
---- Click on the in-card pager: step that barn's breed page and repaint the page. The row is
---- read at click time, so a card that has moved to another barn steps the right one.
-local function stepBreedPage(slot, delta)
-    local r = _pageRows[slot]
-    if r == nil then return end
-    local _, herdRows = herdTable(r.herdBreedComposition)
-    local _, milkRows = milkTable(r.milkBreedProvenance)
-    local pages = breedPagesFor(herdRows, milkRows)
-    if pages <= 1 then return end
-    local key = tostring(r.barnId or "?")
-    local target = breedPageOf(r, pages) + delta
-    if target > pages then target = 1 end
-    if target < 1 then target = pages end
-    _breedPage[key] = target
-    repaint()
-end
-
--- ============================================================
--- BUILD 00:06 (LAW Wizard Esc overlay-chip buttons 2026-09-05, George CLOSED DESIGN 23:12): every
--- created button on this page paints as a vanilla key chip, the CsRfPdaGuest setPivotBtn /
--- renderPivotChip / wirePivotChipPaint chain vendored. Idle = dark plate, lime text; latched =
--- lime plate, dark text; gated = grey, no lime. The Button keeps its own hit box and onClick
--- (RF_CsPivotBtn: buttonActivate chrome, hideKeyboardGlyph, no global-action trigger, so SPACE
--- never confirms); its TextElement text stays "" so the chip is the only paint.
--- ============================================================
--- The engine text colour setter, captured here (no file-local helper shadows the name in this
--- file, but the 20:36 Market crash is the reason this is never called by its bare name).
-local engineSetTextColor = setTextColor
-local CHIP_TEXT = { 0.22323, 0.40724, 0.00368 }
-local CHIP_BG = { 0.00913, 0.01033, 0.00651 }
-local CHIP_GATED_TEXT = { 0.62, 0.64, 0.66 }
-local CHIP_GATED_BG = { 0.06, 0.06, 0.065 }
-
---- Store the chip state on the Button and blank its text. enabled=false paints the grey chip
---- and disables the Button; latched inverts the live chip.
-local function setChipBtn(el, label, enabled, latched)
-    if el == nil then return end
-    if type(el.setText) == "function" then el:setText("") end
-    el.rfChipLabel = label
-    el.rfChipEnabled = enabled and true or false
-    el.rfChipLatched = latched and true or false
-    if type(el.setDisabled) == "function" then el:setDisabled(not enabled) end
-end
-
-local function renderChip(el, overlay)
-    local label = el.rfChipLabel
-    if label == nil or label == "" then return end
-    if el.absPosition == nil or el.absSize == nil or el.visible == false then return end
-    local height = el.absSize[2] * 0.72
-    if height <= 0 then return end
-    local t, b, ta, ba
-    if el.rfChipEnabled and el.rfChipLatched then
-        t, b, ta, ba = CHIP_BG, CHIP_TEXT, 1.0, 1.0
-    elseif el.rfChipEnabled then
-        t, b, ta, ba = CHIP_TEXT, CHIP_BG, 1.0, 1.0
-    else
-        t, b, ta, ba = CHIP_GATED_TEXT, CHIP_GATED_BG, 0.45, 0.55
+    if reload and list.isLoaded and type(list.reloadData) == "function" then
+        pcall(list.reloadData, list)
     end
-    overlay:setColor(t[1], t[2], t[3], ta, b[1], b[2], b[3], ba)
-    local width = overlay:getButtonWidth(label, height)
-    local x = el.absPosition[1] + (el.absSize[1] - width) * 0.5
-    local y = el.absPosition[2] + (el.absSize[2] - height) * 0.5
-    overlay:renderButton(label, x, y, height, true)
+    return list
 end
 
---- Wrap one already-visible parent's draw once (guard flag on the element) so the listed chips
---- repaint every frame the parent draws. lookup(root, id) resolves each Button. The colour reset
---- at the end is the ENGINE global captured above, never an element helper.
-local function wireChipPaint(parent, ids, flag, lookup)
-    if parent == nil or parent[flag] then return end
-    parent[flag] = true
-    local prevDraw = parent.draw
-    function parent:draw(...)
-        if prevDraw ~= nil then prevDraw(self, ...) end
-        local idm = g_inputDisplayManager
-        if idm == nil or type(idm.getKeyboardKeyOverlay) ~= "function" then return end
-        local overlay = idm:getKeyboardKeyOverlay()
-        if overlay == nil or type(overlay.renderButton) ~= "function" then return end
-        for _, id in ipairs(ids) do
-            local el = lookup(self, id)
-            if el ~= nil then
-                pcall(renderChip, el, overlay)
-            end
-        end
-        setTextBold(false)
-        setTextAlignment(RenderText.ALIGN_LEFT)
-        setTextVerticalAlignment(RenderText.VERTICAL_ALIGN_BASELINE)
-        if type(engineSetTextColor) == "function" then
-            engineSetTextColor(1, 1, 1, 1)
-        end
-    end
-end
-
+-- The eight breed-pager Buttons of the doors before BUILD 11:40. Belt only: an old first-writer
+-- door may still carry them, so every show hides, unlabels and disables whatever is found.
 local DAIRY_CHIP_IDS = {
     "rfDairyCard1BreedPrev", "rfDairyCard1BreedNext", "rfDairyCard2BreedPrev", "rfDairyCard2BreedNext",
     "rfDairyCard3BreedPrev", "rfDairyCard3BreedNext", "rfDairyCard4BreedPrev", "rfDairyCard4BreedNext",
 }
+-- The sixteen multi-line breed Texts of the same old doors: blanked and hidden on the same belt,
+-- so a Lua reload ahead of the XML restart never shows a frozen breed column.
+local OLD_DOOR_TEXT_PARTS = { "HerdNames", "HerdVals", "MilkNames", "MilkVals" }
 
---- The wrap goes on rfFwTableBlock, the bay the four cards sit in.
-local function wireDairyChipPaint(container)
-    wireChipPaint(findDescendant(container, "rfFwTableBlock"), DAIRY_CHIP_IDS, "_rfDairyChipWired", function(root, id)
-        return findDescendant(root, id) or findOnPage(container, id)
-    end)
-end
-
---- The in-card breed pager: hidden, blank and disabled unless the barn has more rows than
---- a table page holds. The XML carries no onClick on purpose (an unbound Button is inert
---- for every other door); this binds onClickCallback once per element instance, the way the
---- engine's own TabbedMenu assigns tab.onClickCallback, and the click is consumed.
-local function paintBreedPager(container, slot, pages, page)
-    local prevEl = cardEl(container, slot, "BreedPrev")
-    local nextEl = cardEl(container, slot, "BreedNext")
-    local multi = pages > 1
-    for _, el in ipairs({ prevEl, nextEl }) do
+local function beltHideBreedChips(container)
+    for _, id in ipairs(DAIRY_CHIP_IDS) do
+        local el = findOnPage(container, id)
         if el ~= nil then
-            stripButtonGlyph(el)
-            if type(el.setDisabled) == "function" then el:setDisabled(not multi) end
-            if not multi then setText(el, ""); el.rfChipLabel = nil end
-            setVis(el, multi)
+            setVis(el, false)
+            el.rfChipLabel = nil
+            if type(el.setDisabled) == "function" then el:setDisabled(true) end
         end
     end
-    if not multi then return end
-    if prevEl ~= nil and prevEl.rfDairyBoundSlot ~= slot then
-        prevEl.onClickCallback = function() stepBreedPage(slot, -1) return true end
-        prevEl.rfDairyBoundSlot = slot
+    for slot = 1, CARD_SLOTS do
+        for _, part in ipairs(OLD_DOOR_TEXT_PARTS) do
+            local el = findOnPage(container, "rfDairyCard" .. slot .. part)
+            if el ~= nil then
+                setText(el, "")
+                setVis(el, false)
+            end
+        end
     end
-    if nextEl ~= nil and nextEl.rfDairyBoundSlot ~= slot then
-        nextEl.onClickCallback = function() stepBreedPage(slot, 1) return true end
-        nextEl.rfDairyBoundSlot = slot
-    end
-    -- BUILD 00:06 (overlay-chip law): the labels ride the chips, the Buttons keep their
-    -- onClickCallback binding above.
-    setChipBtn(prevEl, tr("dairy_rf_pda_breed_prev", "< Breeds"), true, false)
-    stripButtonGlyph(prevEl)
-    setChipBtn(nextEl, string.format(tr("dairy_rf_pda_breed_next", "Breeds (%d/%d) >"), page, pages), true, false)
-    stripButtonGlyph(nextEl)
 end
 
---- George's measured card: Name -6, State -32, Herd now header -52 and rows -72..-132, Milk in
---- tank header -152 and rows -172..-232, the stored-feed readout -252, breed pager -346.
---- Nothing is created; every element is in the nine-door XML.
-local function paintCard(container, slot, r, scoreMax, troughText)
-    _pageRows[slot] = r
+--- George's measured card: Name -6, State -32, Herd now header -52 and its list -72 (80px, four
+--- 20px rows visible, the rest scroll), Milk in tank header -152 and its list -172, the stored-feed
+--- readout -252. Nothing is created; every element is in the ten-door XML. Headers and lists are
+--- set on a full show; the 2s light tick repaints Name / State / stored feed and leaves them, except
+--- when the barn in this slot is not the one the lists were painted for (a barn arrived, moved or
+--- was swapped between full shows): then this slot alone gets its headers and lists once. Change-
+--- gated, never periodic: the thrash fence holds.
+local function paintCard(container, slot, r, scoreMax, troughText, full)
     setText(cardEl(container, slot, "Name"), barnLabel(r))
     setText(cardEl(container, slot, "State"), stateCardLine(r, scoreMax))
-    local herdHeader, herdRows = herdTable(r.herdBreedComposition)
-    local milkHeader, milkRows = milkTable(r.milkBreedProvenance)
-    local pages = breedPagesFor(herdRows, milkRows)
-    local page = breedPageOf(r, pages)
-    paintTable(container, slot, "Herd", herdHeader, herdRows, page)
-    paintTable(container, slot, "Milk", milkHeader, milkRows, page)
+    local barnKey = tostring(r.barnId or "?")
+    if full or _cardBarn[slot] ~= barnKey then
+        local herdHeader, herdRows = herdTable(r.herdBreedComposition)
+        local milkHeader, milkRows = milkTable(r.milkBreedProvenance)
+        _cardRows[slot] = { herd = herdRows, milk = milkRows }
+        _cardBarn[slot] = barnKey
+        setText(cardEl(container, slot, "HerdHead"), herdHeader)
+        setText(cardEl(container, slot, "MilkHead"), milkHeader)
+        syncList(container, "rfDairyCard" .. slot .. "HerdList", true)
+        syncList(container, "rfDairyCard" .. slot .. "MilkList", true)
+    end
     -- BUILD 20:36 (George CLOSED DESIGN 19:03): the 555x380 card is back, so the farm-wide
     -- stored-feed readout paints inside the card again (rfDairyCardNStored at -252, three lines).
     local stored = cardEl(container, slot, "Stored")
     setText(stored, troughText or "")
     setVis(stored, true)
-    paintBreedPager(container, slot, pages, page)
 end
 
 -- ============================================================
@@ -1016,6 +939,8 @@ local function restoreFwEmptyHintBox(container)
 end
 
 function DairyRfPdaGuest.onShow(container, lightOnly)
+    beltHideBreedChips(container)
+    local full = lightOnly ~= true
     restoreFwEmptyHintBox(container)
     resetFwTableTitlePos(container)
     clearHostDupes(container)
@@ -1027,7 +952,6 @@ function DairyRfPdaGuest.onShow(container, lightOnly)
     -- host clears the body before this runs, so this is the last word on it for as long
     -- as Dairy is the active module.
     hideSheetChrome(container)
-    wireDairyChipPaint(container)
     paintSideTeach(container)
 
     -- DairyConstants.HERD.SCORE_MAX is the real bound DairyCoreManager clamps herdHealth
@@ -1070,7 +994,7 @@ function DairyRfPdaGuest.onShow(container, lightOnly)
         for slot = 1, CARD_SLOTS do
             setVis(cardEl(container, slot), false)
         end
-        _pageRows = {}
+        if full then _cardRows = {}; _cardBarn = {} end
         _lastRowCount = 0
         _pageIndex = 1
         paintPager(container, 1)
@@ -1094,8 +1018,7 @@ function DairyRfPdaGuest.onShow(container, lightOnly)
     -- barns (2x2 since BUILD 17:13) and an empty slot stays an honest empty (hidden frame),
     -- the hint below says how many barns sit on the pages after this one. The shared pager
     -- only appears past four barns (pageCountFor).
-    _lastContainer = container
-    _pageRows = {}
+    if full then _cardRows = {}; _cardBarn = {} end
     local painted = 0
     for slot = CARDS_PER_PAGE + 1, CARD_SLOTS do
         setVis(cardEl(container, slot), false)
@@ -1104,7 +1027,7 @@ function DairyRfPdaGuest.onShow(container, lightOnly)
         local r = rows[first + slot]
         local card = cardEl(container, slot)
         if r ~= nil then
-            paintCard(container, slot, r, scoreMax, troughText)
+            paintCard(container, slot, r, scoreMax, troughText, full)
             setVis(card, true)
             painted = painted + 1
         else
@@ -1151,8 +1074,8 @@ end
 
 function DairyRfPdaGuest.onHide()
     _pageIndex = 1
-    _breedPage = {}
-    _pageRows = {}
+    _cardRows = {}
+    _cardBarn = {}
 end
 
 --- Registry change: selectModule / registerModule / unregisterModule all notify. If Dairy was
@@ -1211,7 +1134,6 @@ function DairyRfPdaGuest.reset()
     _chromeHidden = false
     _pageIndex = 1
     _lastRowCount = 0
-    _breedPage = {}
-    _pageRows = {}
-    _lastContainer = nil
+    _cardRows = {}
+    _cardBarn = {}
 end
