@@ -771,8 +771,15 @@ end
 -- register, unregister) and, as a belt for applyHomeModuleQuiet which does not notify, on the
 -- availability poll every host refresh makes through getModules(). The rows are left to the
 -- guest that owns the next show. Every card frame and the Dairy hint go dark at the same time.
-local SHEET_STATIC = {
+local SHEET_HEADERS = {
     "rfFwColA", "rfFwColB", "rfFwColC", "rfFwColD",
+}
+-- BUILD 21:40 (George CLOSED DESIGN 21:35 item 5): the eleven hairlines of the old fixed
+-- eight-row table. Nothing paints that grid any more - Income and Depot moved their rows into the
+-- shared SmoothList at 17:21, this module uses cards and NPC Favor uses lists - so they are hidden
+-- on the way in with the rest of the chrome and, unlike the column headers, they are NEVER handed
+-- back. Handing them back is what left a second frame standing behind the Depot sheet.
+local SHEET_RULES = {
     "rfFwRuleHead", "rfFwRuleRow1", "rfFwRuleRow2", "rfFwRuleRow3", "rfFwRuleRow4",
     "rfFwRuleRow5", "rfFwRuleRow6", "rfFwRuleRow7",
     "rfFwRuleCol1", "rfFwRuleCol2", "rfFwRuleCol3",
@@ -781,9 +788,15 @@ local _chromeHidden = false
 local _listenerHost = nil
 
 local function hideSheetChrome(container)
-    for _, id in ipairs(SHEET_STATIC) do
+    for _, id in ipairs(SHEET_HEADERS) do
         setVis(findOnPage(container, id), false)
     end
+    for _, id in ipairs(SHEET_RULES) do
+        setVis(findOnPage(container, id), false)
+    end
+    -- BUILD 17:21: the shared table's rows now live in this list, so the list goes dark with the
+    -- rest of the sheet. Nil-safe: an older door copy has no such id.
+    setVis(findOnPage(container, "rfFwSheetBox"), false)
     for i = 1, MAX_ROWS do
         for _, c in ipairs({ "A", "B", "C", "D" }) do
             setVis(findOnPage(container, "rfFwRow" .. i .. c), false)
@@ -795,7 +808,7 @@ local function hideSheetChrome(container)
 end
 
 local function restoreSheetChrome(container)
-    for _, id in ipairs(SHEET_STATIC) do
+    for _, id in ipairs(SHEET_HEADERS) do
         setVis(findOnPage(container, id), true)
     end
     for slot = 1, CARD_SLOTS do
@@ -1084,6 +1097,15 @@ local function onRegistryChanged()
     handBackChromeIfLeft()
 end
 
+--- BUILD 19:15: the Esc Help footer asks whichever module is showing to open its own guide, so
+--- every companion ships and owns its own help instead of borrowing Soil's.
+---@param container table|nil
+function DairyRfPdaGuest.onOpenHelp(container)
+    if DairyGuideDialog ~= nil and type(DairyGuideDialog.show) == "function" then
+        DairyGuideDialog.show()
+    end
+end
+
 function DairyRfPdaGuest.tryRegister()
     if RfEscBootstrap ~= nil then
         if MOD_DIR == nil then
@@ -1093,6 +1115,12 @@ function DairyRfPdaGuest.tryRegister()
                 profilesXml = MOD_DIR .. "xml/gui/rfEscProfiles.xml",
                 iconPath = "textures/ui/menuIcon.dds",
             })
+            -- BUILD 19:15 (George CLOSED DESIGN 18:55 item 5): load this mod's Field Guide at the
+            -- same moment the door itself loads. A GUI loaded from a mod directory later, once the
+            -- mod's own file system context has closed, fails to open.
+            if DairyGuideDialog ~= nil and type(DairyGuideDialog.register) == "function" then
+                pcall(DairyGuideDialog.register, MOD_DIR)
+            end
             if not doorOk then print("[Dairy] DairyRfPdaGuest: WARNING ensureDoor failed (will retry)") end
         end
     end
@@ -1112,6 +1140,7 @@ function DairyRfPdaGuest.tryRegister()
             -- (RfEscModules whitelist carries it since BUILD 14:04), so the shared pager
             -- and the , . keys step Dairy by a full page of two cards.
             onPageStep = DairyRfPdaGuest.onPageStep,
+            onOpenHelp = DairyRfPdaGuest.onOpenHelp,
         })
         if ok then
             _registered = true
