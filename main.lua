@@ -35,6 +35,7 @@ source(DairyCoreModDirectory .. "src/gui/RfEscModules.lua")
 source(DairyCoreModDirectory .. "src/gui/RfPdaMenuPage.lua")
 source(DairyCoreModDirectory .. "src/gui/RfEscBootstrap.lua")
 source(DairyCoreModDirectory .. "src/gui/RfEscUiDebugger.lua")
+source(DairyCoreModDirectory .. "src/gui/DairyGuideDialog.lua")
 source(DairyCoreModDirectory .. "src/gui/DairyRfPdaGuest.lua")
 source(DairyCoreModDirectory .. "src/gui/FeedDesignationDialog.lua")
 
