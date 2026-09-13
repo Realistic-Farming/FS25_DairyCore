@@ -87,9 +87,18 @@ function RLBridge:computeHerdScore(barnId, farmId)
                             and animal.genetics.productivity or 1.0
             -- normalize 0.25..1.75 -> 0..1 so an average herd does not max out (F4)
             local prodGene = math.max(0, math.min(1, (prodRaw - 0.25) / 1.5))
+            -- F191: only ACTIVE records penalize. RealisticLivestock keeps a cured
+            -- record attached until its immunity counts down (Disease.lua:89-93),
+            -- and a carrier record is symptomless by design, so neither may drag
+            -- the herd score. Field names come from Disease.lua:10/15 (cured,
+            -- isCarrier). Read-only: the record is never touched.
             local diseaseCount = 0
             if animal.diseases ~= nil then
-                for _ in pairs(animal.diseases) do diseaseCount = diseaseCount + 1 end
+                for _, d in pairs(animal.diseases) do
+                    if type(d) == "table" and d.cured ~= true and d.isCarrier ~= true then
+                        diseaseCount = diseaseCount + 1
+                    end
+                end
             end
             local diseasePenalty = math.min(diseaseCount * 0.08, 0.40)
             local animalScore = ((health * 0.6) + (prodGene * 0.4)) - diseasePenalty
