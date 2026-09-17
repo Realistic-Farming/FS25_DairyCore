@@ -92,10 +92,35 @@ function RLBridge:computeHerdScore(barnId, farmId)
             -- and a carrier record is symptomless by design, so neither may drag
             -- the herd score. Field names come from Disease.lua:10/15 (cured,
             -- isCarrier). Read-only: the record is never touched.
+            --
+            -- RSF-F191: THE PROVIDER DECIDES FIRST. Each animal's own
+            -- getHasAnyDisease is asked before any record is read. It answers from
+            -- RealisticLivestock's side of the mod fence, including whether diseases
+            -- are enabled at all, which this mod must not read for itself. A strict
+            -- false means no active record, whatever the list still holds. Only a
+            -- strict true opens the list, and then the records are counted in order
+            -- with ipairs, the way the provider iterates them, each one active only
+            -- when it is neither cured nor a carrier. The true itself is never a
+            -- record. A missing or non-boolean getter, an unreadable list or a
+            -- malformed record raises inside this safeRead, so the bridge degrades
+            -- to Standard mode rather than inventing a count.
+            -- Calling a getter that is absent or not callable raises here, which
+            -- is the degradation: no separate type check is needed for it.
+            local hasAnyDisease = animal.getHasAnyDisease(animal)
+            if hasAnyDisease ~= true and hasAnyDisease ~= false then
+                error("F191: getHasAnyDisease returned a non-boolean (" .. tostring(hasAnyDisease) .. ")")
+            end
             local diseaseCount = 0
-            if animal.diseases ~= nil then
-                for _, d in pairs(animal.diseases) do
-                    if type(d) == "table" and d.cured ~= true and d.isCarrier ~= true then
+            if hasAnyDisease then
+                local diseases = animal.diseases
+                if type(diseases) ~= "table" then
+                    error("F191: the disease list is unreadable")
+                end
+                for _, d in ipairs(diseases) do
+                    if type(d) ~= "table" then
+                        error("F191: a malformed disease record")
+                    end
+                    if not d.cured and not d.isCarrier then
                         diseaseCount = diseaseCount + 1
                     end
                 end
