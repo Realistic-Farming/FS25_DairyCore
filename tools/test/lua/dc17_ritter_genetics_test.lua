@@ -39,7 +39,16 @@ local function setRitterAbsent()
 end
 
 -- The barn placeable lives under farm 1 in the mocked husbandry system.
+-- RSF-F191: the herd score asks each animal's getHasAnyDisease before any record,
+-- as every RealisticLivestock animal can answer. These animals carry no disease
+-- records, so the getter answers false, what the provider says for an empty list.
+-- Without it every Ritter-mode herd score here would degrade to Standard mode.
 local function setHerd(animals)
+  for _, animal in ipairs(animals) do
+    if rawget(animal, "getHasAnyDisease") == nil then
+      animal.getHasAnyDisease = function() return false end
+    end
+  end
   g_currentMission.husbandrySystem = {
     getPlaceablesByFarm = function(_, farmId)
       if farmId == 1 then
