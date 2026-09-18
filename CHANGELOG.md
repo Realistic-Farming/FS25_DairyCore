@@ -27,14 +27,13 @@ First public release.
 - Contaminated-feed trough exposure (D1): a herd fed from a contaminated trough accrues exposure, with its own recovery flush path (the C5 hatch) once the trough is cleaned.
 - DC-25 milk tank registry: tracks each barn's milk tank as its own tracked record.
 - Settlement now gates on a successful payment (F107), so a contract can't be marked settled before the money actually moves.
-- Herd health score now counts only active disease records rather than every record ever seen (RSF-F191), fixed in both Standard and RealisticLivestock (Ritter) modes.
+- Herd health score now counts only active disease records rather than every record ever seen (RSF-F191), in RealisticLivestock (Ritter) mode. Standard mode's herd score does not read disease records at all, so the fix is Ritter-only.
 
 ### Fixed
 - Barn discovery now distinguishes live milk barns from saved records, and discovers barns through the placeable system directly (DC-32) rather than a weaker lookup. Startup
   retries preserve unresolved dairy state, rebind late-loading barns and notify
   the existing barn and breed surfaces when visibility or ownership changes.
-  Diagnostics report live barns and stored records separately. Test package
-  version 1.0.5.24 distinguishes this correction from the earlier retry diagnostics.
+  Diagnostics report live barns and stored records separately.
 - Feed-field bonuses and penalties plus the mycotoxin penalty now apply in both
   Standard and RealisticLivestock (Ritter) modes. They previously ran only in the
   Standard score path, so a Ritter-mode farm was silently exempt (DC-11 placement).
