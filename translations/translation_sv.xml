@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Besättning nu" />
+        <text name="dairy_rf_pda_breed_milk" text="Mjölk i tank" />
+        <text name="dairy_rf_pda_breed_unknown" text="okänd" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Väntar på server" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Väntar på spelarens gård" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Tankrutt ej tillgänglig" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Fyllningstyp okänd" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Ingen intern lagring" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Ögonblicksbild ogiltig" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Besättning oläslig" />
+        <text name="dairy_rf_pda_breed_col_status" text="Status" />
+        <text name="dairy_rf_pda_breed_status_live" text="Register aktiva" />
+        <text name="dairy_rf_pda_breed_head" text="%d djur" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="ingen mjölk lagrad" />
+        <text name="dairy_rf_pda_breed_source_standard" text="standardräkning" />
+        <text name="dairy_rf_pda_breed_source_rl" text="Realistic Livestock-räkning" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Två klockor: Besättning nu räknar mjölkdjuren som står i ladugården i dag. Mjölk i tank följer den lagrade mjölken efter raserna som gav den; en ny besättning bredvid gammal mjölk är normalt. Okänd mjölk är från före registret eller kom en obevisad väg." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d ladugårdar till i tabellen" />
+        <text name="dairy_rf_pda_card_feed" text="Foderfalt (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Foderfalt: inga tilldelade" />
+        <text name="dairy_rf_pda_card_field" text="Falt %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="ogras %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="sjukdom" />
+        <text name="dairy_rf_pda_card_designated" text="forser denna ladugard" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Falt" />
+        <text name="dairy_rf_pda_card_field_next" text="Falt &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Lagg till foder" />
+        <text name="dairy_rf_pda_card_remove" text="Ta bort foder" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="klockan star" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Tillbaka" />
+        <text name="dairy_rf_pda_page_next" text="Mer (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="%d ladugardar till efter denna sida" />
+        <text name="dairy_rf_pda_trough_waiting" text="Lagrat foder: vantar pa skordedata" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Ingen skord ar registrerad for den har garden annu." />
+        <text name="dairy_rf_pda_trough_server_only" text="Lagrat foder: bara pa servern, ingen post pa den har klienten" />
+        <text name="dairy_rf_pda_trough_organic" text="Gardens lagrade foder: ekologiskt (%d%% ekologisk andel)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Gardens lagrade foder: inte ekologiskt (%d%% ekologisk andel)" />
+        <text name="dairy_rf_pda_trough_clean" text="Fororening: ingen i det lagrade fodret" />
+        <text name="dairy_rf_pda_trough_trace" text="Fororening: spar, avtar %d%% per dag" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Fororening: %d%% sjukt, avtar %d%% per dag" />
+        <text name="dairy_rf_pda_side_teach" text="Mejeri&#10;&#10;Ett kort per ladugard pa din gard. Bladdra med , och . eller sidknapparna.&#10;&#10;Besattning nu ar mjolkbesattningen som star i ladugarden i dag, per ras. Mjolk i tank ar den lagrade mjolken per ras som gav den. Mjolk utan raspost forblir okand. En ny besattning bredvid gammal mjolk ar normalt.&#10;&#10;Forskamningsklocka: startar nar en hamtning registreras. Klockan star betyder inte startad, sa Farsk ar annu ingen lopande timer.&#10;&#10;Fodersjukdomsklocka: sjukt foder i lagret ger besattningen mykotoxin. Det avtar dag for dag. Sidtipset namnger ladugarden sa lange det varar.&#10;&#10;Lagrat foder: kvaliteten lases pa grodan vid skorden och blandas i gardens silor. Traget hamtar fran det lagret och mjolken foljer det. Ekologiskt betyder over 80% ekologisk andel. Vantar pa skordedata tills den forsta skorden ar registrerad." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Raser" />
+        <text name="dairy_rf_pda_breed_next" text="Raser (%d/%d) &gt;" />
     </texts>
 </l10n>

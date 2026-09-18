@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="目前畜群" />
+        <text name="dairy_rf_pda_breed_milk" text="槽內牛奶" />
+        <text name="dairy_rf_pda_breed_unknown" text="未知" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="等待伺服器" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="等待玩家農場" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="儲槽路線無法使用" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="填充類型無法解析" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="無內部儲存" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="快照無效" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="無法讀取畜群" />
+        <text name="dairy_rf_pda_breed_col_status" text="狀態" />
+        <text name="dairy_rf_pda_breed_status_live" text="記錄進行中" />
+        <text name="dairy_rf_pda_breed_head" text="%d頭" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="無儲存牛奶" />
+        <text name="dairy_rf_pda_breed_source_standard" text="標準計數" />
+        <text name="dairy_rf_pda_breed_source_rl" text="Realistic Livestock 計數" />
+        <text name="dairy_rf_pda_breed_side_intro" text="兩個時鐘: 目前畜群計算今天站在牛舍裡的泌乳動物。槽內牛奶依生產牠的品種追蹤已儲存的牛奶; 舊牛奶旁出現新畜群是正常的。未知牛奶早於記錄, 或經由無法證明的途徑進入。" />
+        <text name="dairy_rf_pda_breed_side_more" text="表中還有 %d 座牛舍" />
+        <text name="dairy_rf_pda_card_feed" text="飼料田 (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="飼料田: 未指定" />
+        <text name="dairy_rf_pda_card_field" text="田 %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="雜草 %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="病害" />
+        <text name="dairy_rf_pda_card_designated" text="供應此畜舍" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; 田" />
+        <text name="dairy_rf_pda_card_field_next" text="田 &gt;" />
+        <text name="dairy_rf_pda_card_add" text="新增飼料" />
+        <text name="dairy_rf_pda_card_remove" text="移除飼料" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="時鐘停止" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; 返回" />
+        <text name="dairy_rf_pda_page_next" text="更多 (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="後面頁面還有 %d 座畜舍" />
+        <text name="dairy_rf_pda_trough_waiting" text="貯存飼料: 等待收成資料" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="此農場尚未記錄任何收割。" />
+        <text name="dairy_rf_pda_trough_server_only" text="貯存飼料: 僅伺服器有, 此用戶端無記錄" />
+        <text name="dairy_rf_pda_trough_organic" text="農場貯存飼料: 有機 (有機占比 %d%%)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="農場貯存飼料: 非有機 (有機占比 %d%%)" />
+        <text name="dairy_rf_pda_trough_clean" text="污染: 貯存飼料中無" />
+        <text name="dairy_rf_pda_trough_trace" text="污染: 微量, 每日下降 %d%%" />
+        <text name="dairy_rf_pda_trough_contaminated" text="污染: %d%% 帶病, 每日下降 %d%%" />
+        <text name="dairy_rf_pda_side_teach" text="酪農&#10;&#10;農場中每座畜舍一張卡片。用 , 與 . 鍵或翻頁按鈕換頁。&#10;&#10;目前牛群是今日在畜舍中的擠乳牛群，依品種顯示。槽中牛乳是貯存的牛乳，依生產它的品種顯示。沒有品種記錄的牛乳維持未知。舊牛乳旁有新牛群是正常的。&#10;&#10;腐壞時鐘: 記錄一次收取後開始。時鐘停止表示尚未開始，所以新鮮還不是運作中的計時器。&#10;&#10;飼料病害時鐘: 存量中的帶病飼料會讓牛群沾上黴菌毒素。它逐日減少。持續期間頁面提示會點名該畜舍。&#10;&#10;貯存飼料: 品質在收割時鎖定於作物上，並在農場的青貯槽中混合。飼槽取自該存量，牛乳隨之而變。有機表示有機占比超過 80%。在第一次收割記錄前顯示等待收成資料。" />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; 品種" />
+        <text name="dairy_rf_pda_breed_next" text="品種 (%d/%d) &gt;" />
     </texts>
 </l10n>

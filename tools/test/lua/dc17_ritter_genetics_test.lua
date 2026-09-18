@@ -39,7 +39,16 @@ local function setRitterAbsent()
 end
 
 -- The barn placeable lives under farm 1 in the mocked husbandry system.
+-- RSF-F191: the herd score asks each animal's getHasAnyDisease before any record,
+-- as every RealisticLivestock animal can answer. These animals carry no disease
+-- records, so the getter answers false, what the provider says for an empty list.
+-- Without it every Ritter-mode herd score here would degrade to Standard mode.
 local function setHerd(animals)
+  for _, animal in ipairs(animals) do
+    if rawget(animal, "getHasAnyDisease") == nil then
+      animal.getHasAnyDisease = function() return false end
+    end
+  end
   g_currentMission.husbandrySystem = {
     getPlaceablesByFarm = function(_, farmId)
       if farmId == 1 then
@@ -104,6 +113,9 @@ local peakTerm = 100 * normProd(0.9)          -- what a peak grade would add
 local m2 = DairyCoreManager.new()
 m2.barns["barn1"] = bareBarn()
 m2:_updateBarnHealth(m2.barns["barn1"])
+-- RSF-F191 fixture trap: the grade below means nothing unless the herd score was
+-- read in Ritter mode. A degrade falls back to Standard and still yields a number.
+T.eq("7.2 [reached: the herd score was read in Ritter mode]", m2.barns["barn1"].ritterMode, true)
 local base2 = m2.barns["barn1"].herdHealthScore - 100 * meanGene
 T.eq("7.2: one elite animal does not reach an elite grade",
   m2.barns["barn1"].milkQualityTier, "reduced")
@@ -126,8 +138,13 @@ m3.barns["barn1"] = bareBarn()
 m3:_updateBarnHealth(m3.barns["barn1"])
 local dc12base = RLBridge:computeHerdScore("barn1", 1)
 T.ok("7.4a: the barn survives with no divide-by-zero", type(m3.barns["barn1"].herdHealthScore) == "number")
-T.near("7.4a: the score is DC-12's base score, no genetics term",
-  m3.barns["barn1"].herdHealthScore, dc12base, 1e-6)
+-- RSF-F191 fixture trap: a degraded herd score returns nil, which would crash the
+-- comparison below and hide every named row in this file. Fail by name instead.
+T.ok("7.4a [reached: DC-12's base score was read in Ritter mode]", dc12base ~= nil)
+if dc12base ~= nil then
+  T.near("7.4a: the score is DC-12's base score, no genetics term",
+    m3.barns["barn1"].herdHealthScore, dc12base, 1e-6)
+end
 T.eq("7.4a: the source flag is false (Ritter present, no usable genetics)",
   m3.barns["barn1"].herdHealthScore_RitterSource, false)
 T.eq("7.4a: ritterMode still reads true (DC-12 supplied the score)",

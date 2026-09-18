@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Стадо зараз" />
+        <text name="dairy_rf_pda_breed_milk" text="Молоко в танку" />
+        <text name="dairy_rf_pda_breed_unknown" text="невідомо" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Очікування сервера" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Очікування ферми гравця" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Маршрут танка недоступний" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Тип продукту не розпізнано" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Немає внутрішнього сховища" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Знімок недійсний" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Стадо не читається" />
+        <text name="dairy_rf_pda_breed_col_status" text="Статус" />
+        <text name="dairy_rf_pda_breed_status_live" text="Записи ведуться" />
+        <text name="dairy_rf_pda_breed_head" text="%d гол." />
+        <text name="dairy_rf_pda_breed_litres" text="%d л" />
+        <text name="dairy_rf_pda_breed_no_milk" text="молока немає" />
+        <text name="dairy_rf_pda_breed_source_standard" text="стандартний підрахунок" />
+        <text name="dairy_rf_pda_breed_source_rl" text="підрахунок Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Два відліки: Стадо зараз рахує дійних тварин, що стоять у хліві сьогодні. Молоко в танку слідує за збереженим молоком за породами, які його дали; нове стадо поруч зі старим молоком - це нормально. Невідоме молоко було до запису або надійшло неперевіреним шляхом." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d хлівів ще в таблиці" />
+        <text name="dairy_rf_pda_card_feed" text="Кормові поля (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Кормові поля: не призначено" />
+        <text name="dairy_rf_pda_card_field" text="Поле %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="бур'яни %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="хвороба" />
+        <text name="dairy_rf_pda_card_designated" text="годує цей хлів" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Поле" />
+        <text name="dairy_rf_pda_card_field_next" text="Поле &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Додати корм" />
+        <text name="dairy_rf_pda_card_remove" text="Прибрати корм" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="годинник стоїть" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Назад" />
+        <text name="dairy_rf_pda_page_next" text="Далі (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="ще %d хлівів на наступних сторінках" />
+        <text name="dairy_rf_pda_trough_waiting" text="Запас корму: очікування даних збору" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Для цієї ферми ще не записано жодного укосу." />
+        <text name="dairy_rf_pda_trough_server_only" text="Запас корму: лише на сервері, на цьому клієнті запису немає" />
+        <text name="dairy_rf_pda_trough_organic" text="Запас корму ферми: органічний (%d%% органічної частки)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Запас корму ферми: не органічний (%d%% органічної частки)" />
+        <text name="dairy_rf_pda_trough_clean" text="Зараження: у запасі корму немає" />
+        <text name="dairy_rf_pda_trough_trace" text="Зараження: сліди, спадає на %d%% за день" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Зараження: %d%% хворі, спадає на %d%% за день" />
+        <text name="dairy_rf_pda_side_teach" text="Молочна ферма&#10;&#10;Одна картка на кожен хлів вашої ферми. Сторінки гортаються клавішами , і . або кнопками сторінок.&#10;&#10;Стадо зараз: дійне стадо, що стоїть у хліві сьогодні, за породами. Молоко в танку: збережене молоко за породами, які його дали. Молоко без запису породи лишається невідомим. Нове стадо поруч зі старим молоком це нормально.&#10;&#10;Годинник псування: запускається, коли записано вивіз. Годинник стоїть означає не запущений, тож Свіже поки не живий таймер.&#10;&#10;Годинник хвороби корму: хворий корм у запасі дає стаду мікотоксин. Він спадає день за днем. Підказка сторінки називає хлів, поки це триває.&#10;&#10;Запас корму: якість фіксується на культурі під час укосу і змішується в силосах ферми. Годівниця бере з цього запасу, і молоко йде за ним. Органічний означає понад 80% органічної частки. Очікування даних збору до першого записаного укосу." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Породи" />
+        <text name="dairy_rf_pda_breed_next" text="Породи (%d/%d) &gt;" />
     </texts>
 </l10n>

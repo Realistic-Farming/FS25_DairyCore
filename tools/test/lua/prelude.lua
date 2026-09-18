@@ -34,6 +34,25 @@ RLBridge = {
   getHerdCounts    = function() return nil end,
 }
 
+-- ── Milk tank registry (DC-25) ─────────────────────────────
+-- DairyCoreManager.new() constructs MilkTank.new(self) at its line 42. The milk
+-- tank placeable merge (PR #40) added this call without updating the bench loads,
+-- which left the whole suite red at load with `attempt to index a nil value
+-- (global 'MilkTank')`. The bench registers no tanks, so the shape stub mirrors
+-- the real registry's empty-set behaviour: no nearest tank, no rows, no-op
+-- register/deregister. A future test that needs real tank behaviour loads
+-- src/MilkTank.lua itself.
+MilkTank = {
+  new = function()
+    return {
+      registerTank          = function() end,
+      deregisterTank        = function() end,
+      getNearestTankForBarn = function() return nil end,
+      getTankRows           = function() return {} end,
+    }
+  end,
+}
+
 -- ── Mission stub ───────────────────────────────────────────
 -- Tests flip _isServer to exercise the F79 gate from both sides.
 g_currentMission = {

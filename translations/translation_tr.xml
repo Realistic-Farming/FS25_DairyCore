@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Şu anki sürü" />
+        <text name="dairy_rf_pda_breed_milk" text="Tanktaki süt" />
+        <text name="dairy_rf_pda_breed_unknown" text="bilinmiyor" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Sunucu bekleniyor" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Oyuncu çiftliği bekleniyor" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Tank rotası kullanılamıyor" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Ürün türü çözülemedi" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="İç depo yok" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Anlık görüntü geçersiz" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Sürü okunamıyor" />
+        <text name="dairy_rf_pda_breed_col_status" text="Durum" />
+        <text name="dairy_rf_pda_breed_status_live" text="Kayıtlar açık" />
+        <text name="dairy_rf_pda_breed_head" text="%d baş" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="depolanmış süt yok" />
+        <text name="dairy_rf_pda_breed_source_standard" text="standart sayım" />
+        <text name="dairy_rf_pda_breed_source_rl" text="Realistic Livestock sayımı" />
+        <text name="dairy_rf_pda_breed_side_intro" text="İki saat: Şu anki sürü bugün ahırda duran sağmal hayvanları sayar. Tanktaki süt, depolanan sütü onu üreten ırklara göre izler; eski sütün yanında yeni bir sürü normaldir. Bilinmeyen süt kayıttan öncedir ya da kanıtlanmamış bir yoldan gelmiştir." />
+        <text name="dairy_rf_pda_breed_side_more" text="tabloda +%d ahır daha" />
+        <text name="dairy_rf_pda_card_feed" text="Yem tarlalari (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Yem tarlalari: atanmis yok" />
+        <text name="dairy_rf_pda_card_field" text="Tarla %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="yabani ot %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="hastalik" />
+        <text name="dairy_rf_pda_card_designated" text="bu ahiri besler" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Tarla" />
+        <text name="dairy_rf_pda_card_field_next" text="Tarla &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Yem ekle" />
+        <text name="dairy_rf_pda_card_remove" text="Yem kaldir" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="saat durdu" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Geri" />
+        <text name="dairy_rf_pda_page_next" text="Devam (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="bu sayfadan sonra %d ahir daha" />
+        <text name="dairy_rf_pda_trough_waiting" text="Depolanan yem: hasat verisi bekleniyor" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Bu ciftlik icin henuz kayitli bicim yok." />
+        <text name="dairy_rf_pda_trough_server_only" text="Depolanan yem: yalnizca sunucuda, bu istemcide kayit yok" />
+        <text name="dairy_rf_pda_trough_organic" text="Ciftligin depolanan yemi: organik (%%%d organik pay)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Ciftligin depolanan yemi: organik degil (%%%d organik pay)" />
+        <text name="dairy_rf_pda_trough_clean" text="Bulasma: depolanan yemde yok" />
+        <text name="dairy_rf_pda_trough_trace" text="Bulasma: iz miktarda, gunde %%%d azaliyor" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Bulasma: %%%d hastalikli, gunde %%%d azaliyor" />
+        <text name="dairy_rf_pda_side_teach" text="Sut&#10;&#10;Ciftligindeki her ahir icin bir kart. Sayfalari , ve . ile ya da sayfa dugmeleriyle cevir.&#10;&#10;Suru simdi, bugun ahirda duran sagmal surudur, irka gore. Tanktaki sut, onu veren irklara gore depolanan suttur. Irk kaydi olmayan sut bilinmeyen kalir. Eski sutun yaninda yeni bir suru normaldir.&#10;&#10;Bozulma saati: bir toplama kaydedildiginde baslar. Saat durdu, baslamadi demektir; yani Taze henuz calisan bir sayac degildir.&#10;&#10;Yem hastaligi saati: stoktaki hastalikli yem suruye mikotoksin yukler. Gun gun azalir. Sayfa ipucu surdugu surece ahiri adlandirir.&#10;&#10;Depolanan yem: kalite bicimde urun uzerinde kilitlenir ve ciftligin silolarinda harmanlanir. Yemlik o stoktan beslenir, sut de onu izler. Organik, %80 uzeri organik pay demektir. Ilk bicim kaydedilene kadar hasat verisi bekleniyor." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Irklar" />
+        <text name="dairy_rf_pda_breed_next" text="Irklar (%d/%d) &gt;" />
     </texts>
 </l10n>

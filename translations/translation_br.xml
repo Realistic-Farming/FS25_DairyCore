@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Rebanho atual" />
+        <text name="dairy_rf_pda_breed_milk" text="Leite no tanque" />
+        <text name="dairy_rf_pda_breed_unknown" text="desconhecido" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Aguardando o servidor" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Aguardando a fazenda do jogador" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Rota do tanque indisponível" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Tipo de produto não resolvido" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Sem armazenamento interno" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Instantâneo inválido" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Rebanho ilegível" />
+        <text name="dairy_rf_pda_breed_col_status" text="Estado" />
+        <text name="dairy_rf_pda_breed_status_live" text="Registros ativos" />
+        <text name="dairy_rf_pda_breed_head" text="%d cabeças" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="sem leite armazenado" />
+        <text name="dairy_rf_pda_breed_source_standard" text="contagem padrão" />
+        <text name="dairy_rf_pda_breed_source_rl" text="contagem Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Dois relógios: Rebanho atual conta os animais leiteiros que estão hoje no estábulo. Leite no tanque segue o leite armazenado pelas raças que o produziram; um rebanho novo ao lado de leite antigo é normal. O leite desconhecido é anterior ao registro ou chegou por um caminho não comprovado." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d estábulos a mais na tabela" />
+        <text name="dairy_rf_pda_card_feed" text="Campos de forragem (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Campos de forragem: nenhum designado" />
+        <text name="dairy_rf_pda_card_field" text="Campo %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="ervas daninhas %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="doenca" />
+        <text name="dairy_rf_pda_card_designated" text="alimenta este estabulo" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Campo" />
+        <text name="dairy_rf_pda_card_field_next" text="Campo &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Adicionar forragem" />
+        <text name="dairy_rf_pda_card_remove" text="Remover forragem" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="relogio parado" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Voltar" />
+        <text name="dairy_rf_pda_page_next" text="Mais (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="mais %d estabulos depois desta pagina" />
+        <text name="dairy_rf_pda_trough_waiting" text="Racao armazenada: aguardando dados de colheita" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Nenhum corte registrado para esta fazenda ainda." />
+        <text name="dairy_rf_pda_trough_server_only" text="Racao armazenada: so no servidor, sem registro neste cliente" />
+        <text name="dairy_rf_pda_trough_organic" text="Racao armazenada da fazenda: organica (%d%% de parcela organica)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Racao armazenada da fazenda: nao organica (%d%% de parcela organica)" />
+        <text name="dairy_rf_pda_trough_clean" text="Contaminacao: nenhuma na racao armazenada" />
+        <text name="dairy_rf_pda_trough_trace" text="Contaminacao: tracos, cai %d%% por dia" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Contaminacao: %d%% doente, cai %d%% por dia" />
+        <text name="dairy_rf_pda_side_teach" text="Leite&#10;&#10;Um cartao por estabulo da sua fazenda. Mude de pagina com , e . ou com o paginador.&#10;&#10;Rebanho agora e o rebanho leiteiro que esta no estabulo hoje, por raca. Leite no tanque e o leite armazenado pelas racas que o deram. Leite sem registro de raca fica desconhecido. Um rebanho novo ao lado de leite antigo e normal.&#10;&#10;Relogio de deterioracao: comeca quando uma coleta e registrada. Relogio parado significa nao iniciado, entao Fresco ainda nao e um temporizador rodando.&#10;&#10;Relogio de doenca da racao: racao doente na reserva poe micotoxina no rebanho. Cai dia a dia. A dica da pagina nomeia o estabulo enquanto durar.&#10;&#10;Racao armazenada: a qualidade e fixada na cultura no corte e misturada nos silos da fazenda. O cocho puxa dessa reserva e o leite a segue. Organica significa mais de 80% de parcela organica. Aguardando dados de colheita ate o primeiro corte registrado." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Racas" />
+        <text name="dairy_rf_pda_breed_next" text="Racas (%d/%d) &gt;" />
     </texts>
 </l10n>

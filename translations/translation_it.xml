@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Mandria attuale" />
+        <text name="dairy_rf_pda_breed_milk" text="Latte in cisterna" />
+        <text name="dairy_rf_pda_breed_unknown" text="sconosciuto" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="In attesa del server" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="In attesa della fattoria del giocatore" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Cisterna condivisa non disponibile" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Tipo di prodotto non risolto" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Nessun deposito interno" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Istantanea non valida" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Mandria illeggibile" />
+        <text name="dairy_rf_pda_breed_col_status" text="Stato" />
+        <text name="dairy_rf_pda_breed_status_live" text="Registri attivi" />
+        <text name="dairy_rf_pda_breed_head" text="%d capi" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="nessun latte stoccato" />
+        <text name="dairy_rf_pda_breed_source_standard" text="conteggio standard" />
+        <text name="dairy_rf_pda_breed_source_rl" text="conteggio Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Due orologi: Mandria attuale conta gli animali da latte presenti oggi nella stalla. Latte in cisterna segue il latte stoccato per razza che lo ha prodotto; una mandria nuova accanto a latte vecchio è normale. Il latte sconosciuto precede il registro o è arrivato per una via non provata." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d altre stalle nella tabella" />
+        <text name="dairy_rf_pda_card_feed" text="Campi foraggio (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Campi foraggio: nessuno assegnato" />
+        <text name="dairy_rf_pda_card_field" text="Campo %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="infestanti %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="malattia" />
+        <text name="dairy_rf_pda_card_designated" text="alimenta questa stalla" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Campo" />
+        <text name="dairy_rf_pda_card_field_next" text="Campo &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Aggiungi foraggio" />
+        <text name="dairy_rf_pda_card_remove" text="Rimuovi foraggio" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="orologio fermo" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Indietro" />
+        <text name="dairy_rf_pda_page_next" text="Altro (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="altre %d stalle dopo questa pagina" />
+        <text name="dairy_rf_pda_trough_waiting" text="Foraggio stoccato: in attesa dei dati di raccolta" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Nessun taglio registrato per questa fattoria." />
+        <text name="dairy_rf_pda_trough_server_only" text="Foraggio stoccato: solo sul server, nessun dato su questo client" />
+        <text name="dairy_rf_pda_trough_organic" text="Foraggio stoccato della fattoria: biologico (%d%% quota biologica)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Foraggio stoccato della fattoria: non biologico (%d%% quota biologica)" />
+        <text name="dairy_rf_pda_trough_clean" text="Contaminazione: nessuna nel foraggio stoccato" />
+        <text name="dairy_rf_pda_trough_trace" text="Contaminazione: tracce, cala del %d%% al giorno" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Contaminazione: %d%% malato, cala del %d%% al giorno" />
+        <text name="dairy_rf_pda_side_teach" text="Latte&#10;&#10;Una scheda per ogni stalla della tua fattoria. Cambia pagina con , e . o con i pulsanti pagina.&#10;&#10;Mandria ora e la mandria da latte oggi in stalla, per razza. Latte in cisterna e il latte stoccato per le razze che lo hanno prodotto. Il latte senza dato di razza resta sconosciuto. Una mandria nuova accanto a latte vecchio e normale.&#10;&#10;Orologio del deperimento: parte quando viene registrata una raccolta. Orologio fermo significa non partito, quindi Fresco non e ancora un timer attivo.&#10;&#10;Orologio della malattia del foraggio: foraggio malato nella scorta mette micotossina sulla mandria. Cala giorno dopo giorno. Il suggerimento di pagina nomina la stalla finche dura.&#10;&#10;Foraggio stoccato: la qualita si fissa sulla coltura al taglio e si mescola nei silos della fattoria. La mangiatoia attinge a quella scorta e il latte la segue. Biologico significa oltre l'80% di quota biologica. In attesa dei dati di raccolta fino al primo taglio registrato." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Razze" />
+        <text name="dairy_rf_pda_breed_next" text="Razze (%d/%d) &gt;" />
     </texts>
 </l10n>

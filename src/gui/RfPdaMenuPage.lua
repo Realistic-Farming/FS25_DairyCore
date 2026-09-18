@@ -13,26 +13,38 @@
 -- SoilPDAScreen coexists untouched.
 -- =========================================================
 
-local MOD_DIR = g_currentModDirectory
-local MOD_NAME = g_currentModName
+local MOD_DIR = (SeasonalCropStressModDirectory or g_currentModDirectory)
+local MOD_NAME = (SeasonalCropStressModName or g_currentModName)
 
--- Soft log when sourced from WC/CS joiners (SoilLogger may be absent).
+-- Soft log when sourced from a non-Soil joiner (SoilLogger may be absent).
+-- BUILD 17:08: the stub's signature must match Soil's real logger, which is DOT-called
+-- with the format first (src/utils/Logger.lua: function SoilLogger.info(msg, ...)), and
+-- every call in this file is dot-style. The old stub took (_, fmt, ...) as if colon-called,
+-- so on every non-Soil-hosted door the message landed in the discarded first slot and the
+-- log printed only the leftover arguments - or nothing at all. That is why the host's
+-- [RfEsc] lines have never appeared in a Dairy-door log, and it would have eaten the
+-- selector diagnostics this build ships. pcall on the format so a stray % in a runtime
+-- value can never turn a log line into the only traceback on the page.
 if SoilLogger == nil then
+    local function stubLine(fmt, ...)
+        local ok, text = pcall(string.format, fmt or "", ...)
+        return "[RfEsc] " .. (ok and text or tostring(fmt))
+    end
     SoilLogger = {
-        info = function(_, fmt, ...)
-            if Logging and Logging.info then Logging.info("[RfEsc] " .. string.format(fmt or "", ...)) end
+        info = function(fmt, ...)
+            if Logging and Logging.info then Logging.info(stubLine(fmt, ...)) end
         end,
-        warning = function(_, fmt, ...)
-            if Logging and Logging.warning then Logging.warning("[RfEsc] " .. string.format(fmt or "", ...)) end
+        warning = function(fmt, ...)
+            if Logging and Logging.warning then Logging.warning(stubLine(fmt, ...)) end
         end,
-        error = function(_, fmt, ...)
-            if Logging and Logging.error then Logging.error("[RfEsc] " .. string.format(fmt or "", ...)) end
+        error = function(fmt, ...)
+            if Logging and Logging.error then Logging.error(stubLine(fmt, ...)) end
         end,
     }
 end
 
 ---@class RfPdaMenuPage
-RfPdaMenuPage = {}
+RfPdaMenuPage = RfPdaMenuPage or {}
 RfPdaMenuPage.CLASS_NAME = "RfPdaMenuPage"
 -- NO-HOST: shared Esc door name (not Soil-owned menuSoilFertilizer).
 RfPdaMenuPage.MENU_PAGE_NAME = "menuRealisticFarming"
@@ -187,7 +199,7 @@ local function mdResolve(bare, name)
     end
     -- 2. the named environment. Kept first among the fallbacks because it is the cheapest
     --    and correct in the common case, but NOT trusted alone - this hardcodes a mod name
-    --    the guest itself never hardcodes (it uses g_currentModName), so a rename or a
+    --    the guest itself never hardcodes (it uses (SeasonalCropStressModName or g_currentModName)), so a rename or a
     --    differently-named install slips straight past it. That is what produced
     --    "GATE graph=false" on the Dairy door.
     if g_modEnvironments ~= nil then
@@ -198,7 +210,10 @@ local function mdResolve(bare, name)
             MdRfPdaGuest = "FS25_MarketDynamics",
             MDMMarketScreenGraph = "FS25_MarketDynamics",
             MDMMarketScreen = "FS25_MarketDynamics",
+            MDMPriceFormat = "FS25_MarketDynamics",
             CsRfPdaGuest = "FS25_SeasonalCropStress",
+            NpcRfPdaGuest = "FS25_NPCFavor",
+            ProStaffRfPdaGuest = "FS25_ProStaffCoOp",
         }
         local env = g_modEnvironments[OWNER[name] or "FS25_MarketDynamics"]
         if env ~= nil and env[name] ~= nil then
@@ -212,16 +227,69 @@ local function mdResolve(bare, name)
             end
         end
     end
-    -- 4. real global table: MarketDynamics publishes here from BUILD 11:43.
+    -- 4. _G. BUILD 14:04 (George TASK 10:53): Vera's live gate read via=mission, which
+    --    means belts 2 and 3 miss on the live engine (g_modEnvironments carries nothing
+    --    there) and getfenv(0) is the per-mod sandbox, not a shared root. _G read from mod
+    --    code resolves through the sandbox chain, so when the engine backs it with the real
+    --    global table this belt sees a publisher's _G write; when the sandbox loops _G onto
+    --    itself it degenerates to the bare lookup and costs one table index.
+    if type(_G) == "table" and _G[name] ~= nil then
+        return _G[name]
+    end
+    -- 5. sandbox root: MarketDynamics publishes here from BUILD 11:43.
     local okEnv, root = pcall(getfenv, 0)
     if okEnv and type(root) == "table" and root[name] ~= nil then
         return root[name]
     end
-    -- 5. mission handle, same publish.
+    -- 6. mission handle, same publish. The one belt Vera's live gate has actually seen
+    --    resolve on a non-MD door (via=mission), so it must stay last-resort-but-present.
     if g_currentMission ~= nil and g_currentMission[name] ~= nil then
         return g_currentMission[name]
     end
     return nil
+end
+
+--- BUILD 14:04 fence for _populateMdCommodityRow: 2dp currency when MDMPriceFormat cannot
+--- be resolved at all. George's constraint on the failed probe is "degrades to 2dp path -
+--- never formatMoney(..., 0)". This is the Vera-F2 pad rule in miniature (formatNumber and
+--- formatMoney both round-then-tostring, so neither ever pads a whole number to .00): split
+--- the digits by hand, let formatNumber group the integer half only, take the locale's own
+--- decimal mark. No x1000, no litre suffix, no animal test - that display policy lives in
+--- MDMPriceFormat and duplicating it here would put two dialects back on screen. This fence
+--- should be unreachable: the Prices rows only paint under a registered MD guest, and
+--- registration publishes MDMPriceFormat to the mission handle every attempt.
+local function mdMoney2(value)
+    local rounded = value
+    if MathUtil ~= nil and type(MathUtil.round) == "function" then
+        rounded = MathUtil.round(value, 2)
+    end
+    local negative = rounded < 0
+    local magnitude = negative and -rounded or rounded
+    local whole = math.floor(magnitude)
+    local frac = math.floor((magnitude - whole) * 100 + 0.5)
+    if frac >= 100 then
+        whole = whole + 1
+        frac = frac - 100
+    end
+    local wholeStr = tostring(whole)
+    local separator = "."
+    local symbol = ""
+    if g_i18n ~= nil then
+        if type(g_i18n.formatNumber) == "function" then
+            wholeStr = g_i18n:formatNumber(whole, 0)
+        end
+        if type(g_i18n.decimalSeparator) == "string" and g_i18n.decimalSeparator ~= "" then
+            separator = g_i18n.decimalSeparator
+        end
+        if type(g_i18n.getCurrencySymbol) == "function" then
+            symbol = g_i18n:getCurrencySymbol(true) or ""
+        end
+    end
+    local out = symbol .. wholeStr .. separator .. string.format("%02d", frac)
+    if negative then
+        out = "-" .. out
+    end
+    return out
 end
 
 local function tr(key, fallback)
@@ -409,7 +477,6 @@ function RfPdaMenuPage:onGuiSetupFinished()
     self.mdPricesBand = self:getDescendantById("mdPricesBand") or self.mdPricesBand
     self.mdEventsBand = self:getDescendantById("mdEventsBand") or self.mdEventsBand
     self.mdContractsBand = self:getDescendantById("mdContractsBand") or self.mdContractsBand
-    self.mdOpenMarketBtn = self:getDescendantById("mdOpenMarketBtn") or self.mdOpenMarketBtn
     self.mdSubnavShell = self:getDescendantById("mdSubnavShell") or self.mdSubnavShell
     self.mdSubnavSelector = self:getDescendantById("mdSubnavSelector") or self.mdSubnavSelector
     self.mdSubnavDotBox = self:getDescendantById("mdSubnavDotBox") or self.mdSubnavDotBox
@@ -589,51 +656,9 @@ function RfPdaMenuPage:initialize()
             end
         end
     }
-    -- Open full Market when MDM module is active (bottom strip twin).
-    -- MENU_EXTRA_1, NOT MENU_ACTIVATE: the commodity SmoothList consumes ACTIVATE/SPACE
-    -- first, so the footer callback never fired at all - zero MarketScreen.show lines in
-    -- the client log on click (Ash+George r2 2026-08-07). EXTRA_1 is free while MDM is
-    -- the active module, since Help / Rotation Planner / Field Detail are Soil-only footers.
-    self.btnOpenMarket = {
-        inputAction = InputAction.MENU_EXTRA_1,
-        showWhenPaused = true,
-        text = tr("md_rf_pda_open_market", "Open full Market"),
-        callback = function()
-            print("[MarketDynamics] Esc footer Open full Market pressed")
-            -- Cross-mod resolve (Vera F2 2026-08-07). MdRfPdaGuest / MDMMarketScreen are
-            -- MarketDynamics-env globals and are nil on a Soil/WC/SCS hosted door, so the
-            -- bare calls silently did nothing there. Same shape as the Worker Manager
-            -- resolve below and Soil's soilGlobal: try in-env, then g_modEnvironments.
-            local host = self:_getHost()
-            local activeId = host ~= nil and host.activeModuleId or nil
-            local mod = (host ~= nil and host.modules ~= nil and activeId ~= nil)
-                and host.modules[activeId] or nil
-            if mod ~= nil and type(mod.onOpenFullMarket) == "function" then
-                print("[MarketDynamics] Open full Market via active module def")
-                mod.onOpenFullMarket()
-                return
-            end
-            -- BUILD 12:59: this had its own two-belt resolve (in-env, then the hardcoded
-            -- MarketDynamics env key) and neither of the belts that actually work - the
-            -- getfenv/mission publish. Routed through mdResolve so SPACE and the footer
-            -- button share one implementation and one set of five belts.
-            local guest = (type(mdResolve) == "function")
-                    and mdResolve(MdRfPdaGuest, "MdRfPdaGuest") or MdRfPdaGuest
-            if guest ~= nil and type(guest.onOpenFullMarket) == "function" then
-                print("[MarketDynamics] Open full Market via resolved MdRfPdaGuest")
-                pcall(guest.onOpenFullMarket)
-                return
-            end
-            local scr = (type(mdResolve) == "function")
-                    and mdResolve(MDMMarketScreen, "MDMMarketScreen") or MDMMarketScreen
-            if scr ~= nil and type(scr.show) == "function" then
-                print("[MarketDynamics] Open full Market via resolved MDMMarketScreen")
-                pcall(scr.show)
-                return
-            end
-            print("[MarketDynamics] Open full Market: no handler available (all resolve paths nil)")
-        end
-    }
+    -- BUILD 12:05 (George CLOSED DESIGN 09:45): the Esc footer Open full Market table is gone
+    -- with the Esc full-Market door; the Market footer is Back only. The standalone Market
+    -- screen keeps its keybind and the Control Center toggle.
     -- SPACE / MENU_ACTIVATE: open the Worker Manager deep desk when WC is active.
     self.btnOpenWorkerManager = {
         -- MENU_EXTRA_2, not MENU_ACTIVATE: same SmoothList swallow class as Open full
@@ -674,6 +699,18 @@ function RfPdaMenuPage:initialize()
         text = tr("cs_pda_btn_help", "Help"),
         callback = function()
             self:onClickHelpCs()
+        end
+    }
+    -- BUILD 19:15 (George CLOSED DESIGN 18:55 item 5): ONE generic Help footer for the eight wave-2
+    -- modules. It never names a dialog: it asks the active guest to open its own Field Guide, so each
+    -- companion ships and owns its own help and a door hosted by any mod routes to the right one.
+    -- Soil keeps btnHelp and Crop Stress keeps btnHelpCs, which point at their own guides.
+    self.btnHelpFw = {
+        inputAction = InputAction.MENU_EXTRA_1,
+        showWhenPaused = true,
+        text = tr("rf_pda_btn_help", "Help"),
+        callback = function()
+            self:onClickHelpFw()
         end
     }
 
@@ -1033,13 +1070,56 @@ function RfPdaMenuPage:_ensureMtoArrowsVisible(sel)
         return
     end
 
-    sel.disableButtonsOnSingleText = false
-    sel.hideLeftRightButtons = false
-    if sel.setCanChangeState then
-        sel:setCanChangeState(true)
+    -- BUILD 17:50 (PB-06). The item count decides everything below this line.
+    --
+    -- Before 17:50 this helper forced the arrows enabled and full lime unconditionally,
+    -- which was the fault it fixed: with a single entry the arrow cannot change state, so
+    -- the player saw a bright, clickable-looking arrow that could never act.
+    --
+    -- 17:50 leaned on disableButtonsOnSingleText to express that. BUILD 20:39 takes it back
+    -- off (see the note below the empty-list guard) and drives disabled from here alone.
+    -- Line references throughout are
+    -- .local/ref/FS25-lua-scripting/elements/MultiTextOptionElement.lua unless named
+    -- otherwise. Nothing here is guessed.
+    local texts = sel.texts or {}
+
+    -- BUILD 20:39. An empty text list means "not seeded yet", not "one page", and the two
+    -- must not be treated the same. Every caller below runs this helper both BEFORE and
+    -- AFTER the texts are set, so the early call used to latch the pager disabled from a
+    -- count that was about to change - and if the seeding path then failed or threw, the
+    -- pager stayed disabled for the rest of the session while the arrows below still got
+    -- painted. That is one of the three ways George's TASK 20:38 lime-but-dead read is
+    -- reachable. With no texts there is nothing to page through, so write nothing and let
+    -- the seeded call decide.
+    if #texts == 0 then
+        return
     end
+    local multi = #texts > 1
+
+    -- BUILD 20:39: disableButtonsOnSingleText stays FALSE (Sam feel lock DESIGN 20:00,
+    -- re-stated in BUILD 20:39; the XML declares false on every MTO in this page).
+    -- 17:50 read it as a free engine helper, but it is not free: with it true the engine
+    -- writes setDisabled(#texts <= 1) from inside updateContentElement (:831-833), and
+    -- updateContentElement runs on every setTexts, setState and arrow click. That is a
+    -- second writer on the one flag that decides whether the pager takes input at all,
+    -- firing on the same frame as our own write - "state reset in the same frame", the
+    -- third cause George named. With it false this function is the only writer.
+    -- The single-page focus guard 17:50 wanted from it is not lost: canReceiveFocus (:774)
+    -- also returns false on a disabled element, and one page still sets disabled below.
+    sel.disableButtonsOnSingleText = false
+    sel.hideLeftRightButtons = false   -- never remove the control, only dim it
+    if sel.setCanChangeState then
+        sel:setCanChangeState(multi)
+    end
+    -- This is the gate that decides whether a click ever reaches the arrows. A disabled
+    -- MTO swallows the whole mouse event before it can descend to its buttons:
+    -- MultiTextOptionElement:mouseEvent wraps its entire body in getIsActive() (:434) and
+    -- GuiElement:getIsActive is "not disabled and visible" (GuiElement.lua:1338-1340).
+    -- The GuiOverlay.setColor tint further down does NOT go through that gate, so a
+    -- disabled pager still paints lime - which is exactly the reported defect: lime arrows,
+    -- dead clicks. Multi-page must therefore end this call with disabled == false.
     if sel.setDisabled then
-        sel:setDisabled(false)
+        sel:setDisabled(not multi)
     end
 
     -- Extract: GuiUtils.getNormalizedScreenValues(values, default) - values = "Wpx Hpx" or array; returns table.
@@ -1053,11 +1133,22 @@ function RfPdaMenuPage:_ensureMtoArrowsVisible(sel)
     end
 
     -- ButtonElement extends TextElement (not Bitmap); tint via GuiOverlay on .overlay.
-    local r, g, b, a = 0.549, 0.776, 0.247, 1
+    --
+    -- Enabled keeps George's lime. Disabled goes to Samantha's neutral 45% rather than a faded
+    -- lime, so "cannot act" reads as absence of colour instead of a dimmed affordance. The
+    -- brief writes the enabled state as {1,1,1,1}, which would drop the lime this file already
+    -- carries; that is not what PB-06 is about, so the lime stays and the reading is flagged
+    -- in the reply rather than decided silently.
+    local r, g, b, a
+    if multi then
+        r, g, b, a = 0.549, 0.776, 0.247, 1
+    else
+        r, g, b, a = 1, 1, 1, 0.45
+    end
     for _, btn in ipairs({ sel.leftButtonElement, sel.rightButtonElement }) do
         if btn ~= nil then
             if btn.setVisible then btn:setVisible(true) end
-            if btn.setDisabled then btn:setDisabled(false) end
+            if btn.setDisabled then btn:setDisabled(not multi) end
             -- Size THEN lime (George Plan A). Absolute target - do not ratio current size.
             if type(btn.setSize) == "function" and tw ~= nil and th ~= nil then
                 btn:setSize(tw, th)
@@ -1073,8 +1164,19 @@ function RfPdaMenuPage:_ensureMtoArrowsVisible(sel)
 end
 
 --- Keep Map circle arrows enabled + lime on first open (not near-black grey).
+--- BUILD 20:39: also the wrap lock for the left-pane pager. Wrap is engine-native and on
+--- by default (MultiTextOptionElement.lua:55) - onRightButtonClicked rolls #texts -> 1 and
+--- onLeftButtonClicked rolls 1 -> #texts (:670-679 / :721-730) - but XML #wrap and profile
+--- "wrap" can both turn it off (:111 / :141), and with it off the last page clamps and the
+--- arrow reads dead at exactly one end. The ask is explicit that both ends wrap, so state
+--- it rather than inherit it. Set here on the pager only: _ensureMtoArrowsVisible is shared
+--- with the WC wage / About / subnav MTOs, and their wrap is not this token's business.
 function RfPdaMenuPage:_ensureSelectorArrowsVisible()
-    self:_ensureMtoArrowsVisible(self.rfPanelSelector)
+    local sel = self.rfPanelSelector
+    if sel ~= nil then
+        sel.wrap = true
+    end
+    self:_ensureMtoArrowsVisible(sel)
 end
 
 --- Stable id list fingerprint for quiet SmoothList reload decisions.
@@ -1114,7 +1216,10 @@ function RfPdaMenuPage:refreshPanelSelector(forceRebuildDots)
             activeIndex = 1
         end
 
-        self:_ensureSelectorArrowsVisible()
+        -- BUILD 20:39: the pre-setTexts ensure call that used to sit here is gone. It fed
+        -- _ensureMtoArrowsVisible the PREVIOUS text count - on first open an empty one - so
+        -- it decided the pager's disabled state from a number that the next line was about
+        -- to replace. The post-setState call below is the one that matters and it stays.
         -- setTexts can re-apply profile single-text disable; always follow with force-enable.
         self.rfPanelSelector:setTexts(texts)
         if self.rfPanelSelector.setState then
@@ -1215,6 +1320,13 @@ function RfPdaMenuPage:_rebuildDots(count)
 end
 
 function RfPdaMenuPage:onClickRfPanelSelector()
+    -- BUILD 17:08 diagnostic, one line per real selector input (forceEvent is false on
+    -- every internal setState in this file, so this callback only fires for the player).
+    -- If a live test still shows dead arrows AND this line never appears in the log, the
+    -- click is being consumed ABOVE this page (menu-level), which the in-page shield in
+    -- mouseEvent cannot reach - that finding goes to George, not to more host code.
+    SoilLogger.info("RfPdaMenuPage: selector input received, state=%s",
+        tostring(self.rfPanelSelector ~= nil and self.rfPanelSelector:getState() or "?"))
     self:_ensureSelectorArrowsVisible()
     self:_applySelectorState()
 end
@@ -1270,14 +1382,43 @@ function RfPdaMenuPage:_applySelectorState()
 
     local state = self.rfPanelSelector:getState()
     local panel = self._panelCache[state]
-    if panel == nil then return end
+    if panel == nil then
+        -- BUILD 20:39: this is the second half of the defect. The arrow has already moved
+        -- the label and the dots by the time we get here (the engine advances state, then
+        -- raises this callback), so returning empty-handed leaves the page NAME on one
+        -- module and the page CONTENT on another - the "content does not move" read. A
+        -- cache one module older than the MTO texts is enough to hit it. Re-read the
+        -- registry once before giving up.
+        local panels = (type(host.getPanels) == "function") and host:getPanels() or nil
+        if panels ~= nil then
+            self._panelCache = panels
+            panel = panels[state]
+        end
+    end
+    if panel == nil then
+        -- Still nothing at this index: put the pager back on the page that is actually
+        -- showing. An honest snap-back beats a label pointing at a page that never loaded.
+        self:_restoreBrandToActivePanel()
+        return
+    end
 
     if host.activeModuleId ~= panel.id then
         if not self:_allowModuleSelect(panel.id) then
+            -- Refused by the dual-fire debounce. The MTO state has still moved, so snap it
+            -- back or label, dots and content stay disagreeing until the next full refresh.
+            self:_restoreBrandToActivePanel()
             return
         end
         -- Host notify refreshes selector + content (quiet lists).
-        host:selectPanel(panel.id)
+        local switched = host:selectPanel(panel.id)
+        if switched == false then
+            -- Registry refused (module gone or isAvailable false): no notify fires, so
+            -- nothing downstream would ever correct the advanced label. Snap it back.
+            SoilLogger.warning("RfPdaMenuPage: selectPanel %s refused, restoring pager state",
+                tostring(panel.id))
+            self:_restoreBrandToActivePanel()
+            return
+        end
         SoilLogger.info("RfPdaMenuPage: selectPanel %s (arrow/selector)", tostring(panel.id))
     else
         self:refreshContent(false)
@@ -1332,6 +1473,7 @@ function RfPdaMenuPage:_refreshPageHeader(active)
     local isSoil = active == nil or active.id == "soilFertilizer"
     local isWc = active ~= nil and active.id == "workerCosts"
     local activeId = active ~= nil and active.id or nil
+    local isMd = activeId == "marketDynamics"
     local isFw = activeId == "income" or activeId == "tax" or activeId == "dairy"
             or activeId == "npcFavor" or activeId == "fertilizerDepot"
     if self.rfPageTitle then
@@ -1368,6 +1510,24 @@ function RfPdaMenuPage:_refreshPageHeader(active)
                 end
             end
             self.rfPageBlurb:setText(wcBlurb)
+        elseif isMd then
+            -- BUILD 16:24 (George CLOSED DESIGN 15:47): Market keeps ONE short tagline line under the
+            -- hero title (RF_PageTagline 23px; a two-line blurb reached -72 and sat on CROP / PRICE /
+            -- CHANGE at -52 - 8). The long teach lives in mdSideInfoShell (MdRfPdaGuest.paintSideInfo),
+            -- and _applyMdContentDrop lowers the content plane 24px for Market so the header row
+            -- clears this line. The text is the registered md_rf_pda_blurb (one line since 16:24).
+            if type(self.rfPageBlurb.setVisible) == "function" then
+                self.rfPageBlurb:setVisible(true)
+            end
+            local mdBlurb = active and active.blurb
+            local mdTagline = "Prices, events and contracts at a glance: pick a crop above, act below."
+            if type(mdBlurb) == "string" and mdBlurb ~= "" then
+                local lower = mdBlurb:lower()
+                if not lower:find("^missing%s") and not lower:find("^missing_") then
+                    mdTagline = mdBlurb
+                end
+            end
+            self.rfPageBlurb:setText(mdTagline)
         elseif active ~= nil and type(active.blurb) == "string" and active.blurb ~= "" then
             if type(self.rfPageBlurb.setVisible) == "function" then
                 self.rfPageBlurb:setVisible(true)
@@ -1439,6 +1599,48 @@ end
 
 --- Show/hide CS table+detail twins and WC subnav/page shells by active guest panel id.
 --- Panel id for Crop Stress guest is seasonalCropStress (not "cropStress").
+--- BUILD 16:24 (George CLOSED DESIGN 15:47, Ash ACK 16:24): on Market the content plane's TOP edge
+--- drops 24px so CROP / PRICE / CHANGE clear the one-line tagline. Lua only, Market only: the shared
+--- RF_PanelContentShell / RF_HostPlaceholderShell profiles are untouched, so Soil / Crop Stress /
+--- Worker Costs keep their plane. rfHostPlaceholder is the Market table's parent (mdTableRegion and
+--- mdPageBand live in it); rfPanelContent is Soil's plane and is hidden on Market, so it stays put.
+--- Mechanism: GuiElement:setSize with the height reduced by 24px keeps the element's position (its
+--- bottom edge; engine y grows upward) and lowers the top edge. Children re-anchor in
+--- updateAbsolutePosition: the top-anchored table (RF_MdTableRegionShell, 456 reserve) shrinks by
+--- 24px and the bottom-anchored mdPageBand and the footer do not move. Restored to the stored base
+--- height on any other door; re-based if the door XML is rebuilt (new element).
+function RfPdaMenuPage:_applyMdContentDrop(isMd)
+    local el = self.rfHostPlaceholder
+    if el == nil or type(el.setSize) ~= "function" or type(el.size) ~= "table" then
+        return
+    end
+    if self._rfHostPlaceholderBaseEl ~= el then
+        self._rfHostPlaceholderBaseEl = el
+        self._rfHostPlaceholderBaseH = el.size[2]
+        self._rfMdContentDropped = false
+    end
+    local dy = nil
+    if GuiUtils ~= nil and type(GuiUtils.getNormalizedScreenValues) == "function" then
+        local norms = GuiUtils.getNormalizedScreenValues("0px 24px")
+        if type(norms) == "table" then
+            dy = norms[2]
+        end
+    end
+    if dy == nil or self._rfHostPlaceholderBaseH == nil then
+        return
+    end
+    local wantDropped = isMd == true
+    if wantDropped == (self._rfMdContentDropped == true) then
+        return
+    end
+    if wantDropped then
+        el:setSize(nil, self._rfHostPlaceholderBaseH - dy)
+    else
+        el:setSize(nil, self._rfHostPlaceholderBaseH)
+    end
+    self._rfMdContentDropped = wantDropped
+end
+
 function RfPdaMenuPage:_syncHostGuestChrome(activeId)
     local isSoil = activeId == nil or activeId == "soilFertilizer"
     local isCs = activeId == "seasonalCropStress"
@@ -1454,6 +1656,54 @@ function RfPdaMenuPage:_syncHostGuestChrome(activeId)
         end
     end
     setVis(self.rfHostTableRegion, isCs)
+    -- BUILD 09:19 (PB-07): the shared row pager is OFF by default, every refresh, for every
+    -- module. Only a guest that implements onPageStep turns it back on, from inside its own
+    -- onShow, which runs after this. That ordering is what stops the pager following the
+    -- player from NPC Favor onto Income or Dairy - those guests do not know the buttons
+    -- exist and would never have hidden them.
+    -- BUILD 14:35 (Pro Staff Buy / Run on any Esc host): the two Pro Staff action Buttons
+    -- sit in every door copy now and ride the same every-refresh hide; ProStaffRfPdaGuest.onShow
+    -- is the only thing that turns them back on, so they never follow the player onto
+    -- another module (the rule the Pro Staff host copy has had since BUILD 00:46).
+    -- BUILD 00:06 (George CLOSED DESIGN 23:12): rfFwPagePrev / rfFwPageNext are gone from the door
+    -- XML (the NPC tables scroll), so only the Pro Staff strip rides this loop now. The ids are
+    -- looked up nil-safe, so a door copy that still carries the pager just hides it as before.
+    for _, id in ipairs({ "rfFwPagePrev", "rfFwPageNext", "rfPsBuyBtn", "rfPsFlushBtn" }) do
+        local btn = self:getDescendantById(id)
+        if btn ~= nil then
+            btn.inputActionName = nil
+            btn.keyDisplayText = nil
+            btn.keyOverlay = nil
+            btn.hideKeyboardGlyph = true
+            btn.hasLoadedInputGlyph = false
+            btn.isKeyboardMode = false
+            btn.keyGlyphOffsetX = 0
+            btn.keyGlyphSize = { 0, 0 }
+            btn.iconSize = { 0, 0 }
+            btn.icon = {}
+            if type(btn.setVisible) == "function" then
+                btn:setVisible(false)
+            end
+        end
+    end
+    -- BUILD 00:06: the NPC Favor tables (two SmoothLists under rfFwTableBlock), their favors
+    -- header and empty hint go dark on every refresh; NpcRfPdaGuest.onShow alone shows them, so
+    -- Income / Dairy / Depot never inherit a live list. Nil-safe: thin doors have no such ids.
+    -- BUILD 12:05: plus the two NPC detail cards (rfFwRosterDetailCard / rfFwFavorDetailCard).
+    -- BUILD 17:21: rfFwSheetBox joins the list. No host ever calls a guest onHide, so the shared
+    -- scrolling table has to go dark here or the module that showed it last keeps its rows on
+    -- screen under the next module's headers.
+    for _, id in ipairs({ "rfFwRosterBox", "rfFwFavorBox", "rfFwFavEmpty",
+                          "rfFwFavColGroup", "rfFwFavColWho", "rfFwFavColWhat", "rfFwFavColUrgency",
+                          "rfFwRosterDetailCard", "rfFwFavorDetailCard", "rfFwSheetBox",
+                          -- BUILD 19:15: the selected-row band goes dark with its sheet, so a row
+                          -- read on Depot can never sit under another module's headers.
+                          "rfFwSheetBand" }) do
+        local el = self:getDescendantById(id)
+        if el ~= nil and type(el.setVisible) == "function" then
+            el:setVisible(false)
+        end
+    end
     -- Action bar rides the CS module only; the guest decides the two buttons.
     setVis(self.csActionBar, isCs)
     if not isCs then
@@ -1510,19 +1760,16 @@ function RfPdaMenuPage:_syncHostGuestChrome(activeId)
         setVis(self.mdPricesBand, false)
         setVis(self.mdEventsBand, false)
         setVis(self.mdContractsBand, false)
-        setVis(self.mdOpenMarketBtn, false)
-        local btnE = self:getDescendantById("mdOpenMarketBtnEvents")
-        local btnC = self:getDescendantById("mdOpenMarketBtnContracts")
-        setVis(btnE, false)
-        setVis(btnC, false)
     end
     if not isCs then
         setVis(self.csFieldsEmptyHint, false)
     end
     -- Fresh WC: page MTO lives in sibling wcSubnavShell (NOT rfFilterBox). Brand alone in filter.
     setVis(self.wcSubnavShell, isWc)
-    setVis(self.wcSubnavSelector, isWc)
-    setVis(self.wcSubnavDotBox, isWc)
+    -- BUILD 18:26: one Worker Costs page, no picker. The shell stays (it carries wcSideInfoShell);
+    -- the selector and its dots stay hidden on every door.
+    setVis(self.wcSubnavSelector, false)
+    setVis(self.wcSubnavDotBox, false)
     -- MDM subnav twin (Prices | Events | Contracts); exclusive with WC subnav.
     setVis(self.mdSubnavShell, isMd)
     setVis(self.mdSubnavSelector, isMd)
@@ -1674,6 +1921,22 @@ function RfPdaMenuPage:_syncHostGuestChrome(activeId)
     if isFw and self.rfPageBlurb ~= nil and type(self.rfPageBlurb.setText) == "function" then
         self.rfPageBlurb:setText("")
     end
+    -- BUILD 16:24 (George CLOSED DESIGN 15:47): rfFwHintTable sits inside rfFwTableBlock beside the
+    -- Dairy cards (-336..-388 crosses the cards' bottom band). A table door (Income / Depot / NPC)
+    -- could leave hint text in it and Dairy only blanked the text. Clear AND hide it on every
+    -- framework door show (Dairy, Income, Depot, NPC, Tax). A table guest that wants the line must
+    -- paint the text and setVisible(true) itself in its own onShow, which runs after this.
+    if isFw then
+        local fwHint = self:getDescendantById("rfFwHintTable")
+        if fwHint ~= nil then
+            if type(fwHint.setText) == "function" then
+                fwHint:setText("")
+            end
+            setVis(fwHint, false)
+        end
+    end
+    -- BUILD 16:24: Market-only content plane drop (restore on every other door, Soil included).
+    self:_applyMdContentDrop(isMd)
     setVis(self.wcGlanceShell, false)
     self:_refreshSideInfo(activeId)
     -- CS: hide host body so table+detail get room (not isWc alone - body was still on for CS).
@@ -1684,15 +1947,16 @@ function RfPdaMenuPage:_syncHostGuestChrome(activeId)
     if (isWc or isCs or isMd or isFw) and self.rfHostBody and self.rfHostBody.setText then
         self.rfHostBody:setText("")
     end
-    -- Bottom bar: SPACE opens full Market while MDM is active.
-    if isMd and self.btnOpenMarket ~= nil then
-        self.menuButtonInfo = { self.btnBack, self.btnOpenMarket }
-        local trFn = self._rfTr
-        if type(trFn) == "function" then
-            self.btnOpenMarket.text = trFn("md_rf_pda_open_market", "Open full Market")
-        end
-    elseif isWc and self.btnOpenWorkerManager ~= nil then
-        self.menuButtonInfo = { self.btnBack, self.btnOpenWorkerManager }
+    -- BUILD 12:05 (George CLOSED DESIGN 09:45): Market footer is Back only; the Esc full-Market
+    -- door is gone (Prices / Events / Contracts are the whole Market on this page).
+    -- BUILD 19:15: Back + Help for the eight wave-2 modules (Market, Worker Costs, Pro Staff and the
+    -- five framework pages). The Help entry is the generic one; the guest decides which guide opens.
+    if isMd then
+        self.menuButtonInfo = { self.btnBack, self.btnHelpFw }
+    elseif isWc then
+        -- BUILD 22:42 (George CLOSED DESIGN 21:26): Hire / Fire live on the page
+        -- (wcBtnHireN / wcBtnFireN); Open Worker Manager is off the Esc footer.
+        self.menuButtonInfo = { self.btnBack, self.btnHelpFw }
     elseif isCs then
         -- BUILD Help restore 2026-08-12: Back + Help. Consultant chip stays off footer.
         self.menuButtonInfo = { self.btnBack, self.btnHelpCs }
@@ -1705,6 +1969,8 @@ function RfPdaMenuPage:_syncHostGuestChrome(activeId)
         -- Both dialogs stay registered and still open from the PDA/joiner; only the
         -- duplicate bottom-bar buttons go, since the cards now carry that content.
         self.menuButtonInfo = { self.btnBack, self.btnHelp }
+    elseif isFw or activeId == "prostaff" then
+        self.menuButtonInfo = { self.btnBack, self.btnHelpFw }
     else
         self.menuButtonInfo = { self.btnBack }
     end
@@ -1787,8 +2053,18 @@ function RfPdaMenuPage:_wcPageSel()
     return self.wcSubnavSelector
 end
 
---- Host-seed WC page labels once on WC enter (never from arrow click; never forceEvent).
+--- BUILD 18:26 (George CLOSED DESIGN 17:59): Worker Costs is ONE page and the page picker is
+--- gone. This used to seed three texts, three dots and a state on wcSubnavSelector; it is now
+--- a no-op that pins page 1 so _syncWcSubPageVisibility shows the merged wcPageDashboard. The
+--- selector stays declared and hidden (XML visible=false, chrome sync below keeps it off).
+--- Kept as a function so the module-switch path and any stale caller stay safe.
 function RfPdaMenuPage:_seedWcSubnavTexts()
+    self.wcSubPageIndex = 1
+    self._wcSubnavSeeded = true
+end
+
+--- Retired by BUILD 18:26 (kept for reference, never called): the three-page seed.
+function RfPdaMenuPage:_seedWcSubnavTextsRetired()
     local sel = self:_wcPageSel()
     if sel == nil then
         return
@@ -1982,6 +2258,8 @@ function RfPdaMenuPage:_seedMdSubnavTexts()
         t("md_rf_pda_page_prices", "Prices"),
         t("md_rf_pda_page_events", "Events"),
         t("md_rf_pda_page_contracts", "Contracts"),
+        -- BUILD 16:42 (George CLOSED DESIGN 16:25): three pages again; Event Settings is the
+        -- right card of the Events page, not a tab.
     }
     self._mdSubnavSeeding = true
     if sel.setTexts then
@@ -2075,11 +2353,6 @@ function RfPdaMenuPage:_syncMdSubPageVisibility()
     setVis(self.mdPricesBand, idx == 1)
     setVis(self.mdEventsBand, idx == 2)
     setVis(self.mdContractsBand, idx == 3)
-    setVis(self.mdOpenMarketBtn, idx == 1)
-    local btnE = self:getDescendantById("mdOpenMarketBtnEvents")
-    local btnC = self:getDescendantById("mdOpenMarketBtnContracts")
-    setVis(btnE, idx == 2)
-    setVis(btnC, idx == 3)
     if idx == 1 and self.mdGraphArea ~= nil and type(self.mdGraphArea.updateAbsolutePosition) == "function" then
         self.mdGraphArea:updateAbsolutePosition()
     end
@@ -2194,6 +2467,37 @@ function RfPdaMenuPage:onClickWcWageReset()
     end
 end
 
+--- BUILD 22:42 (George CLOSED DESIGN 21:26): Hire / Fire from the Esc Worker Costs page. Same
+--- shape as onClickWcWageOption: the registered guest handler first (registry fields onHire /
+--- onFire, carried by RfEscModules.registerModule), the mission-published guest handle as the
+--- belt. n is the roster ROW of the last paint (recruit rows 1..4, crew rows 1..8); the guest
+--- maps it to the snapshot entry and sends the WorkerManager command.
+function RfPdaMenuPage:_wcRosterAction(kind, n)
+    local host = self:_getHost()
+    local active = host and host:getActivePanel()
+    if active ~= nil and type(active[kind]) == "function" then
+        pcall(active[kind], self.rfHostPlaceholder, n)
+        return
+    end
+    local guest = g_currentMission ~= nil and g_currentMission.WcRfPdaGuest or nil
+    if guest ~= nil and type(guest[kind]) == "function" then
+        pcall(guest[kind], self.rfHostPlaceholder, n)
+    end
+end
+
+function RfPdaMenuPage:onClickWcHire1() self:_wcRosterAction("onHire", 1) end
+function RfPdaMenuPage:onClickWcHire2() self:_wcRosterAction("onHire", 2) end
+function RfPdaMenuPage:onClickWcHire3() self:_wcRosterAction("onHire", 3) end
+function RfPdaMenuPage:onClickWcHire4() self:_wcRosterAction("onHire", 4) end
+function RfPdaMenuPage:onClickWcFire1() self:_wcRosterAction("onFire", 1) end
+function RfPdaMenuPage:onClickWcFire2() self:_wcRosterAction("onFire", 2) end
+function RfPdaMenuPage:onClickWcFire3() self:_wcRosterAction("onFire", 3) end
+function RfPdaMenuPage:onClickWcFire4() self:_wcRosterAction("onFire", 4) end
+function RfPdaMenuPage:onClickWcFire5() self:_wcRosterAction("onFire", 5) end
+function RfPdaMenuPage:onClickWcFire6() self:_wcRosterAction("onFire", 6) end
+function RfPdaMenuPage:onClickWcFire7() self:_wcRosterAction("onFire", 7) end
+function RfPdaMenuPage:onClickWcFire8() self:_wcRosterAction("onFire", 8) end
+
 
 --- Esc Crop Stress actions. The host never speaks CsDialogLoader (SCS-env-scoped,
 --- George binding); it delegates to the active guest, which routes through the
@@ -2237,6 +2541,187 @@ function RfPdaMenuPage:onClickHelpCs()
     if csGuest ~= nil and type(csGuest.onOpenHelp) == "function" then
         pcall(csGuest.onOpenHelp, self.rfHostPlaceholder)
     end
+end
+
+-- ---------------------------------------------------------------------------
+-- BUILD 09:19 (PB-07): shared Table-mode row pager.
+--
+-- rfFwTableBlock is a STATIC eight-row table (rfFwRow1..rfFwRow8) - not a SmoothList - and
+-- four guests paint into it: Income, Dairy, NPC Favor and Fertilizer Depot. When a guest has
+-- more rows than eight it prints "showing 8 of 11" into rfFwMore and the other three rows
+-- were unreachable: no scrollbar, no page control, no route of any kind. Sam's law is that a
+-- list which prints a range must be navigable to the end of that range.
+--
+-- This is a PAGER and deliberately not a SmoothList. George's standing hang lesson is that a
+-- SmoothList nested under the Map-style Bitmap shell in this page can hang the frame, and the
+-- existing csConsultPanel carries the same NO-GO ("George NO-GO on TextElement.new rebuild,
+-- dialog XML nest, or SmoothList"). Two Buttons plus a window offset held by the guest costs
+-- no new list machinery and cannot re-enter the layout.
+--
+-- The host owns only the click. It knows nothing about roster size, page count or labels -
+-- it forwards a step to whichever guest is active and then repaints. A guest that does not
+-- implement onPageStep is simply not pageable and the buttons stay hidden, which is why the
+-- other three Table guests need no change to keep working exactly as before.
+-- ---------------------------------------------------------------------------
+
+--- Forward one page step to the active guest, then repaint the page it just moved.
+---@param delta number -1 for previous page, +1 for next
+---@return boolean moved true when the window moved and a repaint ran
+function RfPdaMenuPage:_rfFwPageStep(delta)
+    local host = self:_getHost()
+    local active = host and host:getActivePanel()
+    if active == nil then
+        return false
+    end
+    local step = active.onPageStep
+    -- BUILD 14:04 (Brian TEST 10:29). This is why the live MORE was a painted no-op: the
+    -- guest registered onPageStep exactly as BUILD 09:19 described, and
+    -- RfEscModules:registerModule silently dropped it - the sixth handler that whitelist
+    -- has eaten (onOpenFullMarket, onOpenConsultant/Schedule/Help, onPivotRemote,
+    -- onLightTick, onMoverChanged before it). The whitelist now carries onPageStep, and
+    -- this belt is the same shape as the 23:51 onLightTick belt directly below in
+    -- refreshContent: if the registry instance was created by a mod still running an old
+    -- RfEscModules copy, reach the guest class itself rather than shipping a dead button
+    -- again. npcFavor is the only pageable guest today, so the belt names it.
+    if type(step) ~= "function" and active.id == "npcFavor" then
+        local npcGuest = (type(mdResolve) == "function")
+                and mdResolve(NpcRfPdaGuest, "NpcRfPdaGuest") or NpcRfPdaGuest
+        if npcGuest ~= nil and type(npcGuest.onPageStep) == "function" then
+            step = npcGuest.onPageStep
+        end
+    end
+    if type(step) ~= "function" then
+        return false
+    end
+    -- The guest owns the clamp/wrap: it is the only side that knows how many rows it has.
+    -- It returns true when the window actually moved, so a click at a hard end does not
+    -- trigger a pointless full repaint.
+    local ok, moved = pcall(step, delta)
+    if not ok then
+        SoilLogger.warning("RfPdaMenuPage: onPageStep failed on %s: %s",
+            tostring(active.id), tostring(moved))
+        return false
+    end
+    if moved == false then
+        return false
+    end
+    -- Soft refresh: same path the module pager uses, so the guest repaints its rows and its
+    -- own footer range without a full enter/rebuild.
+    self:refreshContent(false)
+    return true
+end
+
+function RfPdaMenuPage:onClickRfFwPagePrev()
+    self:_rfFwPageStep(-1)
+end
+
+function RfPdaMenuPage:onClickRfFwPageNext()
+    self:_rfFwPageStep(1)
+end
+
+-- ---------------------------------------------------------------------------
+-- BUILD 14:35 (Pro Staff Buy / Run on any Esc host): the two Pro Staff action Buttons
+-- (rfPsBuyBtn / rfPsFlushBtn) sit in every door copy, and the Esc page that loads is
+-- always the HOST mod's copy, so the click names must exist here too or the buttons
+-- never fire (rain-key lesson). Vendored from the Pro Staff host copy (BUILD 00:46);
+-- the guest is reached through the mission handle first, then resolved across mod
+-- environments, because bare ProStaffRfPdaGuest is nil in every env but Pro Staff's.
+-- The host owns nothing but the click: the guest decides farm, membership and count,
+-- and it calls ProStaffManager:buyLevel or ProStaffManager:requestFarmFlush and
+-- nothing else. No money is moved here.
+-- ---------------------------------------------------------------------------
+
+--- The Pro Staff guest: mission handle first (a registry built by another mod's older
+--- RfEscModules copy cannot strand the click), then the cross-env resolver.
+local function _psGuest()
+    if g_currentMission ~= nil and g_currentMission.proStaffRfPdaGuest ~= nil then
+        return g_currentMission.proStaffRfPdaGuest
+    end
+    return (type(mdResolve) == "function")
+            and mdResolve(ProStaffRfPdaGuest, "ProStaffRfPdaGuest") or ProStaffRfPdaGuest
+end
+
+function RfPdaMenuPage:onClickPsBuy()
+    local guest = _psGuest()
+    if guest == nil or type(guest.onBuy) ~= "function" then
+        return
+    end
+    local ok, err = pcall(guest.onBuy)
+    if not ok then
+        SoilLogger.warning("RfPdaMenuPage: Pro Staff buy failed: %s", tostring(err))
+    end
+    self:refreshContent(false)
+end
+
+function RfPdaMenuPage:onClickPsFlush()
+    local guest = _psGuest()
+    if guest == nil or type(guest.onFlush) ~= "function" then
+        return
+    end
+    local ok, err = pcall(guest.onFlush)
+    if not ok then
+        SoilLogger.warning("RfPdaMenuPage: Pro Staff flush failed: %s", tostring(err))
+    end
+    self:refreshContent(false)
+end
+
+--- 2026-08-22 (Wizard): pager keys are now . / > for next and , / < for back
+--- (Space is retired - it collided with the engine's global button-activate and its
+--- glyph chip was what overlapped the labels; the buttons themselves now use the
+--- glyph-hidden RF_CsPivotBtn profile). keyEvent walks children first via the
+--- superclass (GuiElement.lua:772-784, children in reverse order, eventUsed carried),
+--- so a focused control that consumes the key wins before this fires and nothing
+--- double-steps. Only an unclaimed press reaches the step, and only a step that
+--- actually moved marks the event used; on every page without a pageable guest
+--- _rfFwPageStep returns false immediately and the key passes through untouched.
+--- unicode 46 is ".", 62 is ">", 44 is ",", 60 is "<" - taken from the event's own
+--- unicode so keyboard layout does not matter.
+function RfPdaMenuPage:keyEvent(unicode, sym, modifier, isDown, eventUsed)
+    local used = RfPdaMenuPage:superClass().keyEvent(self, unicode, sym, modifier, isDown, eventUsed)
+    if not used and isDown == true and (unicode == 46 or unicode == 62) then
+        used = self:_rfFwPageStep(1) == true
+    end
+    if not used and isDown == true and (unicode == 44 or unicode == 60) then
+        used = self:_rfFwPageStep(-1) == true
+    end
+    return used
+end
+
+--- BUILD 17:08 (Brian TEST 16:53, George TASK 17:03 GO): click shield for the module
+--- selector. Brian measured both selector arrows hover-highlighting but never advancing,
+--- with no Lua traceback. The engine split that allows exactly that: ButtonElement paints
+--- its hover state regardless of eventUsed (ButtonElement.lua:450-459) but fires its click
+--- only "if not eventUsed" (:469-491), and FocusManager highlight on the MTO is likewise
+--- move-driven (MultiTextOptionElement.lua:465-469). So hover-alive-click-dead means the
+--- CLICK half of the event is being consumed before the selector's walk position - George's
+--- hit-steal read. Event order in this engine is reverse declaration order with no z-index,
+--- and Sam's lock forbids moving any geometry, so the fix is delivery order, not layout:
+--- the page offers every click that lands inside the selector's rect to the selector FIRST,
+--- then runs the normal child walk with the event marked used, so whichever sibling was
+--- eating the click can still clear its own pressed state but can no longer act on it.
+--- Moves are NOT pre-offered - hover behavior is untouched, and a second visit of the MTO
+--- during the normal walk with eventUsed=true only re-computes identical press flags
+--- (:441-446, not eventUsed-gated), so nothing double-fires and no wrapper element is
+--- introduced. Clicks outside the selector rect take the walk exactly as before, so the
+--- module list, FW pager and every guest control keep their ownership.
+function RfPdaMenuPage:mouseEvent(posX, posY, isDown, isUp, button, eventUsed)
+    local used = eventUsed
+    local sel = self.rfPanelSelector
+    if not used and (isDown or isUp) and sel ~= nil
+        and sel.absPosition ~= nil and sel.absSize ~= nil
+        and type(sel.getIsActive) == "function" and sel:getIsActive()
+        and GuiUtils ~= nil and type(GuiUtils.checkOverlayOverlap) == "function"
+        and GuiUtils.checkOverlayOverlap(posX, posY,
+            sel.absPosition[1], sel.absPosition[2], sel.absSize[1], sel.absSize[2], nil) then
+        if sel:mouseEvent(posX, posY, isDown, isUp, button, false) then
+            used = true
+            if not self._selShieldLogged then
+                self._selShieldLogged = true
+                SoilLogger.info("RfPdaMenuPage: selector click shield delivered its first click")
+            end
+        end
+    end
+    return RfPdaMenuPage:superClass().mouseEvent(self, posX, posY, isDown, isUp, button, used) or used
 end
 
 function RfPdaMenuPage:_csPageSel()
@@ -2435,6 +2920,44 @@ local function _csPivotRemote(self, action)
     end
 end
 
+-- [SCS-046] Rain-key clicks. Same host-then-resolved-guest route as the pivot
+-- remotes below, but a DIFFERENT handler: these become
+-- CropStressRainKeyCommandEvent, never a pivot remote action. Vendored into
+-- every host copy of this page, because the Esc page that actually loads is the
+-- HOST mod's copy and a button whose onClick name is missing there never paints.
+local function _csRainKey(self, token)
+    -- [BUILD 15:58] The pcall stays, because a UI click must never take the
+    -- menu down, but the error is PRINTED now. A bare pcall here is what made
+    -- Fit look like a dead chip: the send threw, the throw was swallowed, and
+    -- nothing reached the log, so there was no difference between "the button
+    -- is not wired" and "the button threw on every press".
+    local function call(fn)
+        local ok, err = pcall(fn, self.rfHostPlaceholder, token)
+        if not ok then
+            print(string.format("[CropStress] Esc rain key %s FAILED: %s",
+                tostring(token), tostring(err)))
+        end
+        return ok
+    end
+    local host = self:_getHost()
+    local active = host and host:getActivePanel()
+    if active ~= nil and type(active.onRainKeyCommand) == "function" then
+        call(active.onRainKeyCommand)
+    else
+        local csGuest = (type(mdResolve) == "function")
+                and mdResolve(CsRfPdaGuest, "CsRfPdaGuest") or CsRfPdaGuest
+        if csGuest ~= nil and type(csGuest.onRainKeyCommand) == "function" then
+            call(csGuest.onRainKeyCommand)
+        else
+            print("[CropStress] Esc rain key IGNORED: no onRainKeyCommand handler resolved")
+        end
+    end
+end
+
+function RfPdaMenuPage:onClickCsPivotFit()       _csRainKey(self, "FIT_TOGGLE") end
+function RfPdaMenuPage:onClickCsPivotTripMinus() _csRainKey(self, "TRIP_MINUS") end
+function RfPdaMenuPage:onClickCsPivotTripPlus()  _csRainKey(self, "TRIP_PLUS") end
+
 function RfPdaMenuPage:onClickCsPivotDoor()    _csPivotRemote(self, "DOOR_TOGGLE") end
 function RfPdaMenuPage:onClickCsPivotPower()   _csPivotRemote(self, "POWER_TOGGLE") end
 function RfPdaMenuPage:onClickCsPivotSpray()   _csPivotRemote(self, "SPRAY_TOGGLE") end
@@ -2448,6 +2971,7 @@ function RfPdaMenuPage:onClickCsPivotMaxUp()   _csPivotRemote(self, "SWEEP_MAX_U
 function RfPdaMenuPage:onClickCsPivotMaxDn()   _csPivotRemote(self, "SWEEP_MAX_DN") end
 function RfPdaMenuPage:onClickCsPivotArmPlus() _csPivotRemote(self, "ARM_STEP_PLUS") end
 function RfPdaMenuPage:onClickCsPivotArmMinus() _csPivotRemote(self, "ARM_STEP_MINUS") end
+function RfPdaMenuPage:onClickCsPivotAutoManual() _csPivotRemote(self, "AUTO_MANUAL_TOGGLE") end
 
 --- @param rebuildLists boolean|nil when true (default), rebuild field SmoothList data
 function RfPdaMenuPage:refreshContent(rebuildLists)
@@ -2689,12 +3213,50 @@ function RfPdaMenuPage:_populateMdCommodityRow(index, cell)
         end
     end
     if nameEl then nameEl:setText(entry.title or "-") end
+    -- BUILD 09:19 (PB-02). This cell is the one Brian read as "£0" and "£1".
+    --
+    -- entry.price is the PER-LITRE engine number. formatMoney(price, 0, ...) rounded it to
+    -- whole currency units and printed no unit at all, so a live 0.00037/l commodity became
+    -- an actionable-looking "£0" and soybean at 0.85/l became "£1". Neither is a zero and
+    -- neither says what it is a price OF.
+    --
+    -- MDMPriceFormat is the single place that decides how a market price is written: the
+    -- x1000 display multiply for bulk goods, the forced two decimals built by hand (Vera F2:
+    -- neither formatMoney nor formatNumber forcePrecision actually pads .00), the locale
+    -- decimal mark, and the " / 1,000L" suffix that animal cargo does NOT get. The full
+    -- Market table and the Esc selected-crop line call the same helper, so all three
+    -- surfaces print one string and not three dialects of it.
+    --
+    -- The nil guard matters on this file specifically: this host is mirrored into all nine
+    -- doors and only the Market Dynamics zip ships MdPriceFormat.lua. On the other eight
+    -- doors MDMPriceFormat is nil UNLESS Market Dynamics is also loaded - and if it is not
+    -- loaded there is no Market page to paint anyway. The fallback keeps the old reading
+    -- instead of erroring.
+    --
+    -- BUILD 10:06, Vera FAIL F1. The bare global was doing less than that comment claimed.
+    -- It is nil not only when Market Dynamics is absent, but whenever Market Dynamics is not
+    -- the mod that WON the door race: FS25 gives every mod its own environment and this
+    -- mirrored file executes inside the host's, so on a Dairy-hosted or Income-hosted suite
+    -- the bare lookup misses a fully loaded MdPriceFormat.lua and the cell silently drops to
+    -- the formatMoney fallback - the exact "GBP 0" reading PB-02 was supposed to have fixed.
+    -- Same failure shape, same cause and same cure as MDMMarketScreenGraph on the Dairy door.
+    -- Resolved through mdResolve, which is that cure: bare first (free when Market Dynamics
+    -- hosts), then the named g_modEnvironments["FS25_MarketDynamics"] entry, then the
+    -- name-independent scan and the getfenv(0) / mission belts.
+    local priceFormat = (type(mdResolve) == "function")
+            and mdResolve(MDMPriceFormat, "MDMPriceFormat") or MDMPriceFormat
     local priceText = "-"
     if entry.price ~= nil then
-        if g_i18n and g_i18n.formatMoney then
-            priceText = g_i18n:formatMoney(entry.price, 0, true, true)
+        if priceFormat ~= nil and type(priceFormat.price) == "function" then
+            priceText = priceFormat.price(entry.fillTypeIndex, entry.price)
         else
-            priceText = string.format("%.0f", entry.price)
+            -- BUILD 14:04 (Vera FAIL on SUBMIT 10:16). The old branch here was
+            -- formatMoney(entry.price, 0, ...), which is the exact GBP 0 / GBP 1 reading
+            -- this cell has now shipped twice. George's constraint is verbatim "failed
+            -- probe degrades to 2dp path - never formatMoney(..., 0)", so the raw
+            -- per-litre number prints at two decimals or it does not print through
+            -- an engine rounder at all.
+            priceText = mdMoney2(entry.price)
         end
     end
     if priceEl then priceEl:setText(priceText) end
@@ -2842,10 +3404,42 @@ local function resolveListRowIndex(element)
         if el.rowDataIndex ~= nil then
             return el.rowDataIndex
         end
+        -- BUILD 19:15: rowDataIndex is stamped by THIS page's own populate, so it exists only while
+        -- the host is still the list's data source. A list a guest has taken over - the shared Esc
+        -- sheet - never carries it, and the click resolved to nil. The engine stamps
+        -- element.indexInSection on every populated cell and reads that same field back as the
+        -- clicked row, so it is the row number either way. Index 0 is a section header, never a row.
+        if type(el.indexInSection) == "number" and el.indexInSection > 0 and el.isEmptyCell ~= true then
+            return el.indexInSection
+        end
         el = el.parent
         guard = guard + 1
     end
     return nil
+end
+
+--- BUILD 19:15 (George CLOSED DESIGN 18:55 item 2): a click on the shared Esc table. The engine hands
+--- the clicked cell to the callback; resolveListRowIndex walks up to the row's own rowDataIndex, and
+--- the index goes to whichever guest is showing. A guest without onSheetRow is a quiet no-op, which is
+--- what Income wants: it has no band.
+function RfPdaMenuPage:onClickFwSheetRow(element)
+    local index = resolveListRowIndex(element)
+    if index == nil or index < 1 then return end
+    local host = self:_getHost()
+    local active = host and host.getActivePanel and host:getActivePanel()
+    if active ~= nil and type(active.onSheetRow) == "function" then
+        pcall(active.onSheetRow, index)
+    end
+end
+
+--- BUILD 19:15 (item 5): the generic Help footer. Every wave-2 guest publishes onOpenHelp and owns its
+--- own Field Guide dialog inside its own mod, so this never names one.
+function RfPdaMenuPage:onClickHelpFw()
+    local host = self:_getHost()
+    local active = host and host.getActivePanel and host:getActivePanel()
+    if active ~= nil and type(active.onOpenHelp) == "function" then
+        pcall(active.onOpenHelp, self.rfHostPlaceholder or self)
+    end
 end
 
 function RfPdaMenuPage:onClickFieldRow(element)
@@ -2990,28 +3584,57 @@ function RfPdaMenuPage:_mdLogGuestBelt(mdGuest)
         tostring(mdGuest ~= nil and type(mdGuest.selectCommodityIndex) == "function")))
 end
 
-function RfPdaMenuPage:onClickMdOpenMarket()
-    -- BUILD 12:59: was the last bare cross-mod read in this file. Under a foreign door
-    -- both names were nil, so the button did nothing at all - silently, which is the
-    -- worst version. Registry first, then the resolver, and it cannot throw.
-    local host = self:_getHost()
-    local active = host and host.getActivePanel and host:getActivePanel()
-    if active ~= nil and type(active.onOpenFullMarket) == "function" then
-        pcall(active.onOpenFullMarket)
-        return
-    end
+-- BUILD 12:05: the Esc full-Market click handler is gone with the three Open full Market plates.
+
+--- BUILD 10:47 (George CLOSED DESIGN 10:37): Esc Market page D (Event Settings) and the New
+--- Contract card. The guest owns the gates (host/admin/master for settings, BetterContracts for
+--- contracts) and the server request; the host only routes the click. Same resolver belt as
+--- Open full Market above: bare global, then the owning mod env, then the mission handle the
+--- guest publishes. Deliberately not on the module registry: registerModule whitelists handler
+--- names and that file is vendored in ten mods, while this belt already works on a foreign door.
+local function _mdGuestCall(self, fnName, ...)
     local guest = (type(mdResolve) == "function")
             and mdResolve(MdRfPdaGuest, "MdRfPdaGuest") or MdRfPdaGuest
-    if guest ~= nil and type(guest.onOpenFullMarket) == "function" then
-        pcall(guest.onOpenFullMarket)
-        return
+    if guest == nil or type(guest[fnName]) ~= "function" then
+        -- Companion absent: quiet no-op, same as Open full Market.
+        return false
     end
-    local screen = (type(mdResolve) == "function")
-            and mdResolve(MDMMarketScreen, "MDMMarketScreen") or MDMMarketScreen
-    if screen ~= nil and type(screen.show) == "function" then
-        pcall(screen.show)
+    local ok, err = pcall(guest[fnName], ...)
+    if not ok then
+        print(string.format("[RfPdaMenuPage] Market guest %s failed: %s", tostring(fnName), tostring(err)))
     end
-    -- Companion absent: quiet no-op. "Works alone" means a missing peer is silence,
-    -- not an error out of a click handler.
+    return ok
+end
+
+function RfPdaMenuPage:onClickMdEventSettings()
+    _mdGuestCall(self, "onEventSettings", self.rfHostPlaceholder or self)
+end
+
+function RfPdaMenuPage:onClickMdNewContract()
+    _mdGuestCall(self, "onNewContract", self.rfHostPlaceholder or self)
+end
+
+--- Quantity / window chips. The engine hands the clicked Button to the callback
+--- (ButtonElement:sendAction raises onClickCallback with the element), and the guest reads
+--- the preset off the element id (mdNcQty5000, mdNcDays30).
+function RfPdaMenuPage:onClickMdNcQty(element)
+    _mdGuestCall(self, "onNcQty", self.rfHostPlaceholder or self, element)
+end
+
+function RfPdaMenuPage:onClickMdNcDays(element)
+    _mdGuestCall(self, "onNcDays", self.rfHostPlaceholder or self, element)
+end
+
+--- BUILD 17:21 (George CLOSED DESIGN 14:00): pick an open deal on the Contracts page, then cancel
+--- it. mdCtRow1..5 are invisible hit targets laid over the five contract rows, so the engine hands
+--- the clicked Button to the callback and the guest reads the row number off its id; the pick is
+--- stored as a contract id, never a row index. Cancel is ONE chip (mdCancelBtn), and the guest owns
+--- every gate: BetterContracts stand-down, "is the pick still an open deal", and the request itself.
+function RfPdaMenuPage:onClickMdCtRow(element)
+    _mdGuestCall(self, "onContractRow", self.rfHostPlaceholder or self, element)
+end
+
+function RfPdaMenuPage:onClickMdCancel()
+    _mdGuestCall(self, "onCancelContract", self.rfHostPlaceholder or self)
 end
 

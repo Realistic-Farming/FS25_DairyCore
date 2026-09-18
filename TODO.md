@@ -6,6 +6,13 @@
 
 ## Features / enhancements
 
+- [x] Feed-field designation surface (DC-11 section 3.1, 2026-08-23): deep engine
+  dialog opened from the Dairy Esc glance ("Feed Fields" footer button) lists owned
+  fields with live SF state and Toggle calls the already-built designate/undesignate.
+  Server-gated writes; reads via `getOwnedFeedFields` / `getBarnDesignations`. 24 new
+  assertions in `dc11_designation_surface_test.lua`. The herd score now has a way to
+  move; this was the last DC-15 predecessor.
+- [x] Feed modifiers + mycotoxin apply in both modes (DC-11 4A placement, 2026-08-23): the mode-independent farm-business layer (`_farmBusinessModifiers`) now applies feed-field bonuses and penalties plus the mycotoxin penalty after either score path (Standard or Ritter/RL), and F106 makes `undesignateFeedField` dirty-mark symmetric with `designateFeedField`. 439 suite assertions green. On `feat/DC-11-feed-business-layer`, PR opening.
 - [x] Esc framework table freeze (Dairy guest, #30): shared grid restated per show; 1.0.5.4.
 - [~] In-game: Dairy table keeps its columns after visiting another Esc guest in the same session.
 ## Features / enhancements
@@ -31,6 +38,7 @@
   SDS-owned.
 
 ## Bugs
+- [x] DC-32 (2026-08-18): Dairy tab showed "no barns" on the dedicated server. `discoverBarns` enumerated via `husbandrySystem:getPlaceablesByFarm` (unverifiable, absent from every reference and the game scripts) with fallbacks that do not exist on the engine-native system, so discovery found 0 barns; the network sync is update-only and could not materialise them on clients. Fix: enumerate `g_currentMission.placeableSystem.placeables` (the verified table, walked by PlaceableBeehive.lua), owner from `getOwnerFarmId()`, with a 10 s retry for slow placeable loads. 418 suite assertions green.
 - [x] The sovereign floor floored the live spot and divided by that same spot, so
   the floor crashed exactly when the market crashed (DC-16, 2026-08-14): the floor
   now rides `entry.base`, read as a pull, never the live spot.
@@ -67,11 +75,16 @@
       latches `self.active = false` on the first pcall failure. DC-17 assumed the
       fix; the bridge should retry with a counter and announce once, not latch.
       Also the mode-change event (DC-12 section 3.2) is still log-only.
-- [ ] **The DC-11 feed-field designation surface ships callerless** (designed
-      state); when FP-1 or a contamination reader wires to it, re-verify the
-      placement ruling: the feed-field bonuses currently sit inside the Standard
-      score path (`_herdScoreStandard`), so a Ritter farm misses them. Latent
-      today, zero callers; fix the placement before the first consumer wires.
+- [x] **The F105 mycotoxin half: harvest contamination routes into the barn
+      penalty (2026-08-21).** DairyCore's second `soilHarvestBus` listener
+      (`DairyCore_FeedContamination`) routes a harvest cut of a designated feed
+      field into `applyFeedContaminationPenalty`; clean cuts never route. The
+      designation surface is still callerless, so the adapter is latent today.
+- [x] **The DC-11 feed-field designation surface is BUILT (2026-08-23).** Deep
+      engine dialog from the Dairy Esc glance, backed by `getOwnedFeedFields` and
+      `getBarnDesignations`; Toggle calls designate/undesignate. The feed-field
+      bonuses and the mycotoxin penalty now have real fields to read; this was the
+      last DC-15 predecessor and the herd score can now move.
 - [ ] **`undesignateFeedField` does not mark the barn dirty** while
       `designateFeedField` does, five lines apart. Two-minute fix when someone is
       in that file.

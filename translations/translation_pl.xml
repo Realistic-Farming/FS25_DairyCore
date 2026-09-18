@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Stado teraz" />
+        <text name="dairy_rf_pda_breed_milk" text="Mleko w zbiorniku" />
+        <text name="dairy_rf_pda_breed_unknown" text="nieznane" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Oczekiwanie na serwer" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Oczekiwanie na farmę gracza" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Trasa zbiornika niedostępna" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Nierozpoznany typ produktu" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Brak wewnętrznego magazynu" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Migawka nieprawidłowa" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Stado nieczytelne" />
+        <text name="dairy_rf_pda_breed_col_status" text="Stan" />
+        <text name="dairy_rf_pda_breed_status_live" text="Rejestry aktywne" />
+        <text name="dairy_rf_pda_breed_head" text="%d szt." />
+        <text name="dairy_rf_pda_breed_litres" text="%d l" />
+        <text name="dairy_rf_pda_breed_no_milk" text="brak mleka w magazynie" />
+        <text name="dairy_rf_pda_breed_source_standard" text="liczenie standardowe" />
+        <text name="dairy_rf_pda_breed_source_rl" text="liczenie Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Dwa zegary: Stado teraz liczy zwierzęta mleczne stojące dziś w oborze. Mleko w zbiorniku śledzi zmagazynowane mleko według ras, które je dały; nowe stado obok starego mleka to normalne. Nieznane mleko pochodzi sprzed rejestru lub trafiło tu niepotwierdzoną drogą." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d obór więcej w tabeli" />
+        <text name="dairy_rf_pda_card_feed" text="Pola paszowe (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Pola paszowe: brak przypisanych" />
+        <text name="dairy_rf_pda_card_field" text="Pole %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="chwasty %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="choroba" />
+        <text name="dairy_rf_pda_card_designated" text="karmi te obore" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Pole" />
+        <text name="dairy_rf_pda_card_field_next" text="Pole &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Dodaj pasze" />
+        <text name="dairy_rf_pda_card_remove" text="Usun pasze" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="zegar zatrzymany" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Wstecz" />
+        <text name="dairy_rf_pda_page_next" text="Dalej (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="%d kolejnych obor na nastepnych stronach" />
+        <text name="dairy_rf_pda_trough_waiting" text="Pasza w magazynie: czekam na dane ze zbiorow" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Brak zapisanego pokosu dla tej farmy." />
+        <text name="dairy_rf_pda_trough_server_only" text="Pasza w magazynie: tylko na serwerze, brak zapisu na tym kliencie" />
+        <text name="dairy_rf_pda_trough_organic" text="Pasza farmy w magazynie: ekologiczna (%d%% udzialu eko)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Pasza farmy w magazynie: nieekologiczna (%d%% udzialu eko)" />
+        <text name="dairy_rf_pda_trough_clean" text="Skazenie: brak w zmagazynowanej paszy" />
+        <text name="dairy_rf_pda_trough_trace" text="Skazenie: slad, spada o %d%% dziennie" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Skazenie: %d%% chore, spada o %d%% dziennie" />
+        <text name="dairy_rf_pda_side_teach" text="Mleczarnia&#10;&#10;Jedna karta na obore na twojej farmie. Strony zmieniasz , i . albo przyciskami stron.&#10;&#10;Stado teraz to stado mleczne stojace dzis w oborze, wedlug ras. Mleko w zbiorniku to zmagazynowane mleko wedlug ras, ktore je daly. Mleko bez zapisu rasy pozostaje nieznane. Nowe stado obok starego mleka to normalne.&#10;&#10;Zegar psucia: rusza, gdy zapisany zostanie odbior. Zegar zatrzymany znaczy nieuruchomiony, wiec Swieze nie jest jeszcze dzialajacym licznikiem.&#10;&#10;Zegar choroby paszy: chora pasza w zapasie naklada mykotoksyne na stado. Slabnie dzien po dniu. Podpowiedz strony wskazuje obore, poki to trwa.&#10;&#10;Pasza w magazynie: jakosc ustala sie na roslinie przy pokosie i miesza w silosach farmy. Koryto czerpie z tego zapasu, a mleko za nim podaza. Ekologiczna znaczy ponad 80% udzialu eko. Czekam na dane ze zbiorow do pierwszego zapisanego pokosu." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Rasy" />
+        <text name="dairy_rf_pda_breed_next" text="Rasy (%d/%d) &gt;" />
     </texts>
 </l10n>

@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Állomány most" />
+        <text name="dairy_rf_pda_breed_milk" text="Tej a tartályban" />
+        <text name="dairy_rf_pda_breed_unknown" text="ismeretlen" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Várakozás a szerverre" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Várakozás a játékos farmjára" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Tartályútvonal nem elérhető" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Ismeretlen terméktípus" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Nincs belső tároló" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Pillanatkép érvénytelen" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Állomány nem olvasható" />
+        <text name="dairy_rf_pda_breed_col_status" text="Állapot" />
+        <text name="dairy_rf_pda_breed_status_live" text="Nyilvántartás aktív" />
+        <text name="dairy_rf_pda_breed_head" text="%d egyed" />
+        <text name="dairy_rf_pda_breed_litres" text="%d l" />
+        <text name="dairy_rf_pda_breed_no_milk" text="nincs tárolt tej" />
+        <text name="dairy_rf_pda_breed_source_standard" text="normál számlálás" />
+        <text name="dairy_rf_pda_breed_source_rl" text="Realistic Livestock számlálás" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Két óra: Állomány most a ma az istállóban álló tejelő állatokat számolja. Tej a tartályban a tárolt tejet követi az azt adó fajták szerint; új állomány régi tej mellett normális. Az ismeretlen tej a nyilvántartás előtti, vagy nem igazolt úton érkezett." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d további istálló a táblázatban" />
+        <text name="dairy_rf_pda_card_feed" text="Takarmanyfoldek (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Takarmanyfoldek: nincs kijelolve" />
+        <text name="dairy_rf_pda_card_field" text="Fold %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="gyom %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="betegseg" />
+        <text name="dairy_rf_pda_card_designated" text="ezt az istallot latja el" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Fold" />
+        <text name="dairy_rf_pda_card_field_next" text="Fold &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Takarmany hozzaadasa" />
+        <text name="dairy_rf_pda_card_remove" text="Takarmany eltavolitasa" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="ora all" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Vissza" />
+        <text name="dairy_rf_pda_page_next" text="Tovabb (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="meg %d istallo a kovetkezo oldalakon" />
+        <text name="dairy_rf_pda_trough_waiting" text="Tarolt takarmany: varakozas a betakaritasi adatokra" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Ehhez a farmhoz meg nincs rogzitett kaszalas." />
+        <text name="dairy_rf_pda_trough_server_only" text="Tarolt takarmany: csak a szerveren, ezen a kliensen nincs bejegyzes" />
+        <text name="dairy_rf_pda_trough_organic" text="A farm tarolt takarmanya: bio (%d%% bio arany)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="A farm tarolt takarmanya: nem bio (%d%% bio arany)" />
+        <text name="dairy_rf_pda_trough_clean" text="Szennyezes: nincs a tarolt takarmanyban" />
+        <text name="dairy_rf_pda_trough_trace" text="Szennyezes: nyomokban, naponta %d%%-kal csokken" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Szennyezes: %d%% beteg, naponta %d%%-kal csokken" />
+        <text name="dairy_rf_pda_side_teach" text="Tejgazdasag&#10;&#10;Istallonkent egy kartya a farmodon. Lapozz a , es . billentyuvel vagy a lapozoval.&#10;&#10;Allomany most: a ma az istalloban allo fejoallomany, fajtank szerint. Tej a tartalyban: a tarolt tej a fajtak szerint, amelyek adtak. A fajtabejegyzes nelkuli tej ismeretlen marad. Uj allomany regi tej mellett normalis.&#10;&#10;Romlasi ora: akkor indul, amikor egy begyujtest rogzitenek. Az ora all azt jelenti, nem indult el, igy a Friss meg nem futo idozito.&#10;&#10;Takarmanybetegseg ora: a keszletben levo beteg takarmany mikotoxint tesz az allomanyra. Naprol napra csokken. Az oldal tippje megnevezi az istallot, amig tart.&#10;&#10;Tarolt takarmany: a minoseg a kaszalaskor rogzul a novenyen, es a farm siloiban keveredik. A valyu ebbol a keszletbol merit, a tej pedig koveti. A bio 80% feletti bio aranyt jelent. Varakozas a betakaritasi adatokra az elso rogzitett kaszalasig." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Fajtak" />
+        <text name="dairy_rf_pda_breed_next" text="Fajtak (%d/%d) &gt;" />
     </texts>
 </l10n>

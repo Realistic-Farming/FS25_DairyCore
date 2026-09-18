@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8" standalone="no" ?>
+<GUI onOpen="onOpen" onClose="onClose" onCreate="onCreate">
+  <GuiElement profile="newLayer"/>
+  <Bitmap profile="dialogFullscreenBg" id="dialogBg"/>
+
+  <GuiElement profile="dcDialogBg" id="dialogElement">
+    <ThreePartBitmap profile="fs25_dialogBgMiddle"/>
+    <ThreePartBitmap profile="fs25_dialogBgTop"/>
+    <ThreePartBitmap profile="fs25_dialogBgBottom"/>
+
+    <GuiElement profile="fs25_dialogContentContainer">
+      <Text profile="fs25_dialogTitle" id="fdTitle"
+            text="$l10n_dc_fd_title" position="0px -30px"/>
+
+      <Text profile="dcDialogSectionHeader" id="fdBarnHeader"
+            text="$l10n_dc_fd_barn_header" position="0px -70px"/>
+      <Text profile="dcDialogLabel" id="fdBarnLabel"
+            text="" position="0px -98px" size="760px 32px" wrapText="true"/>
+
+      <Text profile="dcDialogSectionHeader" id="fdFieldHeader"
+            text="" position="0px -140px"/>
+      <Text profile="dcDialogLabel" id="fdFieldState"
+            text="" position="0px -168px" size="760px 60px" wrapText="true"/>
+
+      <Text profile="dcDialogValue" id="fdDesignation"
+            text="" position="0px -236px" size="760px 24px" wrapText="true"/>
+
+      <Text profile="dcDialogLabel" id="fdHint"
+            text="$l10n_dc_fd_hint"
+            position="0px -272px" size="760px 80px" wrapText="true"/>
+    </GuiElement>
+
+    <BoxLayout profile="dcDialogButtonBox">
+      <Button profile="dcDialogBtn" id="fdPrevBarnBtn" text="$l10n_dc_fd_prev_barn" onClick="onClickPrevBarn"/>
+      <Button profile="dcDialogBtn" id="fdNextBarnBtn" text="$l10n_dc_fd_next_barn" onClick="onClickNextBarn"/>
+      <Button profile="dcDialogBtn" id="fdPrevFieldBtn" text="$l10n_dc_fd_prev_field" onClick="onClickPrevField"/>
+      <Button profile="dcDialogBtn" id="fdNextFieldBtn" text="$l10n_dc_fd_next_field" onClick="onClickNextField"/>
+      <Button profile="dcDialogBtnPrimary" id="fdToggleBtn" text="$l10n_dc_fd_toggle" onClick="onClickToggle"/>
+      <Button profile="dcDialogBtn" id="fdBackBtn" text="$l10n_button_back" onClick="onClickBack"/>
+    </BoxLayout>
+  </GuiElement>
+
+  <GUIProfiles>
+
+    <!-- Wide dialog body: room for six footer buttons on one row. -->
+    <Profile name="dcDialogBg" extends="fs25_dialogBg">
+      <size value="1000px 560px"/>
+    </Profile>
+
+    <Profile name="dcDialogSectionHeader" extends="fs25_textDefault" with="anchorTopCenter">
+      <size value="760px 22px"/>
+      <textSize value="14px"/>
+      <textBold value="true"/>
+      <textColor value="1 0.8 0.2 1"/>
+      <textAlignment value="center"/>
+    </Profile>
+
+    <Profile name="dcDialogLabel" extends="fs25_textDefault" with="anchorTopCenter">
+      <size value="180px 22px"/>
+      <textSize value="12px"/>
+      <textColor value="0.65 0.65 0.65 1"/>
+      <textAlignment value="left"/>
+    </Profile>
+
+    <Profile name="dcDialogValue" extends="fs25_textDefault" with="anchorTopCenter">
+      <size value="110px 22px"/>
+      <textSize value="13px"/>
+      <textBold value="true"/>
+      <textColor value="1 1 1 1"/>
+      <textAlignment value="left"/>
+    </Profile>
+
+    <!-- Compact footer buttons so all six sit on one clean row. -->
+    <Profile name="dcDialogBtn" extends="buttonOK">
+      <size value="150px 44px"/>
+      <textSize value="13px"/>
+    </Profile>
+    <Profile name="dcDialogBtnPrimary" extends="buttonOK">
+      <size value="180px 44px"/>
+      <textSize value="13px"/>
+    </Profile>
+
+    <Profile name="dcDialogButtonBox" extends="fs25_dialogButtonBox">
+      <layoutMargin value="0 0 20 0"/>
+    </Profile>
+
+  </GUIProfiles>
+</GUI>

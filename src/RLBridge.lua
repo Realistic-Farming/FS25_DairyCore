@@ -9,7 +9,7 @@
 -- writes into Ritter - no addDisease / injection; all reads only).
 -- =========================================================
 
-RLBridge = {}
+RLBridge = RLBridge or {}
 
 function RLBridge:init()
     -- Presence: prefer the reliable loaded-in-this-save check (g_modIsLoaded) over a
@@ -87,9 +87,43 @@ function RLBridge:computeHerdScore(barnId, farmId)
                             and animal.genetics.productivity or 1.0
             -- normalize 0.25..1.75 -> 0..1 so an average herd does not max out (F4)
             local prodGene = math.max(0, math.min(1, (prodRaw - 0.25) / 1.5))
+            -- F191: only ACTIVE records penalize. RealisticLivestock keeps a cured
+            -- record attached until its immunity counts down (Disease.lua:89-93),
+            -- and a carrier record is symptomless by design, so neither may drag
+            -- the herd score. Field names come from Disease.lua:10/15 (cured,
+            -- isCarrier). Read-only: the record is never touched.
+            --
+            -- RSF-F191: THE PROVIDER DECIDES FIRST. Each animal's own
+            -- getHasAnyDisease is asked before any record is read. It answers from
+            -- RealisticLivestock's side of the mod fence, including whether diseases
+            -- are enabled at all, which this mod must not read for itself. A strict
+            -- false means no active record, whatever the list still holds. Only a
+            -- strict true opens the list, and then the records are counted in order
+            -- with ipairs, the way the provider iterates them, each one active only
+            -- when it is neither cured nor a carrier. The true itself is never a
+            -- record. A missing or non-boolean getter, an unreadable list or a
+            -- malformed record raises inside this safeRead, so the bridge degrades
+            -- to Standard mode rather than inventing a count.
+            -- Calling a getter that is absent or not callable raises here, which
+            -- is the degradation: no separate type check is needed for it.
+            local hasAnyDisease = animal.getHasAnyDisease(animal)
+            if hasAnyDisease ~= true and hasAnyDisease ~= false then
+                error("F191: getHasAnyDisease returned a non-boolean (" .. tostring(hasAnyDisease) .. ")")
+            end
             local diseaseCount = 0
-            if animal.diseases ~= nil then
-                for _ in pairs(animal.diseases) do diseaseCount = diseaseCount + 1 end
+            if hasAnyDisease then
+                local diseases = animal.diseases
+                if type(diseases) ~= "table" then
+                    error("F191: the disease list is unreadable")
+                end
+                for _, d in ipairs(diseases) do
+                    if type(d) ~= "table" then
+                        error("F191: a malformed disease record")
+                    end
+                    if not d.cured and not d.isCarrier then
+                        diseaseCount = diseaseCount + 1
+                    end
+                end
             end
             local diseasePenalty = math.min(diseaseCount * 0.08, 0.40)
             local animalScore = ((health * 0.6) + (prodGene * 0.4)) - diseasePenalty

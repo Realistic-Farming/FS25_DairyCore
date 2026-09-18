@@ -11,20 +11,38 @@
 -- neutral when a companion is absent.
 -- =========================================================
 
-local modDirectory = g_currentModDirectory
+-- Hot-reload latch (FuelCosts reference): g_currentModDirectory and
+-- g_currentModName are nil on a live re-source, so they are latched into
+-- module globals on first load, with a g_modsDirectory loose-folder fallback.
+DairyCoreModDirectory = DairyCoreModDirectory
+    or g_currentModDirectory
+    or (g_modsDirectory ~= nil and (g_modsDirectory .. "FS25_DairyCore/") or nil)
+DairyCoreModName = DairyCoreModName or g_currentModName or "FS25_DairyCore"
+local modDirectory = DairyCoreModDirectory
 
 source(modDirectory .. "src/Logger.lua")
 source(modDirectory .. "src/DairyConstants.lua")
 source(modDirectory .. "src/RLBridge.lua")
 source(modDirectory .. "src/FeedProvenance.lua")
+source(modDirectory .. "src/MilkTank.lua")
 source(modDirectory .. "src/DairyCoreManager.lua")
+-- DC-27: the direct-event fallback for the breed surface mirror (used only when
+-- NetworkSync is absent or refuses the module).
+source(modDirectory .. "src/network/DairyBreedSurfaceEvent.lua")
 
 -- Esc RF PDA framework joiner (NO-HOST).
-source(g_currentModDirectory .. "src/gui/RfEscModules.lua")
-source(g_currentModDirectory .. "src/gui/RfPdaMenuPage.lua")
-source(g_currentModDirectory .. "src/gui/RfEscBootstrap.lua")
-source(g_currentModDirectory .. "src/gui/RfEscUiDebugger.lua")
-source(g_currentModDirectory .. "src/gui/DairyRfPdaGuest.lua")
+source(DairyCoreModDirectory .. "src/gui/RfEscModules.lua")
+source(DairyCoreModDirectory .. "src/gui/RfPdaMenuPage.lua")
+source(DairyCoreModDirectory .. "src/gui/RfEscBootstrap.lua")
+source(DairyCoreModDirectory .. "src/gui/RfEscUiDebugger.lua")
+source(DairyCoreModDirectory .. "src/gui/DairyGuideDialog.lua")
+source(DairyCoreModDirectory .. "src/gui/DairyRfPdaGuest.lua")
+source(DairyCoreModDirectory .. "src/gui/FeedDesignationDialog.lua")
+
+-- DC-27: put the milk production wrapper on the PlaceableHusbandryMilk class slot
+-- before TypeManager:finalizeTypes() captures it into the husbandry types. Guarded
+-- on slot identity inside, so a re-source never stacks a second wrapper.
+DairyCoreManager._installMilkBreedProductionWrapper()
 
 local dairyCore = DairyCoreManager.new()
 getfenv(0)["g_dairyCoreManager"] = dairyCore
@@ -71,6 +89,16 @@ end
 
 FSBaseMission.delete = Utils.prependedFunction(FSBaseMission.delete, onMissionDelete)
 
+-- DC-27: a joining client gets the breed surface snapshot as one direct event
+-- when NetworkSync is not carrying the module (with NetworkSync the client pulls
+-- the full snapshot itself on join).
+if FSBaseMission ~= nil and FSBaseMission.sendInitialClientState ~= nil then
+    FSBaseMission.sendInitialClientState = Utils.appendedFunction(FSBaseMission.sendInitialClientState,
+        function(mission, connection, user, farm)
+            dairyCore:sendBreedSurfaceInitialState(connection)
+        end)
+end
+
 if addConsoleCommand ~= nil then
     addConsoleCommand("dairyStatus", "Show DairyCore barns, mode, contracts",
         "consoleCommandStatus", dairyCore)
@@ -84,6 +112,10 @@ if addConsoleCommand ~= nil then
         "consoleCollectionTick", dairyCore)
     addConsoleCommand("dcFeedProvenance", "FP-1: show the farm feed provenance ledger (server only)",
         "consoleFeedProvenance", dairyCore)
+    addConsoleCommand("dcFeedFlushQuote", "D1: quote the contaminated-feed flush for the local farm",
+        "consoleFeedFlushQuote", dairyCore)
+    addConsoleCommand("dcFeedFlush", "D1: pay to purge the farm's contaminated feed (server only)",
+        "consoleFeedFlush", dairyCore)
 end
 
 

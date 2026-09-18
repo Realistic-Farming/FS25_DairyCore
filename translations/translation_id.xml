@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Kawanan saat ini" />
+        <text name="dairy_rf_pda_breed_milk" text="Susu di tangki" />
+        <text name="dairy_rf_pda_breed_unknown" text="tidak diketahui" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Menunggu server" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Menunggu peternakan pemain" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Rute tangki tidak tersedia" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Jenis isi tidak dikenali" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Tidak ada penyimpanan internal" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Snapshot tidak valid" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Kawanan tidak terbaca" />
+        <text name="dairy_rf_pda_breed_col_status" text="Status" />
+        <text name="dairy_rf_pda_breed_status_live" text="Catatan aktif" />
+        <text name="dairy_rf_pda_breed_head" text="%d ekor" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="tidak ada susu tersimpan" />
+        <text name="dairy_rf_pda_breed_source_standard" text="hitungan standar" />
+        <text name="dairy_rf_pda_breed_source_rl" text="hitungan Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Dua jam: Kawanan saat ini menghitung hewan perah yang berada di kandang hari ini. Susu di tangki mengikuti susu yang tersimpan menurut ras yang menghasilkannya; kawanan baru di samping susu lama itu normal. Susu tidak diketahui berasal dari sebelum pencatatan atau masuk lewat jalur yang tidak terbukti." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d kandang lagi di tabel" />
+        <text name="dairy_rf_pda_card_feed" text="Ladang pakan (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Ladang pakan: belum ditetapkan" />
+        <text name="dairy_rf_pda_card_field" text="Ladang %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="gulma %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="penyakit" />
+        <text name="dairy_rf_pda_card_designated" text="memberi pakan kandang ini" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Ladang" />
+        <text name="dairy_rf_pda_card_field_next" text="Ladang &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Tambah pakan" />
+        <text name="dairy_rf_pda_card_remove" text="Hapus pakan" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="jam berhenti" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Kembali" />
+        <text name="dairy_rf_pda_page_next" text="Lanjut (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="%d kandang lagi setelah halaman ini" />
+        <text name="dairy_rf_pda_trough_waiting" text="Pakan tersimpan: menunggu data panen" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Belum ada pemotongan yang tercatat untuk pertanian ini." />
+        <text name="dairy_rf_pda_trough_server_only" text="Pakan tersimpan: hanya di server, tidak ada catatan di klien ini" />
+        <text name="dairy_rf_pda_trough_organic" text="Pakan tersimpan pertanian: organik (%d%% bagian organik)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Pakan tersimpan pertanian: tidak organik (%d%% bagian organik)" />
+        <text name="dairy_rf_pda_trough_clean" text="Kontaminasi: tidak ada di pakan tersimpan" />
+        <text name="dairy_rf_pda_trough_trace" text="Kontaminasi: sedikit, turun %d%% per hari" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Kontaminasi: %d%% berpenyakit, turun %d%% per hari" />
+        <text name="dairy_rf_pda_side_teach" text="Peternakan susu&#10;&#10;Satu kartu per kandang di pertanianmu. Ganti halaman dengan , dan . atau tombol halaman.&#10;&#10;Kawanan sekarang adalah kawanan perah yang ada di kandang hari ini, per ras. Susu di tangki adalah susu tersimpan menurut ras yang menghasilkannya. Susu tanpa catatan ras tetap tidak diketahui. Kawanan baru di samping susu lama itu normal.&#10;&#10;Jam pembusukan: mulai saat pengambilan tercatat. Jam berhenti berarti belum mulai, jadi Segar belum menjadi pewaktu yang berjalan.&#10;&#10;Jam penyakit pakan: pakan berpenyakit di persediaan menaruh mikotoksin pada kawanan. Turun hari demi hari. Petunjuk halaman menyebut kandangnya selama masih berlangsung.&#10;&#10;Pakan tersimpan: kualitas terkunci pada tanaman saat dipotong dan dicampur di silo pertanian. Palung mengambil dari persediaan itu dan susu mengikutinya. Organik berarti bagian organik di atas 80%. Menunggu data panen sampai pemotongan pertama tercatat." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Ras" />
+        <text name="dairy_rf_pda_breed_next" text="Ras (%d/%d) &gt;" />
     </texts>
 </l10n>

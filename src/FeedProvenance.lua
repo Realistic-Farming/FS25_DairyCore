@@ -21,7 +21,7 @@
 -- is absent. Fraction writes and the effects are server-side.
 -- =========================================================
 
-FeedProvenance = {}
+FeedProvenance = FeedProvenance or {}
 local FeedProvenance_mt = Class(FeedProvenance)
 
 function FeedProvenance.new(manager)
@@ -148,6 +148,68 @@ function FeedProvenance:organicFeedFraction(farmId)
     end
     if wtotal <= 0 then return 0 end
     return wsum / wtotal
+end
+
+--- D1: amount-weighted mean contaminated fraction across a farm's feed fills.
+--- The read a barn's trough-exposure consumer uses for ongoing mycotoxin.
+function FeedProvenance:contaminatedFeedFraction(farmId)
+    local byFt = self.provenance[farmId]
+    if byFt == nil then return 0 end
+    local acc = self.accum[farmId]
+    local wsum, wtotal = 0, 0
+    for ft, p in pairs(byFt) do
+        local w = (acc and acc[ft]) or 0
+        wsum = wsum + (p.contaminated or 0) * w
+        wtotal = wtotal + w
+    end
+    if wtotal <= 0 then return 0 end
+    return wsum / wtotal
+end
+
+--- D1: the farm's contaminated feed fills, ascending by fill type. Each entry
+--- carries the fill type, the contaminated fraction, the tracked volume, and the
+--- CONTAMINATED LITRES (volume times fraction) - the volume the paid flush purges
+--- and prices on. This is the model's own tracked volume (the blend denominator S,
+--- the brief's outstanding base-game storage aggregate confirm); the farm's actual
+--- silo/bunker levels are not the price basis until that hook lands.
+function FeedProvenance:contaminatedFills(farmId)
+    local out = {}
+    local byFt = self.provenance[farmId]
+    if byFt == nil then return out end
+    local acc = self.accum[farmId]
+    for ft, p in pairs(byFt) do
+        local frac = p.contaminated or 0
+        if frac > 0 then
+            local litres = (acc and acc[ft]) or 0
+            out[#out + 1] = {
+                fillType           = ft,
+                contaminated       = frac,
+                litres             = litres,
+                contaminatedLitres = litres * frac,
+            }
+        end
+    end
+    table.sort(out, function(a, b) return a.fillType < b.fillType end)
+    return out
+end
+
+--- D1: purge the farm's contaminated feed. Resets the contaminated fraction to 0
+--- for every contaminated fill type (the paid fast-out; the passive daily decay
+--- is the free never-stuck floor). Server-only - the pool is server-authoritative.
+---@param farmId number
+---@return number purged  count of fill types flushed
+function FeedProvenance:purgeContamination(farmId)
+    if not self:serverOnly() then return 0 end
+    local byFt = self.provenance[farmId]
+    if byFt == nil then return 0 end
+    local purged = 0
+    for _, p in pairs(byFt) do
+        if (p.contaminated or 0) > 0 then
+            p.contaminated = 0
+            purged = purged + 1
+        end
+    end
+    return purged
 end
 
 --- THRESHOLD classification (the ratified organic default): a farm's feed classifies

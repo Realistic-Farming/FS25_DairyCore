@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Turma acum" />
+        <text name="dairy_rf_pda_breed_milk" text="Lapte în tanc" />
+        <text name="dairy_rf_pda_breed_unknown" text="necunoscut" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Se așteaptă serverul" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Se așteaptă ferma jucătorului" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Ruta tancului indisponibilă" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Tip de produs nerezolvat" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Fără depozit intern" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Instantaneu invalid" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Turmă ilizibilă" />
+        <text name="dairy_rf_pda_breed_col_status" text="Stare" />
+        <text name="dairy_rf_pda_breed_status_live" text="Registre active" />
+        <text name="dairy_rf_pda_breed_head" text="%d capete" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="fără lapte depozitat" />
+        <text name="dairy_rf_pda_breed_source_standard" text="numărare standard" />
+        <text name="dairy_rf_pda_breed_source_rl" text="numărare Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Două ceasuri: Turma acum numără animalele de lapte aflate azi în grajd. Lapte în tanc urmărește laptele depozitat după rasele care l-au produs; o turmă nouă lângă lapte vechi este normal. Laptele necunoscut precede registrul sau a ajuns pe o cale nedovedită." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d grajduri în plus în tabel" />
+        <text name="dairy_rf_pda_card_feed" text="Campuri de furaj (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Campuri de furaj: niciunul desemnat" />
+        <text name="dairy_rf_pda_card_field" text="Camp %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="buruieni %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="boala" />
+        <text name="dairy_rf_pda_card_designated" text="hraneste acest grajd" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Camp" />
+        <text name="dairy_rf_pda_card_field_next" text="Camp &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Adauga furaj" />
+        <text name="dairy_rf_pda_card_remove" text="Elimina furaj" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="ceas oprit" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Inapoi" />
+        <text name="dairy_rf_pda_page_next" text="Mai mult (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="inca %d grajduri dupa aceasta pagina" />
+        <text name="dairy_rf_pda_trough_waiting" text="Furaj depozitat: se asteapta datele recoltei" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Nicio taiere inregistrata inca pentru aceasta ferma." />
+        <text name="dairy_rf_pda_trough_server_only" text="Furaj depozitat: doar pe server, fara inregistrare pe acest client" />
+        <text name="dairy_rf_pda_trough_organic" text="Furajul depozitat al fermei: ecologic (%d%% cota ecologica)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Furajul depozitat al fermei: neecologic (%d%% cota ecologica)" />
+        <text name="dairy_rf_pda_trough_clean" text="Contaminare: niciuna in furajul depozitat" />
+        <text name="dairy_rf_pda_trough_trace" text="Contaminare: urme, scade cu %d%% pe zi" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Contaminare: %d%% bolnav, scade cu %d%% pe zi" />
+        <text name="dairy_rf_pda_side_teach" text="Lactate&#10;&#10;Un card pentru fiecare grajd al fermei tale. Schimba pagina cu , si . sau cu paginatorul.&#10;&#10;Turma acum este turma de muls aflata azi in grajd, pe rase. Lapte in rezervor este laptele depozitat pe rasele care l-au dat. Laptele fara inregistrare de rasa ramane necunoscut. O turma noua langa lapte vechi este normal.&#10;&#10;Ceasul alterarii: porneste cand se inregistreaza o colectare. Ceas oprit inseamna nepornit, deci Proaspat nu este inca un cronometru activ.&#10;&#10;Ceasul bolii furajului: furajul bolnav din rezerva pune micotoxina pe turma. Scade zi de zi. Indiciul paginii numeste grajdul cat timp dureaza.&#10;&#10;Furaj depozitat: calitatea se fixeaza pe cultura la taiere si se amesteca in silozurile fermei. Ieslea se alimenteaza din acea rezerva si laptele o urmeaza. Ecologic inseamna peste 80% cota ecologica. Se asteapta datele recoltei pana la prima taiere inregistrata." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Rase" />
+        <text name="dairy_rf_pda_breed_next" text="Rase (%d/%d) &gt;" />
     </texts>
 </l10n>

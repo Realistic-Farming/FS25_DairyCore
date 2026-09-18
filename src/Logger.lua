@@ -5,7 +5,7 @@
 -- Mirrors the Realistic Farming logging pattern; greppable by "[DairyCore]".
 -- =========================================================
 
-DCLogger = {}
+DCLogger = DCLogger or {}
 DCLogger.PREFIX = "[DairyCore] "
 DCLogger.debugEnabled = false
 

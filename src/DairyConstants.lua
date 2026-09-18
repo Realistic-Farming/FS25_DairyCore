@@ -11,7 +11,7 @@
 -- before treating them as final.
 -- =========================================================
 
-DairyConstants = {}
+DairyConstants = DairyConstants or {}
 
 -- Milk quality tiers, evaluated from the herd health score (0-100).
 DairyConstants.QUALITY = {
@@ -230,6 +230,19 @@ DairyConstants.FEED_PROVENANCE = {
     ORGANIC_THRESHOLD = 0.8,
 }
 
+-- D1: the paid contaminated-feed recovery flush (the C5 recovery hatch).
+-- RATE_PER_LITRE is the per-litre purge rate, the mid of the LOCKED C5 band
+-- (0.05-0.10 at Standard; see systems/escape-hatch-pricing). The cost scales by
+-- the Economy recovery-hatch curve (0.2 / 1.0 / 2.75, neutral 1.0 when the spine
+-- is absent). The passive daily decay stays the free never-stuck floor; paying
+-- only buys speed.
+DairyConstants.FEED_FLUSH = {
+    RATE_PER_LITRE      = 0.08,
+    ECONOMY_HATCH_CURVE = { 0.2, 1.0, 2.75 },
+    LABEL               = "Contaminated-Feed Flush",
+    ACTION              = "DairyCore_FeedFlush",
+}
+
 -- ProStaff ladder multipliers DairyCore reads (all neutral 1.0 when absent).
 DairyConstants.PROSTAFF = {
     L3_LOGISTICS = 1.05,
@@ -296,6 +309,52 @@ DairyConstants.ACTIONS = {
     SELL_MILK     = "DairyCore_SellMilk",      -- DC-21 office sale (args: barnId, quantity)
     ASSIGN_ROTA   = "DairyCore_AssignRota",    -- DC-9 rota assignment (args: barnId, workerId)
     UNASSIGN_ROTA = "DairyCore_UnassignRota",  -- DC-9 rota release (args: barnId)
+}
+
+-- DC-25: milk tank placeable. A mod-owned storage within reach of a barn.
+DairyConstants.MILK_TANK = {
+    TANK_RADIUS = 150,
+    DEFAULT_CAPACITY = 10000,
+    LEDGER = "DairyCore_MilkTanks",
+    NETWORK_CHANNEL = "DairyCore_MilkTanks",
+    CONFIRM_KEY = "dc_milkTank_deleteConfirm",
+}
+
+-- DC-27: herd breed composition and milk provenance (records only, no score,
+-- premium or price). Identifiers for the ledger module, the NetworkSync module
+-- and channel, the wire schema token, and the persisted row versions. The
+-- REASON tokens are the stable unavailable-reasons a surface may translate.
+DairyConstants.BREED_SURFACE = {
+    LEDGER          = "DairyCore_MilkBreed",
+    NETWORK_MODULE  = "DairyCore_BreedSurface",
+    NETWORK_CHANNEL = "DairyCore_BreedSurface",
+    SCHEMA          = "DC27_BREED_SURFACE/v1",
+    PERSIST_VERSION = 1,
+    ROW_VERSION     = 1,           -- getBarnRows().breedSurfaceVersion
+    -- Milk fill types the record tracks. Anything else in a barn's own tank is
+    -- outside the contract (no DC-25 tanks, no other fill types).
+    MILK_FILLTYPES  = { "MILK", "BUFFALOMILK" },
+    -- Fallback mirror cadence (ms) when NetworkSync is absent; the direct event
+    -- only carries a snapshot that often.
+    FALLBACK_DIRTY_MS = 1000,
+    -- Which herd model produced the counts.
+    SOURCE_STANDARD = "STANDARD",
+    SOURCE_RL       = "REALISTIC_LIVESTOCK",
+    REASON = {
+        WAITING_FOR_SERVER       = "WAITING_FOR_SERVER",
+        UNRESOLVED_FILLTYPE      = "UNRESOLVED_FILLTYPE",
+        NO_INTERNAL_STORAGE      = "NO_INTERNAL_STORAGE",
+        NON_SINGLE_STORAGE_ROUTE = "NON_SINGLE_STORAGE_ROUTE",
+        HERD_UNRESOLVED          = "HERD_UNRESOLVED",
+    },
+    -- A cluster whose sub type carries milk output but no readable name.
+    UNKNOWN_SUBTYPE = "UNKNOWN",
+    -- Wire sentinel for "no farm id on this row".
+    NONE_FARM       = 0,
+    -- Mirror validation: |unknown + sum(known) - litres| must stay within
+    -- CONSERVATION_ABS + litres * CONSERVATION_REL after float32 transport.
+    CONSERVATION_ABS = 0.01,
+    CONSERVATION_REL = 0.0001,
 }
 
 -- Time Guard accrual priorities (lower settles first). Money-moving before reads.

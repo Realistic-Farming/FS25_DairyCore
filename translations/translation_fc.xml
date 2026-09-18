@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Troupeau actuel" />
+        <text name="dairy_rf_pda_breed_milk" text="Lait au réservoir" />
+        <text name="dairy_rf_pda_breed_unknown" text="inconnu" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="En attente du serveur" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="En attente de la ferme du joueur" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Réservoir partagé indisponible" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Type de produit non résolu" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Aucun stockage interne" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Instantané invalide" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Troupeau illisible" />
+        <text name="dairy_rf_pda_breed_col_status" text="État" />
+        <text name="dairy_rf_pda_breed_status_live" text="Registres actifs" />
+        <text name="dairy_rf_pda_breed_head" text="%d têtes" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="aucun lait stocké" />
+        <text name="dairy_rf_pda_breed_source_standard" text="comptage standard" />
+        <text name="dairy_rf_pda_breed_source_rl" text="comptage Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Deux horloges : Troupeau actuel compte les animaux laitiers présents dans l'étable aujourd'hui. Lait au réservoir suit le lait stocké selon les races qui l'ont produit ; un nouveau troupeau à côté d'un lait ancien est normal. Le lait inconnu précède le registre ou est arrivé par un chemin non prouvé." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d autres étables dans le tableau" />
+        <text name="dairy_rf_pda_card_feed" text="Champs fourragers (%d) : %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Champs fourragers : aucun designe" />
+        <text name="dairy_rf_pda_card_field" text="Champ %d (%d/%d) : %s" />
+        <text name="dairy_rf_pda_card_weeds" text="mauvaises herbes %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="maladie" />
+        <text name="dairy_rf_pda_card_designated" text="nourrit cette etable" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Champ" />
+        <text name="dairy_rf_pda_card_field_next" text="Champ &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Ajouter fourrage" />
+        <text name="dairy_rf_pda_card_remove" text="Retirer fourrage" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="horloge inactive" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Retour" />
+        <text name="dairy_rf_pda_page_next" text="Suite (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="%d etables de plus apres cette page" />
+        <text name="dairy_rf_pda_trough_waiting" text="Fourrage stocke : en attente des donnees de recolte" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Aucune coupe enregistree pour cette ferme." />
+        <text name="dairy_rf_pda_trough_server_only" text="Fourrage stocke : serveur seulement, aucun releve sur ce client" />
+        <text name="dairy_rf_pda_trough_organic" text="Fourrage stocke de la ferme : bio (%d%% de part bio)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Fourrage stocke de la ferme : non bio (%d%% de part bio)" />
+        <text name="dairy_rf_pda_trough_clean" text="Contamination : aucune dans le fourrage stocke" />
+        <text name="dairy_rf_pda_trough_trace" text="Contamination : des traces, recule de %d%% par jour" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Contamination : %d%% malade, recule de %d%% par jour" />
+        <text name="dairy_rf_pda_side_teach" text="Laiterie&#10;&#10;Une carte par etable de votre ferme. Changez de page avec , et . ou le pagineur.&#10;&#10;Troupeau actuel : les laitieres presentes dans l'etable aujourd'hui, par race. Lait en cuve : le lait stocke selon les races qui l'ont produit. Le lait sans releve de race reste inconnu. Un nouveau troupeau a cote de vieux lait est normal.&#10;&#10;Horloge de deterioration : demarre quand une collecte est enregistree. Horloge inactive veut dire non demarree, Frais n'est donc pas encore un compteur en marche.&#10;&#10;Horloge de maladie du fourrage : du fourrage malade dans le stock met de la mycotoxine sur le troupeau. Elle recule jour apres jour. L'indice de page nomme l'etable tant que cela dure.&#10;&#10;Fourrage stocke : la qualite est fixee sur la culture a la coupe et melangee dans les silos de la ferme. L'auge puise dans ce stock et le lait le suit. Bio veut dire plus de 80% de part bio. En attente des donnees de recolte jusqu'a la premiere coupe enregistree." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Races" />
+        <text name="dairy_rf_pda_breed_next" text="Races (%d/%d) &gt;" />
     </texts>
 </l10n>

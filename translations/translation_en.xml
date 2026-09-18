@@ -21,7 +21,7 @@
         <text name="dairy_rf_pda_module_title" text="Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="Barn" />
-        <text name="dairy_rf_pda_col_health" text="Herd" />
+        <text name="dairy_rf_pda_col_health" text="Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="Spoilage" />
         <text name="dairy_rf_pda_empty" text="no barns" />
@@ -32,6 +32,67 @@
         <text name="dairy_rf_pda_ritter" text="Ritter" />
         <text name="dairy_rf_pda_barns_n" text="Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Herd now" />
+        <text name="dairy_rf_pda_breed_milk" text="Milk in tank" />
+        <text name="dairy_rf_pda_breed_unknown" text="unknown" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Waiting for server" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Waiting for player farm" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Tank route unavailable" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Fill type unresolved" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="No internal storage" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Snapshot invalid" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Herd unreadable" />
+        <text name="dairy_rf_pda_breed_col_status" text="Status" />
+        <text name="dairy_rf_pda_breed_status_live" text="Records live" />
+        <text name="dairy_rf_pda_breed_head" text="%d head" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="no milk stored" />
+        <text name="dairy_rf_pda_breed_source_standard" text="standard count" />
+        <text name="dairy_rf_pda_breed_source_rl" text="Realistic Livestock count" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Two clocks: Herd now counts the milking animals standing in the barn today. Milk in tank follows the stored milk by the breeds that produced it, so a new herd beside old milk is normal. Unknown milk predates the record or arrived unproven." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d more barns in the table" />
+        <text name="dairy_rf_pda_card_feed" text="Feed fields (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Feed fields: none designated" />
+        <text name="dairy_rf_pda_card_field" text="Field %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="weeds %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="disease" />
+        <text name="dairy_rf_pda_card_designated" text="feeds this barn" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Field" />
+        <text name="dairy_rf_pda_card_field_next" text="Field &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Add feed" />
+        <text name="dairy_rf_pda_card_remove" text="Remove feed" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="clock idle" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Back" />
+        <text name="dairy_rf_pda_page_next" text="More (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="%d more barns after this page" />
+        <text name="dairy_rf_pda_trough_waiting" text="Stored feed: waiting for harvest data" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="No cut recorded for this farm yet." />
+        <text name="dairy_rf_pda_trough_server_only" text="Stored feed: server only, no record on this client" />
+        <text name="dairy_rf_pda_trough_organic" text="Farm's stored feed: organic (%d%% organic share)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Farm's stored feed: not organic (%d%% organic share)" />
+        <text name="dairy_rf_pda_trough_clean" text="Contamination: none in the stored feed" />
+        <text name="dairy_rf_pda_trough_trace" text="Contamination: a trace, fading %d%% a day" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Contamination: %d%% diseased, fading %d%% a day" />
+        <text name="dairy_rf_pda_side_teach" text="Dairy&#10;&#10;One card per barn on your farm. Turn pages with , and . or the pager.&#10;&#10;Herd now is the milking herd in the barn today, by breed. Milk in tank is the stored milk by the breeds that made it. Milk with no breed record stays unknown. A new herd beside old milk is normal.&#10;&#10;Spoilage clock: starts when a collection is recorded. Clock idle means not started, so Fresh is not a live timer yet.&#10;&#10;Feed disease clock: diseased feed in the pool puts mycotoxin on the herd. It fades day by day. The page hint names the barn while it lasts.&#10;&#10;Stored feed: quality is locked on the crop at the cut and blended in the farm's silos. The trough draws from that pool and milk follows it. Organic means over 80% organic share. Waiting for harvest data until the first cut is recorded." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Breeds" />
+        <text name="dairy_rf_pda_breed_next" text="Breeds (%d/%d) &gt;" />
     </texts>
 </l10n>

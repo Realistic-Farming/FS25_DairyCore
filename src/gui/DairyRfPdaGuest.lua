@@ -1,17 +1,33 @@
 -- =========================================================
--- DairyRfPdaGuest - Esc RF PDA Dairy framework (Table shell)
+-- DairyRfPdaGuest - Esc RF PDA Dairy framework (barn cards)
 -- Soft-detect: mission.dairyCoreManager. isAvailable false when PF / disabled.
--- getBarnRows() only. Read-only. Densify 2026-08-05: Sale quality honesty.
--- Barn human-name polish HELD (Col A = barnId). No earned-tier invent.
+-- getBarnRows() for the read side. Densify 2026-08-05: Sale quality honesty.
+-- DC-27 (BUILD 21:48): Herd now / Milk in tank from the server's breed surface
+-- (version 1, strict local farm). No earned-tier invent, no best breed, no price.
+-- BUILD 23:43 (Ash, George CLOSED DESIGN 23:27, Option B): one card per barn in the
+-- 1140x428 content window, four cards a page (2 across x 2 down), the pager steps by
+-- a full page, the sheet chrome is hidden for Dairy only and handed back on the way
+-- out, and the feed fields live on the card. No side dump, no dialog on the way in.
+-- Lua only paints elements the door XML declares; nothing is created at runtime.
+-- BUILD 06:59 (Ash, George CLOSED DESIGN 06:50): the field picker comes off the card (no
+-- soil N/P/K as feed, no Feed Fields footer), the freed Field slot carries the farm's
+-- stored-feed readout from FeedProvenance (WAITING until the farm has harvest data), and
+-- the side rail gets its Dairy teach back. Same XML, same ids; positions unchanged.
+-- BUILD 11:40 (Ash, George CLOSED DESIGN 11:25): no breed chips. Herd now / Milk in tank are
+-- in-card SmoothLists (the NPC Favor nest); extra rows stay in the table and scroll.
 -- =========================================================
 
-DairyRfPdaGuest = {}
+DairyRfPdaGuest = DairyRfPdaGuest or {}
 
-local MOD_DIR = g_currentModDirectory
-local MOD_NAME = g_currentModName
+local MOD_DIR = (DairyCoreModDirectory or g_currentModDirectory)
+local MOD_NAME = (DairyCoreModName or g_currentModName)
 local PANEL_ID = "dairy"
 local PANEL_ORDER = 70
-local MAX_ROWS = 8
+local MAX_ROWS = 8            -- the shared sheet's row count; Dairy hides every row
+-- BUILD 17:13 (George CLOSED DESIGN 17:00): 2x2 barn cards, 555x200 each, in the 1140x428 bay.
+local CARDS_PER_PAGE = 4      -- rfDairyCard1..4: 2 across by 2 down; empty slots hide
+local CARD_SLOTS = 4          -- rfDairyCard1..4 exist in the ten doors
+local TABLE_ROWS = 4          -- breed rows a herd or milk table shows per breed page (200px card)
 local _registered = false
 
 local function tr(key, fallback)
@@ -65,6 +81,17 @@ local function findDescendant(root, id)
     return nil
 end
 
+--- Same walk, but a nil root goes straight to the host page. The chrome hand-back runs
+--- from the registry listener and the availability poll, where no container is handed in.
+local function findOnPage(root, id)
+    if root ~= nil then return findDescendant(root, id) end
+    local page = getHostPage()
+    if page and page.getDescendantById then
+        return page:getDescendantById(id)
+    end
+    return nil
+end
+
 local function setText(el, text)
     if el ~= nil and type(el.setText) == "function" then el:setText(text or "") end
 end
@@ -72,16 +99,6 @@ end
 local function setVis(el, visible)
     if el ~= nil and type(el.setVisible) == "function" then el:setVisible(visible) end
 end
-
-local function paintSide(container, key, fallback)
-    setVis(findDescendant(container, "wcSideInfoShell"), false)
-    setVis(findDescendant(container, "mdSideInfoShell"), false)
-    local shell = findDescendant(container, "rfSideInfoShell")
-    local body = findDescendant(container, "rfSideInfoBody")
-    setVis(shell, true)
-    setText(body, tr(key, fallback))
-end
-
 
 local function refreshFwAbs(container)
     local page = getHostPage()
@@ -118,21 +135,13 @@ local function getMgr()
     return nil
 end
 
-local function isDairyAvailable()
-    local mgr = getMgr()
-    if mgr == nil then return false end
-    if mgr.disabled == true then return false end
-    if g_modIsLoaded ~= nil and g_modIsLoaded["FS25_precisionFarming"] then return false end
-    return true
-end
-
---- Stable scan: barnId ascending (human name HOLD this pass).
-
---- Human barn name for Col A (Tyson eyes-on 2026-08-08 shot 04: raw uniqueId is ugly).
+--- Human barn name (Tyson eyes-on 2026-08-08 shot 04: raw uniqueId is ugly).
 --- George resolve ladder: go to the placeable via placeableSystem and take the first
 --- non-empty real name, then fall back to a truncated id. Every step is pcall-guarded
 --- and nil-safe: an unknown id or a missing placeableSystem must truncate, never throw.
 --- Veto honoured: no invented row.barnName, no typeDesc, no LUADOC getName triple-trust.
+--- BUILD 23:43: this is the one name ladder for the mod; the card title, the page hint
+--- and FeedDesignationDialog's barn label all read it (DairyRfPdaGuest.barnLabel).
 local function barnLabel(r)
     if r == nil then
         return "?"
@@ -179,6 +188,7 @@ local function barnLabel(r)
     end
     return id
 end
+DairyRfPdaGuest.barnLabel = barnLabel
 
 local function sortBarnRows(rows)
     table.sort(rows, function(a, b)
@@ -204,21 +214,675 @@ local function buildWarnFlavour(r)
     if #bits == 0 then
         return nil
     end
-    local barn = tostring(r.barnId or "?")
-    return string.format("%s: %s", barn, table.concat(bits, ", "))
+    -- BUILD 23:43: the hint names the barn the way the card does, never by uniqueId.
+    return string.format("%s: %s", barnLabel(r), table.concat(bits, ", "))
 end
 
-local function anyRitterWithCounts(rows)
-    for _, r in ipairs(rows) do
-        if r.ritterMode == true and r.counts ~= nil then
-            return true
+-- ============================================================
+-- DC-27 (BUILD 21:48): the breed surfaces, presentation only.
+-- ============================================================
+-- Two separate clocks per barn. "Herd now" is the milking headcount standing in the barn
+-- today, by breed. "Milk in tank" is the stored milk by the breeds that produced it, with
+-- unknown milk named as unknown. A new herd beside old milk is correct and stays that way.
+-- Every value painted here is a server record DairyCoreManager already put on the row;
+-- nothing is derived from local animals or Storage, and no breed is scored or priced.
+local BREED_VERSION = 1
+local UNKNOWN_TOKEN = "UNKNOWN"
+
+--- Strict local farm id: a positive number or nil. Mirrors FT_DataProvider:getPlayerFarmIdStrict
+--- in Farm Tablet so both surfaces gate the same way. Never falls back to 1; zero (spectator)
+--- and anything that is not a number read as nil.
+local function localFarmIdStrict()
+    local id = nil
+    if g_localPlayer ~= nil then
+        if type(g_localPlayer.getFarmId) == "function" then
+            local ok, v = pcall(function() return g_localPlayer:getFarmId() end)
+            if ok then id = v end
         end
+        if id == nil then id = g_localPlayer.farmId end
+    end
+    if id == nil and g_currentMission ~= nil and type(g_currentMission.getFarmId) == "function" then
+        local ok, v = pcall(function() return g_currentMission:getFarmId() end)
+        if ok then id = v end
+    end
+    if type(id) == "number" and id > 0 then return id end
+    return nil
+end
+
+--- A record is painted only when the server says it is available. Anything else is a state.
+local function recordLive(rec)
+    return type(rec) == "table" and rec.available == true and rec.trust == "server"
+end
+
+--- Reason for a record that is not paintable. A malformed record (no table, or available
+--- without server trust) reads as an invalid snapshot, never as a value.
+local function recordReason(rec)
+    if type(rec) ~= "table" then return "SNAPSHOT_INVALID" end
+    if rec.available == false and type(rec.reason) == "string" and rec.reason ~= "" then
+        return rec.reason
+    end
+    return "SNAPSHOT_INVALID"
+end
+
+local function stateLabel(reason)
+    local r = tostring(reason or "")
+    if r == "WAITING_FOR_SERVER" then
+        return tr("dairy_rf_pda_breed_waiting_server", "Waiting for server")
+    elseif r == "WAITING_FOR_PLAYER_FARM" then
+        return tr("dairy_rf_pda_breed_waiting_farm", "Waiting for player farm")
+    elseif r == "UNRESOLVED_FILLTYPE" then
+        return tr("dairy_rf_pda_breed_filltype_unresolved", "Fill type unresolved")
+    elseif r == "NO_INTERNAL_STORAGE" then
+        return tr("dairy_rf_pda_breed_storage_missing", "No internal storage")
+    elseif r == "NON_SINGLE_STORAGE_ROUTE" then
+        return tr("dairy_rf_pda_breed_route_unavailable", "Tank route unavailable")
+    elseif r == "HERD_UNRESOLVED" then
+        return tr("dairy_rf_pda_breed_herd_unresolved", "Herd unreadable")
+    end
+    return tr("dairy_rf_pda_breed_snapshot_invalid", "Snapshot invalid")
+end
+
+--- Breed label: the subtype's own fill type title (the game's name for the breed), else a
+--- fill type by that name, else the raw token. The UNKNOWN token is localized.
+local function breedLabel(key)
+    local k = tostring(key or "")
+    if k == "" or k == UNKNOWN_TOKEN then
+        return tr("dairy_rf_pda_breed_unknown", "unknown")
+    end
+    local as = g_currentMission ~= nil and g_currentMission.animalSystem or nil
+    if as ~= nil and type(as.getSubTypeByName) == "function" and g_fillTypeManager ~= nil
+        and type(g_fillTypeManager.getFillTypeTitleByIndex) == "function" then
+        local ok, st = pcall(function() return as:getSubTypeByName(k) end)
+        if ok and type(st) == "table" and st.fillTypeIndex ~= nil then
+            local ok2, title = pcall(function()
+                return g_fillTypeManager:getFillTypeTitleByIndex(st.fillTypeIndex)
+            end)
+            if ok2 and type(title) == "string" and title ~= "" then return title end
+        end
+    end
+    if g_fillTypeManager ~= nil and type(g_fillTypeManager.getFillTypeByName) == "function" then
+        local ok, ft = pcall(function() return g_fillTypeManager:getFillTypeByName(k) end)
+        if ok and type(ft) == "table" and type(ft.title) == "string" and ft.title ~= "" then
+            return ft.title
+        end
+    end
+    return k
+end
+
+local function fillTypeLabel(name)
+    local n = tostring(name or "")
+    if g_fillTypeManager ~= nil and type(g_fillTypeManager.getFillTypeByName) == "function" then
+        local ok, ft = pcall(function() return g_fillTypeManager:getFillTypeByName(n) end)
+        if ok and type(ft) == "table" and type(ft.title) == "string" and ft.title ~= "" then
+            return ft.title
+        end
+    end
+    return n
+end
+
+local function pct(f)
+    return math.floor((tonumber(f) or 0) * 100 + 0.5)
+end
+
+local function headText(n)
+    return string.format(tr("dairy_rf_pda_breed_head", "%d head"), math.floor((tonumber(n) or 0) + 0.5))
+end
+
+local function litresText(l)
+    return string.format(tr("dairy_rf_pda_breed_litres", "%d L"), math.floor((tonumber(l) or 0) + 0.5))
+end
+
+--- Shares sorted for display: share descending, then name; unknown after an equal share.
+--- Returns { key, frac, unknown } entries; zero shares are left out.
+local function sortedShares(fractions, unknownShare)
+    local list = {}
+    if type(fractions) == "table" then
+        for k, f in pairs(fractions) do
+            local v = tonumber(f) or 0
+            if v > 0 then
+                local key = tostring(k)
+                list[#list + 1] = { key = key, frac = v, unknown = (key == UNKNOWN_TOKEN) }
+            end
+        end
+    end
+    local u = tonumber(unknownShare) or 0
+    if u > 0 then
+        list[#list + 1] = { key = UNKNOWN_TOKEN, frac = u, unknown = true }
+    end
+    table.sort(list, function(a, b)
+        if a.frac ~= b.frac then return a.frac > b.frac end
+        if a.unknown ~= b.unknown then return not a.unknown end
+        return a.key < b.key
+    end)
+    return list
+end
+
+--- The barn's tracked milk fill types, MILK first, then by name.
+local function milkFillTypeNames(prov)
+    local names = {}
+    if type(prov) == "table" then
+        for k, _ in pairs(prov) do names[#names + 1] = tostring(k) end
+    end
+    table.sort(names, function(a, b)
+        if (a == "MILK") ~= (b == "MILK") then return a == "MILK" end
+        return a < b
+    end)
+    return names
+end
+
+--- Strict farm gate. Keeps only rows carrying the DC-27 version and this farm's validated
+--- breedSurfaceFarmId (never the legacy row.farmId). Also reports whether any dropped row
+--- was still waiting for the server (a client without its mirror yet) and whether any row
+--- carried a foreign version, so the empty state can say the true reason.
+local function filterBreedRows(rows, farmId)
+    local kept, waitingServer, badVersion = {}, false, false
+    for _, r in ipairs(rows) do
+        local versionOk = r.breedSurfaceVersion == BREED_VERSION
+        if not versionOk then badVersion = true end
+        if versionOk and farmId ~= nil and type(r.breedSurfaceFarmId) == "number"
+            and r.breedSurfaceFarmId == farmId then
+            kept[#kept + 1] = r
+        elseif versionOk and r.breedSurfaceFarmId == nil then
+            local h = r.herdBreedComposition
+            if type(h) == "table" and h.available == false and h.reason == "WAITING_FOR_SERVER" then
+                waitingServer = true
+            end
+        end
+    end
+    return kept, waitingServer, badVersion
+end
+
+-- ============================================================
+-- BUILD 07:47: the breed tables.
+-- ============================================================
+-- A card is 555x380. Each table is a header line plus two multi-line Text columns at the
+-- same pitch (names left, numbers right, TABLE_ROWS lines each), so every breed gets its
+-- own row: name, head or litres, share. No "+N", no best breed, no price. A barn with more
+-- rows than a table holds gets the in-card breed pager (XML-declared Buttons bound at paint
+-- time), never a hidden remainder.
+
+--- Herd table: header and { name, value } rows per breed, share descending. Zero head is
+--- an empty table under a "0 head" header; a record that is not live paints its state in
+--- the header and no rows.
+local function herdTable(rec)
+    local title = tr("dairy_rf_pda_breed_herd", "Herd now")
+    if not recordLive(rec) then
+        return string.format("%s: %s", title, stateLabel(recordReason(rec))), {}
+    end
+    local total = math.floor((tonumber(rec.totalMilkingHeadcount) or 0) + 0.5)
+    local header = string.format("%s: %s", title, headText(total))
+    local rows = {}
+    if total <= 0 then return header, rows end
+    for _, e in ipairs(sortedShares(rec.fractions, nil)) do
+        local n = tonumber(type(rec.counts) == "table" and rec.counts[e.key]) or 0
+        rows[#rows + 1] = { breedLabel(e.key), string.format("%s (%d%%)", headText(n), pct(e.frac)) }
+    end
+    return header, rows
+end
+
+--- Breed rows of one tracked fill type record. Unknown milk is a named row like any other.
+local function milkRecordRows(rec, rows, indent)
+    for _, e in ipairs(sortedShares(rec.fractions, rec.unknownShare)) do
+        local l
+        if e.unknown then
+            l = tonumber(rec.unknownLitres) or 0
+        else
+            l = tonumber(type(rec.knownLitres) == "table" and rec.knownLitres[e.key]) or 0
+        end
+        rows[#rows + 1] = { indent .. breedLabel(e.key), string.format("%s (%d%%)", litresText(l), pct(e.frac)) }
+    end
+end
+
+local function milkRecordValue(rec)
+    if not recordLive(rec) then return stateLabel(recordReason(rec)), false end
+    local litres = math.floor((tonumber(rec.litres) or 0) + 0.5)
+    if litres <= 0 then return tr("dairy_rf_pda_breed_no_milk", "no milk stored"), false end
+    return litresText(litres), true
+end
+
+--- Milk table. One tracked fill type is the common case: "Milk in tank: 1240 L" over its
+--- breed rows. Several tracked fill types each get a section row (the fill type's name with
+--- its litres or state) and their breed rows under it; nothing is folded into "+1".
+local function milkTable(prov)
+    local title = tr("dairy_rf_pda_breed_milk", "Milk in tank")
+    local names = milkFillTypeNames(prov)
+    if #names == 0 then
+        return string.format("%s: %s", title, stateLabel("SNAPSHOT_INVALID")), {}
+    end
+    local rows = {}
+    if #names == 1 then
+        local rec = prov[names[1]]
+        local value, live = milkRecordValue(rec)
+        if live then milkRecordRows(rec, rows, "") end
+        return string.format("%s: %s", title, value), rows
+    end
+    for _, name in ipairs(names) do
+        local rec = prov[name]
+        local value, live = milkRecordValue(rec)
+        rows[#rows + 1] = { fillTypeLabel(name), value }
+        if live then milkRecordRows(rec, rows, "  ") end
+    end
+    return title, rows
+end
+
+--- The line the sheet used to spend three columns on: health score, sale tier, spoilage.
+--- An idle spoilage clock says so in two words; the page hint carries the longer sentence.
+local function stateCardLine(r, scoreMax)
+    local tierKey = tostring(r.qualityTier or "")
+    local tierLabel = tr("dc_tier_" .. tierKey, tierKey ~= "" and tierKey or "--")
+    local spoilLabel
+    if r.spoilageClockStarted ~= true then
+        spoilLabel = tr("dairy_rf_pda_card_spoil_idle", "clock idle")
+    else
+        local spoilKey = tostring(r.spoilage or "")
+        spoilLabel = tr("dc_spoilage_" .. spoilKey, spoilKey ~= "" and spoilKey or "--")
+    end
+    return string.format("%s %d/%d, %s %s, %s %s",
+        tr("dairy_rf_pda_col_health", "Herd Health"),
+        math.floor(tonumber(r.herdHealth) or 0), scoreMax,
+        tr("dairy_rf_pda_col_tier", "Sale quality"), tierLabel,
+        tr("dairy_rf_pda_col_spoil", "Spoilage"), spoilLabel)
+end
+
+-- ============================================================
+-- BUILD 06:59: the farm's stored feed on the card (FeedProvenance, read-only).
+-- ============================================================
+-- There is no per-barn trough value in the engine. FeedProvenance is per farm and per fill
+-- type: quality is locked on the crop at the cut (contamination = the field's disease
+-- pressure, organic = the field's certification), blended into the farm pool by amount, and
+-- the trough draws from that pool: DairyCoreManager._applyTroughExposure reads
+-- contaminatedFeedFraction and _barnOrganicFraction reads organicFeedFraction, both by the
+-- barn's farm. So the card paints exactly those two farm-pool reads, labelled as the farm's
+-- stored feed, and says WAITING while hasData(farmId) is false. No invented barn value, no
+-- mixer average, no soil NPK, and feedDiseaseFlag / mycotoxin stay in the page hint as the
+-- consequence they are. The pool is written on the server and persisted through the
+-- savegame ledger, which a pure client does not have, so a client says that instead of
+-- pretending the farm has never harvested.
+
+local _pageIndex = 1
+local _lastRowCount = 0
+
+local function cardEl(container, slot, part)
+    return findOnPage(container, "rfDairyCard" .. slot .. (part or ""))
+end
+
+local function serverSide(mgr)
+    if mgr ~= nil and type(mgr._isServer) == "function" then
+        local ok, v = pcall(function() return mgr:_isServer() end)
+        if ok then return v == true end
     end
     return false
 end
 
-local SIDE_FALLBACK =
-    "Dairy glance: barns, herd health, sale quality, spoilage. Rows sit in the gray shell. Barn id truncates when unnamed. Esc is read-only - open Dairy tools for full barn work."
+local function feedConstants()
+    if DairyConstants ~= nil and type(DairyConstants.FEED_PROVENANCE) == "table" then
+        return DairyConstants.FEED_PROVENANCE
+    end
+    return nil
+end
+
+--- Contamination fades by this share each in-game day (FeedProvenance.decayContaminated).
+local function contaminationDecayPct()
+    local c = feedConstants()
+    if c ~= nil and type(c.CONTAMINATED_DECAY_PER_DAY) == "number" then
+        return pct(c.CONTAMINATED_DECAY_PER_DAY)
+    end
+    return 15
+end
+
+--- The farm's stored-feed readout, two short lines (the Stored slot wraps whole words over
+--- three), computed once per paint. It is a farm-pool read, so every barn card on the page
+--- says the same thing, and that is the honest state.
+local function troughCardText(mgr, farmId, isServer)
+    local fp = mgr ~= nil and mgr.feedProvenance or nil
+    local hasData = false
+    if fp ~= nil and farmId ~= nil and type(fp.hasData) == "function" then
+        local ok, v = pcall(function() return fp:hasData(farmId) end)
+        hasData = ok and v == true
+    end
+    if not hasData then
+        if not isServer then
+            return tr("dairy_rf_pda_trough_server_only",
+                "Stored feed: server only, no record on this client")
+        end
+        return tr("dairy_rf_pda_trough_waiting", "Stored feed: waiting for harvest data")
+            .. "\n" .. tr("dairy_rf_pda_trough_waiting_why", "No cut recorded for this farm yet.")
+    end
+    local organic, contaminated = 0, 0
+    pcall(function()
+        organic = tonumber(fp:organicFeedFraction(farmId)) or 0
+        contaminated = tonumber(fp:contaminatedFeedFraction(farmId)) or 0
+    end)
+    -- The ratified classification: organic only ABOVE the threshold share.
+    local isOrganic = false
+    if type(fp.isOrganicFeed) == "function" then
+        local ok, v = pcall(function() return fp:isOrganicFeed(farmId) end)
+        isOrganic = ok and v == true
+    else
+        local c = feedConstants()
+        local threshold = (c ~= nil and type(c.ORGANIC_THRESHOLD) == "number") and c.ORGANIC_THRESHOLD or 0.8
+        isOrganic = organic > threshold
+    end
+    local line1
+    if isOrganic then
+        line1 = string.format(tr("dairy_rf_pda_trough_organic",
+            "Farm's stored feed: organic (%d%% organic share)"), pct(organic))
+    else
+        line1 = string.format(tr("dairy_rf_pda_trough_not_organic",
+            "Farm's stored feed: not organic (%d%% organic share)"), pct(organic))
+    end
+    local line2
+    if contaminated <= 0 then
+        line2 = tr("dairy_rf_pda_trough_clean", "Contamination: none in the stored feed")
+    elseif pct(contaminated) < 1 then
+        line2 = string.format(tr("dairy_rf_pda_trough_trace",
+            "Contamination: a trace, fading %d%% a day"), contaminationDecayPct())
+    else
+        line2 = string.format(tr("dairy_rf_pda_trough_contaminated",
+            "Contamination: %d%% diseased, fading %d%% a day"),
+            pct(contaminated), contaminationDecayPct())
+    end
+    return line1 .. "\n" .. line2
+end
+
+--- Buttons in the card block are ours alone: no engine glyph, no chord chip. The pager
+--- buttons go through this too (the engine repaints the glyph on every setText otherwise).
+local function stripButtonGlyph(btn)
+    if btn == nil then return end
+    btn.inputActionName = nil
+    btn.keyDisplayText = nil
+    btn.keyOverlay = nil
+    btn.hideKeyboardGlyph = true
+    btn.hasLoadedInputGlyph = false
+    btn.isKeyboardMode = false
+    btn.keyGlyphOffsetX = 0
+    btn.keyGlyphSize = { 0, 0 }
+    btn.iconSize = { 0, 0 }
+    btn.icon = {}
+end
+
+-- ============================================================
+-- BUILD 11:40 (George CLOSED DESIGN 11:25): the in-card herd / milk breed lists. No breed
+-- chips: extra rows stay in the table and scroll. The NPC Favor nest and data source, copied:
+-- eight SmoothLists (rfDairyCardNHerdList / rfDairyCardNMilkList) in the ten-door XML, one
+-- data source told apart by list id, rows from the {name, value} pairs herdTable / milkTable
+-- already return. setDataSource once per list, setDelegate explicitly, reloadData only on a
+-- full show and only once the list is loaded (the thrash fence).
+-- ============================================================
+local _cardRows = {}      -- slot -> { herd = rows, milk = rows }
+local _cardBarn = {}      -- slot -> barn key the headers and lists were last painted for
+
+--- Slot and part from a list id: "rfDairyCard2MilkList" -> 2, "milk".
+local function listSlotPart(list)
+    local id = list ~= nil and list.id or nil
+    if type(id) ~= "string" then return nil, nil end
+    local slot, part = id:match("^rfDairyCard(%d)(%a+)List$")
+    if slot == nil then return nil, nil end
+    return tonumber(slot), string.lower(part)
+end
+
+local function listRows(list)
+    local slot, part = listSlotPart(list)
+    local card = slot ~= nil and _cardRows[slot] or nil
+    local rows = card ~= nil and card[part] or nil
+    if type(rows) ~= "table" then return {} end
+    return rows
+end
+
+--- The one data source for the eight in-card SmoothLists (engine contract, SmoothListElement.lua:
+--- one section by default, getNumberOfItemsInSection, populateCellForItemInSection; the single
+--- ListItem template is the singular cell). Cells are the engine's clones of the XML template:
+--- nothing is created here, only text set by name. A row pick paints nothing (read-only cards).
+local dairyListSource = {}
+
+function dairyListSource:getNumberOfItemsInSection(list, section)
+    return #listRows(list)
+end
+
+function dairyListSource:populateCellForItemInSection(list, section, index, cell)
+    if cell == nil or type(cell.getDescendantByName) ~= "function" then return end
+    local row = listRows(list)[index]
+    if row == nil then return end
+    setText(cell:getDescendantByName("rfDairyBreedName"), row[1])
+    setText(cell:getDescendantByName("rfDairyBreedVal"), row[2])
+end
+
+function dairyListSource:onListSelectionChanged(list, section, index)
+end
+
+--- setDataSource once per list element, by identity: the list is re-sourced only when its
+--- dataSource is not this chunk's table (a flag on the element would outlive a re-sourced chunk);
+--- setDelegate explicitly (the XML loader made the host page the delegate, the NPC Favor lesson);
+--- reloadData only when asked and only once the engine has loaded the list (list.isLoaded).
+local function syncList(container, id, reload)
+    local list = findOnPage(container, id)
+    if list == nil then return nil end
+    if list.dataSource ~= dairyListSource and type(list.setDataSource) == "function" then
+        list:setDataSource(dairyListSource)
+        if type(list.setDelegate) == "function" then
+            list:setDelegate(dairyListSource)
+        end
+        list._rfDairySourced = true
+    end
+    if reload and list.isLoaded and type(list.reloadData) == "function" then
+        pcall(list.reloadData, list)
+    end
+    return list
+end
+
+-- The eight breed-pager Buttons of the doors before BUILD 11:40. Belt only: an old first-writer
+-- door may still carry them, so every show hides, unlabels and disables whatever is found.
+local DAIRY_CHIP_IDS = {
+    "rfDairyCard1BreedPrev", "rfDairyCard1BreedNext", "rfDairyCard2BreedPrev", "rfDairyCard2BreedNext",
+    "rfDairyCard3BreedPrev", "rfDairyCard3BreedNext", "rfDairyCard4BreedPrev", "rfDairyCard4BreedNext",
+}
+-- The sixteen multi-line breed Texts of the same old doors: blanked and hidden on the same belt,
+-- so a Lua reload ahead of the XML restart never shows a frozen breed column.
+local OLD_DOOR_TEXT_PARTS = { "HerdNames", "HerdVals", "MilkNames", "MilkVals" }
+
+local function beltHideBreedChips(container)
+    for _, id in ipairs(DAIRY_CHIP_IDS) do
+        local el = findOnPage(container, id)
+        if el ~= nil then
+            setVis(el, false)
+            el.rfChipLabel = nil
+            if type(el.setDisabled) == "function" then el:setDisabled(true) end
+        end
+    end
+    for slot = 1, CARD_SLOTS do
+        for _, part in ipairs(OLD_DOOR_TEXT_PARTS) do
+            local el = findOnPage(container, "rfDairyCard" .. slot .. part)
+            if el ~= nil then
+                setText(el, "")
+                setVis(el, false)
+            end
+        end
+    end
+end
+
+--- George's measured card: Name -6, State -32, Herd now header -52 and its list -72 (80px, four
+--- 20px rows visible, the rest scroll), Milk in tank header -152 and its list -172, the stored-feed
+--- readout -252. Nothing is created; every element is in the ten-door XML. Headers and lists are
+--- set on a full show; the 2s light tick repaints Name / State / stored feed and leaves them, except
+--- when the barn in this slot is not the one the lists were painted for (a barn arrived, moved or
+--- was swapped between full shows): then this slot alone gets its headers and lists once. Change-
+--- gated, never periodic: the thrash fence holds.
+local function paintCard(container, slot, r, scoreMax, troughText, full)
+    setText(cardEl(container, slot, "Name"), barnLabel(r))
+    setText(cardEl(container, slot, "State"), stateCardLine(r, scoreMax))
+    local barnKey = tostring(r.barnId or "?")
+    if full or _cardBarn[slot] ~= barnKey then
+        local herdHeader, herdRows = herdTable(r.herdBreedComposition)
+        local milkHeader, milkRows = milkTable(r.milkBreedProvenance)
+        _cardRows[slot] = { herd = herdRows, milk = milkRows }
+        _cardBarn[slot] = barnKey
+        setText(cardEl(container, slot, "HerdHead"), herdHeader)
+        setText(cardEl(container, slot, "MilkHead"), milkHeader)
+        syncList(container, "rfDairyCard" .. slot .. "HerdList", true)
+        syncList(container, "rfDairyCard" .. slot .. "MilkList", true)
+    end
+    -- BUILD 20:36 (George CLOSED DESIGN 19:03): the 555x380 card is back, so the farm-wide
+    -- stored-feed readout paints inside the card again (rfDairyCardNStored at -252, three lines).
+    local stored = cardEl(container, slot, "Stored")
+    setText(stored, troughText or "")
+    setVis(stored, true)
+end
+
+-- ============================================================
+-- BUILD 06:59: the side rail teach.
+-- ============================================================
+-- The host shows rfSideInfoShell for every framework module and paints an empty
+-- rfSideInfoBody for anything that is not Soil or Crop Stress, on every chrome sync and
+-- before the guest runs; the light tick calls only the guest. So the guest writes the body
+-- on every show and that is the last word while Dairy is active; the host repaints the body
+-- for whoever comes next. Short, and no breed list: the cards carry the numbers.
+local SIDE_TEACH_FALLBACK = "Dairy\n\n"
+    .. "One card per barn on your farm. Turn pages with , and . or the pager.\n\n"
+    .. "Herd now is the milking herd in the barn today, by breed. Milk in tank is the stored "
+    .. "milk by the breeds that made it. Milk with no breed record stays unknown. A new herd "
+    .. "beside old milk is normal.\n\n"
+    .. "Spoilage clock: starts when a collection is recorded. Clock idle means not started, "
+    .. "so Fresh is not a live timer yet.\n\n"
+    .. "Feed disease clock: diseased feed in the pool puts mycotoxin on the herd. It fades "
+    .. "day by day. The page hint names the barn while it lasts.\n\n"
+    .. "Stored feed: quality is locked on the crop at the cut and blended in the farm's silos. "
+    .. "The trough draws from that pool and milk follows it. Organic means over 80% organic "
+    .. "share. Waiting for harvest data until the first cut is recorded."
+
+--- BUILD 20:36: the page hint (barn count, more-barns note, spoilage-clock note, mycotoxin
+--- warnings) rides the side info under the teach text: two 380-tall card rows fill the 780 bay
+--- and leave no band for rfDairyCardsHint, which stays declared and hidden.
+local function paintSideTeach(container, tail)
+    setVis(findDescendant(container, "rfSideInfoShell"), true)
+    local body = tr("dairy_rf_pda_side_teach", SIDE_TEACH_FALLBACK)
+    if type(tail) == "string" and tail ~= "" then
+        body = body .. "\n\n" .. tail
+    end
+    setText(findDescendant(container, "rfSideInfoBody"), body)
+end
+
+-- ============================================================
+-- BUILD 23:43: the shared sheet chrome, hidden for Dairy and handed back.
+-- ============================================================
+-- Income, Depot and NPC Favor paint the rfFwCol / rfFwRule / rfFwRow grid and set their own
+-- row visibility on every show, but nobody touches the column headers or the hairlines, and
+-- no host calls onHide. So Dairy hides them on the way in and gives exactly those back the
+-- moment the registry says another module is active: on the change listener (selectModule,
+-- register, unregister) and, as a belt for applyHomeModuleQuiet which does not notify, on the
+-- availability poll every host refresh makes through getModules(). The rows are left to the
+-- guest that owns the next show. Every card frame and the Dairy hint go dark at the same time.
+local SHEET_HEADERS = {
+    "rfFwColA", "rfFwColB", "rfFwColC", "rfFwColD",
+}
+-- BUILD 21:40 (George CLOSED DESIGN 21:35 item 5): the eleven hairlines of the old fixed
+-- eight-row table. Nothing paints that grid any more - Income and Depot moved their rows into the
+-- shared SmoothList at 17:21, this module uses cards and NPC Favor uses lists - so they are hidden
+-- on the way in with the rest of the chrome and, unlike the column headers, they are NEVER handed
+-- back. Handing them back is what left a second frame standing behind the Depot sheet.
+local SHEET_RULES = {
+    "rfFwRuleHead", "rfFwRuleRow1", "rfFwRuleRow2", "rfFwRuleRow3", "rfFwRuleRow4",
+    "rfFwRuleRow5", "rfFwRuleRow6", "rfFwRuleRow7",
+    "rfFwRuleCol1", "rfFwRuleCol2", "rfFwRuleCol3",
+}
+local _chromeHidden = false
+local _listenerHost = nil
+
+local function hideSheetChrome(container)
+    for _, id in ipairs(SHEET_HEADERS) do
+        setVis(findOnPage(container, id), false)
+    end
+    for _, id in ipairs(SHEET_RULES) do
+        setVis(findOnPage(container, id), false)
+    end
+    -- BUILD 17:21: the shared table's rows now live in this list, so the list goes dark with the
+    -- rest of the sheet. Nil-safe: an older door copy has no such id.
+    setVis(findOnPage(container, "rfFwSheetBox"), false)
+    for i = 1, MAX_ROWS do
+        for _, c in ipairs({ "A", "B", "C", "D" }) do
+            setVis(findOnPage(container, "rfFwRow" .. i .. c), false)
+        end
+    end
+    setText(findOnPage(container, "rfFwMore"), "")
+    setText(findOnPage(container, "rfFwHintTable"), "")
+    _chromeHidden = true
+end
+
+local function restoreSheetChrome(container)
+    for _, id in ipairs(SHEET_HEADERS) do
+        setVis(findOnPage(container, id), true)
+    end
+    for slot = 1, CARD_SLOTS do
+        setVis(cardEl(container, slot), false)
+    end
+    setVis(findOnPage(container, "rfDairyCardsHint"), false)
+    _chromeHidden = false
+end
+
+local function handBackChromeIfLeft()
+    if not _chromeHidden then return end
+    local host = getHost()
+    if host ~= nil and host.activeModuleId == PANEL_ID then return end
+    restoreSheetChrome(nil)
+end
+
+local function isDairyAvailable()
+    if _chromeHidden then pcall(handBackChromeIfLeft) end
+    local mgr = getMgr()
+    if mgr == nil then return false end
+    if mgr.disabled == true then return false end
+    if g_modIsLoaded ~= nil and g_modIsLoaded["FS25_precisionFarming"] then return false end
+    return true
+end
+
+-- ============================================================
+-- BUILD 23:43: the page pager (host rfFwPagePrev / rfFwPageNext, keys , and .).
+-- ============================================================
+local function pageCountFor(n)
+    if n <= 0 then return 1 end
+    return math.ceil(n / CARDS_PER_PAGE)
+end
+
+--- The host hides both shared pager Buttons on every refresh before the guest paints, so this
+--- is the only thing that turns them on for Dairy. One page means no pager at all rather than
+--- two dead buttons. The Next label carries the page position.
+local function paintPager(container, pages)
+    local prevEl = findOnPage(container, "rfFwPagePrev")
+    local nextEl = findOnPage(container, "rfFwPageNext")
+    local multi = pages > 1
+    for _, el in ipairs({ prevEl, nextEl }) do
+        if el ~= nil then
+            stripButtonGlyph(el)
+            if type(el.setVisible) == "function" then el:setVisible(multi) end
+            if type(el.setDisabled) == "function" then el:setDisabled(not multi) end
+        end
+    end
+    if not multi then return end
+    setText(prevEl, tr("dairy_rf_pda_page_prev", "< Back"))
+    stripButtonGlyph(prevEl)
+    setText(nextEl, string.format(tr("dairy_rf_pda_page_next", "More (%d/%d) >"), _pageIndex, pages))
+    stripButtonGlyph(nextEl)
+end
+
+---@param delta number -1 previous page, +1 next page
+---@return boolean moved
+function DairyRfPdaGuest.onPageStep(delta)
+    local pages = pageCountFor(_lastRowCount)
+    if pages <= 1 then
+        return false
+    end
+    local step = tonumber(delta) or 0
+    if step == 0 then
+        return false
+    end
+    local target = _pageIndex + (step > 0 and 1 or -1)
+    if target > pages then target = 1 end
+    if target < 1 then target = pages end
+    if target == _pageIndex then
+        return false
+    end
+    _pageIndex = target
+    return true
+end
 
 local BLURB_FALLBACK =
     "Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only."
@@ -248,79 +912,12 @@ local function resetFwTableTitlePos(container)
 end
 
 -- ============================================================
--- BUILD 21:41: the column grid, applied every show.
--- ============================================================
--- All four Table guests (Income, Depot, Dairy, NPC Favor) paint into the SAME shared
--- elements, so whichever ran last leaves its geometry behind for the next one. Every guest
--- therefore has to state its own grid on entry rather than assume the XML baseline, or it
--- inherits the previous module's columns. This block is the XML freeze.
---
--- Y IS HELD. Each move reads the element's own current Y and writes it straight back, and
--- setSize keeps the element's own height, so this can only ever change X and width.
---
--- Positions and sizes are NORMALISED in FS25, so everything goes through GuiUtils. A raw
--- pixel integer here would throw the row off the screen.
-local FW_GRID_COLS = {
-    { "A", "10px", "280px" },
-    { "B", "310px", "280px" },
-    { "C", "610px", "220px" },
-    { "D", "850px", "280px" },
-}
-local FW_GRID_RULES = { "300px", "600px", "840px" }
-local _fwGridWarned = false
-
-local function applyFwGrid(container)
-    if GuiUtils == nil or type(GuiUtils.getNormalizedXValue) ~= "function"
-        or type(GuiUtils.getNormalizedScreenValues) ~= "function" then
-        if not _fwGridWarned then
-            _fwGridWarned = true
-            print("[RF] applyFwGrid: GuiUtils normalizer absent - leaving the XML grid")
-        end
-        return
-    end
-
-    local function place(el, xPx, wPx)
-        if el == nil then return end
-        if type(el.setPosition) == "function" and el.position ~= nil then
-            el:setPosition(GuiUtils.getNormalizedXValue(xPx, 0), el.position[2])
-        end
-        if wPx ~= nil and type(el.setSize) == "function" and el.size ~= nil then
-            local norms = GuiUtils.getNormalizedScreenValues(wPx .. " 1px")
-            if type(norms) == "table" and norms[1] ~= nil then
-                el:setSize(norms[1], el.size[2])
-            end
-        end
-        if type(el.updateAbsolutePosition) == "function" then el:updateAbsolutePosition() end
-    end
-
-    -- BUILD 21:54: this was ipairs over a table my generator had written with ",," between
-    -- entries, which puts a nil at the skipped index. ipairs stops at the first nil, so only
-    -- column A was ever placed and B, C and D stayed on the freeze XML while the rules moved
-    -- anyway. A literal 1..4 walk cannot be truncated by a hole, and skipping a nil entry
-    -- costs one column rather than throwing inside onShow.
-    for i = 1, 4 do
-        local c = FW_GRID_COLS[i]
-        if c ~= nil then
-            local letter, xPx, wPx = c[1], c[2], c[3]
-            place(findDescendant(container, "rfFwCol" .. letter), xPx, wPx)
-            for row = 1, 8 do
-                place(findDescendant(container, "rfFwRow" .. row .. letter), xPx, wPx)
-            end
-        end
-    end
-    -- Vertical rules keep their own Y and their 1px width; only the column boundary moves.
-    for i, xPx in ipairs(FW_GRID_RULES) do
-        place(findDescendant(container, "rfFwRuleCol" .. i), xPx, nil)
-    end
-end
-
--- ============================================================
 -- BUILD 07:06: put the shared empty-hint box back.
 -- ============================================================
 -- rfFwEmptyHint is ONE element behind all nine doors. Income and Depot now shrink it to bay A
 -- (10 / 280 / -68 / 22) so their empty notice sits in the first cell instead of running across
--- the grid. applyFwGrid does not list that id, so without this an empty Income visited earlier
--- in the same session leaves this page's notice in a 280x22 box.
+-- the grid. Without this an empty Income visited earlier in the same session leaves this
+-- page's notice in a 280x22 box.
 --
 -- This page never uses bay A. It restores the XML numbers verbatim, every show, before the
 -- text is set, so the notice is painted into a box that is already the right size.
@@ -355,122 +952,159 @@ local function restoreFwEmptyHintBox(container)
 end
 
 function DairyRfPdaGuest.onShow(container, lightOnly)
-    applyFwGrid(container)
+    beltHideBreedChips(container)
+    local full = lightOnly ~= true
     restoreFwEmptyHintBox(container)
     resetFwTableTitlePos(container)
     clearHostDupes(container)
     showTableMode(container)
-    paintSide(container, "rf_pda_side_info_dairy", SIDE_FALLBACK)
     setText(findDescendant(container, "rfFwTableTitle"), "")
     setVis(findDescendant(container, "rfFwTableTitle"), false)
-    setText(findDescendant(container, "rfFwColA"), tr("dairy_rf_pda_col_barn", "Barn"))
-    setText(findDescendant(container, "rfFwColB"), tr("dairy_rf_pda_col_health", "Herd"))
-    setText(findDescendant(container, "rfFwColC"), tr("dairy_rf_pda_col_tier", "Sale quality"))
-    setText(findDescendant(container, "rfFwColD"), tr("dairy_rf_pda_col_spoil", "Spoilage"))
+    -- BUILD 23:43: the sheet goes dark for Dairy (handed back on the way out, see
+    -- handBackChromeIfLeft). BUILD 06:59: the side rail is back with the Dairy teach; the
+    -- host clears the body before this runs, so this is the last word on it for as long
+    -- as Dairy is the active module.
+    hideSheetChrome(container)
+    paintSideTeach(container)
+
+    -- DairyConstants.HERD.SCORE_MAX is the real bound DairyCoreManager clamps herdHealth
+    -- to; read from the constant so the card line's denominator can never drift.
+    local scoreMax = 100
+    if DairyConstants ~= nil and DairyConstants.HERD ~= nil
+        and type(DairyConstants.HERD.SCORE_MAX) == "number" then
+        scoreMax = DairyConstants.HERD.SCORE_MAX
+    end
 
     local mgr = getMgr()
-    local rows = {}
+    local allRows = {}
     if mgr ~= nil and type(mgr.getBarnRows) == "function" then
-        rows = mgr:getBarnRows() or {}
+        allRows = mgr:getBarnRows() or {}
     end
+    -- Strict farm gate BEFORE the count, the sort, the page cap and the paint. A nil farm
+    -- id keeps every row out, and a row for another farm never reaches this page.
+    local farmId = localFarmIdStrict()
+    local rows, waitingServer, badVersion = filterBreedRows(allRows, farmId)
     sortBarnRows(rows)
 
     local emptyEl = findDescendant(container, "rfFwEmptyHint")
-    local hintEl = findDescendant(container, "rfFwHintTable")
-    local moreEl = findDescendant(container, "rfFwMore")
-    local warnBits = {}
+    local hintEl = findOnPage(container, "rfDairyCardsHint")
 
     if #rows == 0 then
-        setVis(emptyEl, true)
-        setText(emptyEl, tr("dairy_rf_pda_empty", "no barns"))
-        for i = 1, MAX_ROWS do
-            for _, c in ipairs({"A", "B", "C", "D"}) do
-                setVis(findDescendant(container, "rfFwRow" .. i .. c), false)
-            end
+        -- The empty state says why: no proven farm yet, a client still waiting for its
+        -- mirror, a row carrying a foreign surface version, or simply no barns.
+        local emptyText
+        if farmId == nil then
+            emptyText = stateLabel("WAITING_FOR_PLAYER_FARM")
+        elseif waitingServer then
+            emptyText = stateLabel("WAITING_FOR_SERVER")
+        elseif badVersion then
+            emptyText = stateLabel("SNAPSHOT_INVALID")
+        else
+            emptyText = tr("dairy_rf_pda_empty", "no barns")
         end
-        setText(moreEl, "")
+        setVis(emptyEl, true)
+        setText(emptyEl, emptyText)
+        for slot = 1, CARD_SLOTS do
+            setVis(cardEl(container, slot), false)
+        end
+        if full then _cardRows = {}; _cardBarn = {} end
+        _lastRowCount = 0
+        _pageIndex = 1
+        paintPager(container, 1)
         setText(hintEl, "")
+        setVis(hintEl, false)
         return
     end
 
     setVis(emptyEl, false)
     setText(emptyEl, "")
-    local show = math.min(#rows, MAX_ROWS)
-    for i = 1, MAX_ROWS do
-        local a = findDescendant(container, "rfFwRow" .. i .. "A")
-        local b = findDescendant(container, "rfFwRow" .. i .. "B")
-        local c = findDescendant(container, "rfFwRow" .. i .. "C")
-        local d = findDescendant(container, "rfFwRow" .. i .. "D")
-        if i <= show then
-            local r = rows[i]
-            setVis(a, true); setVis(b, true); setVis(c, true); setVis(d, true)
-            -- George HOLD getName=rename-only: soft-try human fields, else truncate barnId.
-            setText(a, barnLabel(r))
-            setText(b, tostring(r.herdHealth or 0))
-            -- Live qualityTier is already effective / post-spoilage sale tier.
-            -- Live qualityTier is already effective / post-spoilage sale tier. The
-            -- row carries the KEY (dc_tier_*); translate it here (DC-14 invariant 3).
-            local tierKey = tostring(r.qualityTier or "")
-            setText(c, tr("dc_tier_" .. tierKey, tierKey ~= "" and tierKey or "--"))
-            -- Honesty: Fresh with clock not started means spoilage path is inert, not a live timer.
-            -- The row carries the spoilage KEY (DC-8/DC-14 invariant 3); translate it here.
-            local spoilKey = tostring(r.spoilage or "")
-            local spoilLabel = tr("dc_spoilage_" .. spoilKey, spoilKey)
-            if r.spoilageClockStarted ~= true then
-                spoilLabel = tr("dairy_rf_pda_spoil_clock_idle", "Fresh (clock not started)")
-            end
-            setText(d, spoilLabel)
-            local warn = buildWarnFlavour(r)
-            if warn ~= nil then
-                warnBits[#warnBits + 1] = warn
-            end
+
+    local n = #rows
+    _lastRowCount = n
+    local pages = pageCountFor(n)
+    if _pageIndex > pages then _pageIndex = pages end
+    if _pageIndex < 1 then _pageIndex = 1 end
+    local first = (_pageIndex - 1) * CARDS_PER_PAGE
+    local troughText = troughCardText(mgr, farmId, serverSide(mgr))
+
+    -- One card per barn, in barn order, never a card cut in half: a page holds four whole
+    -- barns (2x2 since BUILD 17:13) and an empty slot stays an honest empty (hidden frame),
+    -- the hint below says how many barns sit on the pages after this one. The shared pager
+    -- only appears past four barns (pageCountFor).
+    if full then _cardRows = {}; _cardBarn = {} end
+    local painted = 0
+    for slot = CARDS_PER_PAGE + 1, CARD_SLOTS do
+        setVis(cardEl(container, slot), false)
+    end
+    for slot = 1, CARDS_PER_PAGE do
+        local r = rows[first + slot]
+        local card = cardEl(container, slot)
+        if r ~= nil then
+            paintCard(container, slot, r, scoreMax, troughText, full)
+            setVis(card, true)
+            painted = painted + 1
         else
-            setVis(a, false); setVis(b, false); setVis(c, false); setVis(d, false)
+            setVis(card, false)
         end
     end
+    paintPager(container, pages)
 
-    -- Also collect warn flavour from rows beyond the painted 8 so hints stay honest.
-    for i = show + 1, #rows do
-        local warn = buildWarnFlavour(rows[i])
-        if warn ~= nil then
-            warnBits[#warnBits + 1] = warn
-        end
-    end
-
-    local moreParts = {}
-    moreParts[#moreParts + 1] = string.format(tr("dairy_rf_pda_barns_n", "Barns: %d"), #rows)
-    if anyRitterWithCounts(rows) then
-        moreParts[#moreParts + 1] = tr("dairy_rf_pda_ritter", "Ritter")
-    end
-    if #rows > MAX_ROWS then
-        moreParts[#moreParts + 1] = string.format(
-            tr("dairy_rf_pda_more", "Showing %d of %d"),
-            MAX_ROWS, #rows
-        )
-    end
-    setText(moreEl, table.concat(moreParts, "  ·  "))
-
-    local idleClock = false
-    for _, r in ipairs(rows) do
-        if r.spoilageClockStarted ~= true then
-            idleClock = true
-            break
-        end
-    end
     local hintParts = {}
+    hintParts[#hintParts + 1] = string.format(tr("dairy_rf_pda_barns_n", "Barns: %d"), n)
+    local remaining = n - (first + painted)
+    if remaining > 0 then
+        hintParts[#hintParts + 1] = string.format(
+            tr("dairy_rf_pda_card_more", "%d more barns after this page"), remaining)
+    end
+    local idleClock = false
+    local warnBits = {}
+    for _, r in ipairs(rows) do
+        if r.spoilageClockStarted ~= true then idleClock = true end
+        local warn = buildWarnFlavour(r)
+        if warn ~= nil then warnBits[#warnBits + 1] = warn end
+    end
+    local tailParts = {}
     if idleClock then
-        hintParts[#hintParts + 1] = tr(
+        tailParts[#tailParts + 1] = tr(
             "dairy_rf_pda_hint_spoil_idle",
             "Spoilage clock not started - Fresh does not mean a live ageing timer yet."
         )
     end
     if #warnBits > 0 then
-        hintParts[#hintParts + 1] = table.concat(warnBits, "; ")
+        tailParts[#tailParts + 1] = table.concat(warnBits, "; ")
     end
-    setText(hintEl, table.concat(hintParts, " "))
+    -- BUILD 20:36: the hint (barns count and the more-barns note, then the spoilage-clock note
+    -- and the mycotoxin warnings) rides the side info; the stored-feed readout is back on each
+    -- card. rfDairyCardsHint stays declared, empty and hidden.
+    local hintText = table.concat(hintParts, "  ")
+    if #tailParts > 0 then
+        hintText = hintText .. "\n" .. table.concat(tailParts, "  ")
+    end
+    setText(hintEl, "")
+    setVis(hintEl, false)
+    paintSideTeach(container, hintText)
 end
 
-function DairyRfPdaGuest.onHide() end
+function DairyRfPdaGuest.onHide()
+    _pageIndex = 1
+    _cardRows = {}
+    _cardBarn = {}
+end
+
+--- Registry change: selectModule / registerModule / unregisterModule all notify. If Dairy was
+--- the last painter and is no longer the active module, the sheet chrome goes back now.
+local function onRegistryChanged()
+    handBackChromeIfLeft()
+end
+
+--- BUILD 19:15: the Esc Help footer asks whichever module is showing to open its own guide, so
+--- every companion ships and owns its own help instead of borrowing Soil's.
+---@param container table|nil
+function DairyRfPdaGuest.onOpenHelp(container)
+    if DairyGuideDialog ~= nil and type(DairyGuideDialog.show) == "function" then
+        DairyGuideDialog.show()
+    end
+end
 
 function DairyRfPdaGuest.tryRegister()
     if RfEscBootstrap ~= nil then
@@ -481,6 +1115,12 @@ function DairyRfPdaGuest.tryRegister()
                 profilesXml = MOD_DIR .. "xml/gui/rfEscProfiles.xml",
                 iconPath = "textures/ui/menuIcon.dds",
             })
+            -- BUILD 19:15 (George CLOSED DESIGN 18:55 item 5): load this mod's Field Guide at the
+            -- same moment the door itself loads. A GUI loaded from a mod directory later, once the
+            -- mod's own file system context has closed, fails to open.
+            if DairyGuideDialog ~= nil and type(DairyGuideDialog.register) == "function" then
+                pcall(DairyGuideDialog.register, MOD_DIR)
+            end
             if not doorOk then print("[Dairy] DairyRfPdaGuest: WARNING ensureDoor failed (will retry)") end
         end
     end
@@ -496,6 +1136,11 @@ function DairyRfPdaGuest.tryRegister()
             isAvailable = isDairyAvailable,
             onShow = DairyRfPdaGuest.onShow,
             onHide = DairyRfPdaGuest.onHide,
+            -- BUILD 23:43: the host reads onPageStep off the registered descriptor
+            -- (RfEscModules whitelist carries it since BUILD 14:04), so the shared pager
+            -- and the , . keys step Dairy by a full page of two cards.
+            onPageStep = DairyRfPdaGuest.onPageStep,
+            onOpenHelp = DairyRfPdaGuest.onOpenHelp,
         })
         if ok then
             _registered = true
@@ -504,8 +1149,20 @@ function DairyRfPdaGuest.tryRegister()
             return false
         end
     end
+    if _listenerHost ~= host and type(host.addChangeListener) == "function" then
+        host:addChangeListener(onRegistryChanged)
+        _listenerHost = host
+    end
     return _registered and g_inGameMenu ~= nil and g_inGameMenu.menuRealisticFarming ~= nil
 end
 
 function DairyRfPdaGuest.isRegistered() return _registered end
-function DairyRfPdaGuest.reset() _registered = false end
+function DairyRfPdaGuest.reset()
+    _registered = false
+    _listenerHost = nil
+    _chromeHidden = false
+    _pageIndex = 1
+    _lastRowCount = 0
+    _cardRows = {}
+    _cardBarn = {}
+end

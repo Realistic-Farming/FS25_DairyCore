@@ -22,7 +22,7 @@
         <text name="dairy_rf_pda_module_title" text="[EN] Dairy" />
         <text name="dairy_rf_pda_blurb" text="Barn herd glance: sale quality. Spoilage clock idle until collection is recorded (path inert). Read-only." />
         <text name="dairy_rf_pda_col_barn" text="[EN] Barn" />
-        <text name="dairy_rf_pda_col_health" text="[EN] Herd" />
+        <text name="dairy_rf_pda_col_health" text="[EN] Herd Health" />
         <text name="dairy_rf_pda_col_tier" text="[EN] Sale quality" />
         <text name="dairy_rf_pda_col_spoil" text="[EN] Spoilage" />
         <text name="dairy_rf_pda_empty" text="[EN] no barns" />
@@ -33,6 +33,67 @@
         <text name="dairy_rf_pda_ritter" text="[EN] Ritter" />
         <text name="dairy_rf_pda_barns_n" text="[EN] Barns: %d" />
     <text name="dairy_rf_pda_spoil_clock_idle" text="Fresh (clock not started)" />
+    <text name="dc_rf_pda_btn_feed_fields" text="Feed Fields" />
+    <text name="dc_fd_title" text="Feed Fields" />
+    <text name="dc_fd_barn_header" text="Barn  (%d / %d)" />
+    <text name="dc_fd_no_barns" text="no barns" />
+    <text name="dc_fd_field_header" text="Field #%d  (%d / %d)" />
+    <text name="dc_fd_no_fields" text="No owned fields" />
+    <text name="dc_fd_state" text="OM %s    %s    Weeds %s    Rot %s    Disease %s" />
+    <text name="dc_fd_state_empty" text="Own a field to feed this barn. SoilFertilizer absent: no live state to show." />
+    <text name="dc_fd_designated" text="DESIGNATED to this barn" />
+    <text name="dc_fd_not_designated" text="not designated" />
+    <text name="dc_fd_client_readonly" text="server only" />
+    <text name="dc_fd_hint" text="Pick a barn, then step fields with the arrows. Toggle adds or removes the field's feed. Its soil state feeds the herd score daily." />
+    <text name="dc_fd_prev_barn" text="Prev Barn" />
+    <text name="dc_fd_next_barn" text="Next Barn" />
+    <text name="dc_fd_prev_field" text="Prev Field" />
+    <text name="dc_fd_next_field" text="Next Field" />
+    <text name="dc_fd_toggle" text="Toggle Feed" />
     <text name="dairy_rf_pda_hint_spoil_idle" text="Spoilage clock not started - Fresh does not mean a live ageing timer yet." />
+        <text name="dairy_rf_pda_breed_herd" text="Đàn hiện tại" />
+        <text name="dairy_rf_pda_breed_milk" text="Sữa trong bồn" />
+        <text name="dairy_rf_pda_breed_unknown" text="không rõ" />
+        <text name="dairy_rf_pda_breed_waiting_server" text="Đang chờ máy chủ" />
+        <text name="dairy_rf_pda_breed_waiting_farm" text="Đang chờ nông trại người chơi" />
+        <text name="dairy_rf_pda_breed_route_unavailable" text="Tuyến bồn không khả dụng" />
+        <text name="dairy_rf_pda_breed_filltype_unresolved" text="Không nhận ra loại sản phẩm" />
+        <text name="dairy_rf_pda_breed_storage_missing" text="Không có kho nội bộ" />
+        <text name="dairy_rf_pda_breed_snapshot_invalid" text="Ảnh chụp không hợp lệ" />
+        <text name="dairy_rf_pda_breed_herd_unresolved" text="Không đọc được đàn" />
+        <text name="dairy_rf_pda_breed_col_status" text="Trạng thái" />
+        <text name="dairy_rf_pda_breed_status_live" text="Đang ghi nhận" />
+        <text name="dairy_rf_pda_breed_head" text="%d con" />
+        <text name="dairy_rf_pda_breed_litres" text="%d L" />
+        <text name="dairy_rf_pda_breed_no_milk" text="không có sữa lưu" />
+        <text name="dairy_rf_pda_breed_source_standard" text="đếm tiêu chuẩn" />
+        <text name="dairy_rf_pda_breed_source_rl" text="đếm Realistic Livestock" />
+        <text name="dairy_rf_pda_breed_side_intro" text="Hai đồng hồ: Đàn hiện tại đếm các con vật cho sữa đang đứng trong chuồng hôm nay. Sữa trong bồn theo dõi sữa đã lưu theo giống đã tạo ra nó; đàn mới bên cạnh sữa cũ là bình thường. Sữa không rõ có từ trước khi ghi nhận hoặc vào theo đường không chứng minh được." />
+        <text name="dairy_rf_pda_breed_side_more" text="+%d chuồng nữa trong bảng" />
+        <text name="dairy_rf_pda_card_feed" text="Ruong thuc an (%d): %s" />
+        <text name="dairy_rf_pda_card_feed_none" text="Ruong thuc an: chua chi dinh" />
+        <text name="dairy_rf_pda_card_field" text="Ruong %d (%d/%d): %s" />
+        <text name="dairy_rf_pda_card_weeds" text="co dai %d%%" />
+        <text name="dairy_rf_pda_card_disease" text="benh" />
+        <text name="dairy_rf_pda_card_designated" text="nuoi chuong nay" />
+        <text name="dairy_rf_pda_card_field_prev" text="&lt; Ruong" />
+        <text name="dairy_rf_pda_card_field_next" text="Ruong &gt;" />
+        <text name="dairy_rf_pda_card_add" text="Them thuc an" />
+        <text name="dairy_rf_pda_card_remove" text="Bo thuc an" />
+        <text name="dairy_rf_pda_card_spoil_idle" text="dong ho dung" />
+        <text name="dairy_rf_pda_page_prev" text="&lt; Quay lai" />
+        <text name="dairy_rf_pda_page_next" text="Tiep (%d/%d) &gt;" />
+        <text name="dairy_rf_pda_card_more" text="con %d chuong nua sau trang nay" />
+        <text name="dairy_rf_pda_trough_waiting" text="Thuc an du tru: dang cho du lieu thu hoach" />
+        <text name="dairy_rf_pda_trough_waiting_why" text="Trang trai nay chua ghi nhan lan cat nao." />
+        <text name="dairy_rf_pda_trough_server_only" text="Thuc an du tru: chi co tren may chu, khong co ban ghi tren may khach nay" />
+        <text name="dairy_rf_pda_trough_organic" text="Thuc an du tru cua trang trai: huu co (%d%% ty le huu co)" />
+        <text name="dairy_rf_pda_trough_not_organic" text="Thuc an du tru cua trang trai: khong huu co (%d%% ty le huu co)" />
+        <text name="dairy_rf_pda_trough_clean" text="Nhiem ban: khong co trong thuc an du tru" />
+        <text name="dairy_rf_pda_trough_trace" text="Nhiem ban: mot it, giam %d%% moi ngay" />
+        <text name="dairy_rf_pda_trough_contaminated" text="Nhiem ban: %d%% bi benh, giam %d%% moi ngay" />
+        <text name="dairy_rf_pda_side_teach" text="Bo sua&#10;&#10;Moi chuong trong trang trai mot the. Lat trang bang , va . hoac nut trang.&#10;&#10;Dan hien tai la dan vat sua dang o trong chuong hom nay, theo giong. Sua trong bon la sua du tru theo cac giong da cho sua. Sua khong co ban ghi giong van la chua ro. Dan moi ben canh sua cu la binh thuong.&#10;&#10;Dong ho hu hong: bat dau khi mot lan thu gom duoc ghi nhan. Dong ho dung nghia la chua bat dau, nen Tuoi chua phai la bo dem dang chay.&#10;&#10;Dong ho benh thuc an: thuc an bi benh trong kho lam dan nhiem doc to nam. No giam dan tung ngay. Goi y trang neu ten chuong khi con keo dai.&#10;&#10;Thuc an du tru: chat luong duoc chot tren cay trong luc cat va tron trong cac silo cua trang trai. Mang an lay tu kho do va sua di theo. Huu co nghia la ty le huu co tren 80%. Dang cho du lieu thu hoach cho den khi lan cat dau tien duoc ghi nhan." />
+        <text name="dairy_rf_pda_breed_prev" text="&lt; Giong" />
+        <text name="dairy_rf_pda_breed_next" text="Giong (%d/%d) &gt;" />
     </texts>
 </l10n>

@@ -18,6 +18,18 @@
 
 ## Near-term (next release cycle)
 
+- [x] Feed-field designation surface (DC-11 section 3.1, 2026-08-23): the missing
+  player surface that gives barns fields to feed. A deep engine dialog opened from
+  the Dairy Esc glance ("Feed Fields" footer button) lists the farm's owned fields
+  with the live SF state the herd score reads (organic matter, NPK status, weeds,
+  rotation, disease), and Toggle adds or removes the field via the already-built
+  `designateFeedField` / `undesignateFeedField`. Writes are server-gated (clients
+  read and say "server only"); reads come from `getOwnedFeedFields(farmId)` and
+  `getBarnDesignations(barnId)`. This is the last DC-15 predecessor: the herd score
+  now has a way to move.
+- [x] Feed-field modifiers and the mycotoxin penalty apply in both modes (DC-11 4A placement, 2026-08-23): the feed-field bonuses and penalties plus the mycotoxin subtraction moved out of `_herdScoreStandard` into a mode-independent farm-business layer (`_farmBusinessModifiers`) that `_updateBarnHealth` applies after either score path (Standard or Ritter/RL). Ritter-mode farms were silently exempt before, because the Ritter bypass at `DairyCoreManager.lua:374-378` never runs the Standard function. Also F106: `undesignateFeedField` now marks the barn dirty, symmetric with `designateFeedField`. Bench: 10 assertions in `dc11_feed_business_layer_test.lua`.
+- [x] Dedicated-server barn discovery (DC-32, 2026-08-18): the Dairy tab showed "no barns" on the dedicated server even with barns placed. `discoverBarns` enumerated through `husbandrySystem:getPlaceablesByFarm`, a method present in no game script, LUADOC or reference, with fallbacks (`hs.placeables` / `hs.husbandries`) that do not exist on the engine-native husbandry system, so discovery found 0 barns on every dedicated server and the update-only network sync could not materialise them on clients. Discovery now iterates the placeable system's own list (`g_currentMission.placeableSystem.placeables`, the table the game itself walks in PlaceableBeehive.lua), reads each placeable's owner via `getOwnerFarmId()`, and retries every 500 ms for 10 s when the list is not yet populated (client join / slow loads). F75's per-owning-farm intent is preserved; the enumerator is now the verified one.
+- [x] Harvest-contamination routing (DC-11 / F105, 2026-08-21): DairyCore subscribes to SoilFertilizer's `soilHarvestBus` a second time (`DairyCore_FeedContamination`, beside FP-1's provenance listener). A harvest cut of a field a barn has designated as a feed source routes the field's live `diseasePressure` into `applyFeedContaminationPenalty`, setting the barn's mycotoxin penalty and countdown. Clean cuts (`diseasePressure` 0) never route, because a zero-severity call would still impose MIN_PENALTY for MIN_DAYS on a healthy field. Latent until the DC-11 designation surface gives barns fields (zero callers today). Bench: 11 assertions in `dc11_mycotoxin_harvest_bus_test.lua`.
 - [x] Esc framework table freeze (Dairy guest, #30, 2026-08-15): the shared 4-bay column grid is restated on every show. Merged; 1.0.5.4.
 - [x] Co-op herd advisory (DC-19, **DairyCore half**, 2026-08-14): the gate flag
   `hasHerdAdvisory` is read through the existing `_proStaff` accessor (neutral-false when
