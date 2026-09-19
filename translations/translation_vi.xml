@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Bo sua&#10;&#10;Moi chuong trong trang trai mot the. Lat trang bang , va . hoac nut trang.&#10;&#10;Dan hien tai la dan vat sua dang o trong chuong hom nay, theo giong. Sua trong bon la sua du tru theo cac giong da cho sua. Sua khong co ban ghi giong van la chua ro. Dan moi ben canh sua cu la binh thuong.&#10;&#10;Dong ho hu hong: bat dau khi mot lan thu gom duoc ghi nhan. Dong ho dung nghia la chua bat dau, nen Tuoi chua phai la bo dem dang chay.&#10;&#10;Dong ho benh thuc an: thuc an bi benh trong kho lam dan nhiem doc to nam. No giam dan tung ngay. Goi y trang neu ten chuong khi con keo dai.&#10;&#10;Thuc an du tru: chat luong duoc chot tren cay trong luc cat va tron trong cac silo cua trang trai. Mang an lay tu kho do va sua di theo. Huu co nghia la ty le huu co tren 80%. Dang cho du lieu thu hoach cho den khi lan cat dau tien duoc ghi nhan." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Giong" />
         <text name="dairy_rf_pda_breed_next" text="Giong (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Phí bán sữa (mỗi 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Văn phòng và tuyến thu phí theo lít." />
+        <text name="dc_guide_saleFee_02" text="Mỗi 1000 L: mặc định 11, từ 0 đến 50." />
+        <text name="dc_guide_saleFee_03" text="Tức 0,011/L mặc định, tối đa 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Cài đặt phần trăm cũ trở về 11." />
+        <text name="dc_guide_saleFee_05" text="Giá động đang bật sẽ được áp dụng; nếu không" />
+        <text name="dc_guide_saleFee_06" text="dùng giá cơ bản, không phải giá trạm." />
+        <text name="dc_guide_saleFee_07" text="Phí bằng hoặc hơn giá: sữa không bán được." />
+        <text name="dc_guide_saleFee_08" text="Lượt bị từ chối vẫn dùng khung giờ của nó." />
+        <text name="dc_guide_saleFee_09" text="Sữa vẫn cũ đi; xem nhật ký máy chủ." />
     </texts>
 </l10n>

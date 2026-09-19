@@ -94,5 +94,15 @@
         <text name="dairy_rf_pda_side_teach" text="Dairy&#10;&#10;One card per barn on your farm. Turn pages with , and . or the pager.&#10;&#10;Herd now is the milking herd in the barn today, by breed. Milk in tank is the stored milk by the breeds that made it. Milk with no breed record stays unknown. A new herd beside old milk is normal.&#10;&#10;Spoilage clock: starts when a collection is recorded. Clock idle means not started, so Fresh is not a live timer yet.&#10;&#10;Feed disease clock: diseased feed in the pool puts mycotoxin on the herd. It fades day by day. The page hint names the barn while it lasts.&#10;&#10;Stored feed: quality is locked on the crop at the cut and blended in the farm's silos. The trough draws from that pool and milk follows it. Organic means over 80% organic share. Waiting for harvest data until the first cut is recorded." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Breeds" />
         <text name="dairy_rf_pda_breed_next" text="Breeds (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Milk Sale Fee (per 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Office and rota take a handling fee per litre." />
+        <text name="dc_guide_saleFee_02" text="Set per 1000 L: 11 by default, from 0 to 50." />
+        <text name="dc_guide_saleFee_03" text="That is 0.011/L by default, up to 0.05/L." />
+        <text name="dc_guide_saleFee_04" text="Old percentage settings reset to 11." />
+        <text name="dc_guide_saleFee_05" text="Active dynamic pricing applies; otherwise" />
+        <text name="dc_guide_saleFee_06" text="the base price is used, not a station quote." />
+        <text name="dc_guide_saleFee_07" text="Fee at or above price leaves the milk unsold." />
+        <text name="dc_guide_saleFee_08" text="A refused round still uses its scheduled slot." />
+        <text name="dc_guide_saleFee_09" text="Ageing continues normally; see the server log." />
     </texts>
 </l10n>

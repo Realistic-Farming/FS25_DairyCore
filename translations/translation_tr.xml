@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Sut&#10;&#10;Ciftligindeki her ahir icin bir kart. Sayfalari , ve . ile ya da sayfa dugmeleriyle cevir.&#10;&#10;Suru simdi, bugun ahirda duran sagmal surudur, irka gore. Tanktaki sut, onu veren irklara gore depolanan suttur. Irk kaydi olmayan sut bilinmeyen kalir. Eski sutun yaninda yeni bir suru normaldir.&#10;&#10;Bozulma saati: bir toplama kaydedildiginde baslar. Saat durdu, baslamadi demektir; yani Taze henuz calisan bir sayac degildir.&#10;&#10;Yem hastaligi saati: stoktaki hastalikli yem suruye mikotoksin yukler. Gun gun azalir. Sayfa ipucu surdugu surece ahiri adlandirir.&#10;&#10;Depolanan yem: kalite bicimde urun uzerinde kilitlenir ve ciftligin silolarinda harmanlanir. Yemlik o stoktan beslenir, sut de onu izler. Organik, %80 uzeri organik pay demektir. Ilk bicim kaydedilene kadar hasat verisi bekleniyor." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Irklar" />
         <text name="dairy_rf_pda_breed_next" text="Irklar (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Süt satış ücreti (1000 L başına)" />
+        <text name="dc_guide_saleFee_01" text="Ofis ve tur litre başına ücret alır." />
+        <text name="dc_guide_saleFee_02" text="1000 L başına: varsayılan 11, 0 ile 50 arası." />
+        <text name="dc_guide_saleFee_03" text="Yani varsayılan 0,011/L, en çok 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Eski yüzde ayarları 11'e döner." />
+        <text name="dc_guide_saleFee_05" text="Etkin dinamik fiyatlar geçerlidir; aksi halde" />
+        <text name="dc_guide_saleFee_06" text="taban fiyat kullanılır, istasyon fiyatı değil." />
+        <text name="dc_guide_saleFee_07" text="Ücret fiyata eşit veya üstse süt satılmaz." />
+        <text name="dc_guide_saleFee_08" text="Reddedilen tur yine de sırasını kullanır." />
+        <text name="dc_guide_saleFee_09" text="Yaşlanma sürer; sunucu günlüğüne bakın." />
     </texts>
 </l10n>

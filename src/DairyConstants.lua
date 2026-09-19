@@ -140,15 +140,24 @@ DairyConstants.COLLECTION = {
     },
 }
 
--- DC-21: administrative milk disposal. The margin is the administrative cost of an
--- office/rota sale with no truck and no fuel, and its MAGNITUDE is a human ruling.
--- This default is a RECOMMENDATION (a percentage, because it scales with herd size),
--- named and tunable via SettingsHub, never hardcoded inline. Pending Arissani's call.
+-- DC-21 / RSF-F216: administrative milk disposal. The charge is the handling cost of
+-- an office/rota sale with no truck and no fuel, so it is a fixed amount per litre and
+-- not a share of the price: handling costs what it costs whatever the market pays.
+-- Magnitude is Arissani's ruling, 2026-09-19.
+--
+-- Stored and exposed as an integer per 1000 litres, because the shared settings editor
+-- steps a float by 0.1 and prints %.2f, which cannot display or reach 0.011. The
+-- per-litre values are DERIVED by the sale, never stored twice:
+--   11 / 1000 = 0.011 per litre (default)
+--    0 / 1000 = 0.0   per litre (floor; an admin may waive the charge)
+--   50 / 1000 = 0.05  per litre (ceiling)
+-- Named and tunable via SettingsHub, never hardcoded inline.
 DairyConstants.SALE = {
-    DEFAULT_MARGIN = 0.05,   -- 5% off the spot price
-    MARGIN_MIN     = 0.0,
-    MARGIN_MAX     = 0.25,
-    INCOME_LABEL   = "Milk Sale (Administrative)",
+    FEE_PER_1000L     = 11,
+    FEE_MIN_PER_1000L = 0,
+    FEE_MAX_PER_1000L = 50,
+    FEE_DIVISOR       = 1000,
+    INCOME_LABEL      = "Milk Sale (Administrative)",
 }
 
 -- Dairy contracts. termDays are in-game DAYS (Time Guard clock; no "week").

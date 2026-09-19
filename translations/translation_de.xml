@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Milchvieh&#10;&#10;Eine Karte je Stall auf deinem Hof. Seiten wechseln mit , und . oder dem Blaetterer.&#10;&#10;Herde jetzt ist die Melkherde, die heute im Stall steht, nach Rasse. Milch im Tank ist die gelagerte Milch nach den Rassen, die sie gegeben haben. Milch ohne Rassenbeleg bleibt unbekannt. Eine neue Herde neben alter Milch ist normal.&#10;&#10;Verderb-Uhr: startet, sobald eine Abholung erfasst ist. Uhr steht heisst nicht gestartet, Frisch ist also noch kein laufender Timer.&#10;&#10;Futterkrankheits-Uhr: krankes Futter im Vorrat bringt Mykotoxin auf die Herde. Es klingt Tag fuer Tag ab. Der Seitenhinweis nennt den Stall, solange es anhaelt.&#10;&#10;Futtervorrat: die Qualitaet wird beim Schnitt an der Frucht festgelegt und in den Silos des Hofes vermischt. Der Trog schoepft aus diesem Vorrat, die Milch folgt ihm. Bio heisst ueber 80% Bio-Anteil. Warte auf Erntedaten, bis der erste Schnitt erfasst ist." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Rassen" />
         <text name="dairy_rf_pda_breed_next" text="Rassen (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Milchverkaufsgebühr (pro 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Büro und Turnus erheben eine Gebühr je Liter." />
+        <text name="dc_guide_saleFee_02" text="Pro 1000 L: 11 als Standard, von 0 bis 50." />
+        <text name="dc_guide_saleFee_03" text="Das sind 0,011/L als Standard, bis 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Alte Prozentwerte werden auf 11 gesetzt." />
+        <text name="dc_guide_saleFee_05" text="Aktive dynamische Preise gelten; sonst" />
+        <text name="dc_guide_saleFee_06" text="gilt der Basispreis, kein Stationspreis." />
+        <text name="dc_guide_saleFee_07" text="Gebühr ab Preishöhe: Milch bleibt unverkauft." />
+        <text name="dc_guide_saleFee_08" text="Eine Absage verbraucht trotzdem ihren Termin." />
+        <text name="dc_guide_saleFee_09" text="Alterung läuft weiter; siehe Server-Log." />
     </texts>
 </l10n>

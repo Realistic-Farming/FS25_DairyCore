@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Laiterie&#10;&#10;Une carte par etable de votre ferme. Changez de page avec , et . ou le pagineur.&#10;&#10;Troupeau actuel : les laitieres presentes dans l'etable aujourd'hui, par race. Lait en cuve : le lait stocke selon les races qui l'ont produit. Le lait sans releve de race reste inconnu. Un nouveau troupeau a cote de vieux lait est normal.&#10;&#10;Horloge de deterioration : demarre quand une collecte est enregistree. Horloge inactive veut dire non demarree, Frais n'est donc pas encore un compteur en marche.&#10;&#10;Horloge de maladie du fourrage : du fourrage malade dans le stock met de la mycotoxine sur le troupeau. Elle recule jour apres jour. L'indice de page nomme l'etable tant que cela dure.&#10;&#10;Fourrage stocke : la qualite est fixee sur la culture a la coupe et melangee dans les silos de la ferme. L'auge puise dans ce stock et le lait le suit. Bio veut dire plus de 80% de part bio. En attente des donnees de recolte jusqu'a la premiere coupe enregistree." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Races" />
         <text name="dairy_rf_pda_breed_next" text="Races (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Frais de vente du lait (par 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Bureau et tournée prennent des frais par litre." />
+        <text name="dc_guide_saleFee_02" text="Par 1000 L : 11 par défaut, de 0 à 50." />
+        <text name="dc_guide_saleFee_03" text="Soit 0,011/L par défaut, jusqu'à 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Les anciens pourcentages repassent à 11." />
+        <text name="dc_guide_saleFee_05" text="Les prix dynamiques actifs s'appliquent ; sinon" />
+        <text name="dc_guide_saleFee_06" text="le prix de base est utilisé, pas celui d'une station." />
+        <text name="dc_guide_saleFee_07" text="Frais au niveau du prix : le lait reste invendu." />
+        <text name="dc_guide_saleFee_08" text="Une tournée refusée consomme son créneau." />
+        <text name="dc_guide_saleFee_09" text="Le vieillissement continue ; voir le journal." />
     </texts>
 </l10n>

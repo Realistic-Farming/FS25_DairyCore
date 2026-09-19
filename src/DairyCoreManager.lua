@@ -20,6 +20,37 @@ DairyCoreManager.SAVE_FILE        = "FS25_DairyCore.xml"      -- own-file fallba
 -- until the SDK base litersPerDay age-curve is confirmed by Tyson.
 local PER_COW_LITRES_DAY = 22
 
+-- RSF-F216: this file's own translation lookup, used once, for the sale-fee setting
+-- label. Same shape DairyRfPdaGuest.lua:33-50 already uses in this mod: read the mod
+-- environment's i18n with g_i18n as a fallback, pcall getText, and reject a key echo,
+-- a $l10n_ echo or a Missing marker before trusting the result.
+--
+-- Deliberately NOT a new shared helper and deliberately not the GUI's copy imported
+-- here: each file carries the four lines it needs, which is how this mod already does
+-- it. main.lua:20 latches DairyCoreModName before it sources any src file, so the name
+-- exists for every file, survives a hot re-source, and never resolves nil. The
+-- readable English fallback is what makes an early or missing environment harmless.
+local DC_MOD_NAME = (DairyCoreModName or g_currentModName or "FS25_DairyCore")
+
+local function _tr(key, fallback)
+    local modEnv = g_modEnvironments and g_modEnvironments[DC_MOD_NAME]
+    local i18n = (modEnv and modEnv.i18n) or g_i18n
+    if i18n then
+        local ok, text = pcall(function() return i18n:getText(key) end)
+        if ok and type(text) == "string" and text ~= "" then
+            local lower = text:lower()
+            if lower ~= tostring(key):lower()
+                and text ~= ("$l10n_" .. key)
+                and not lower:find("^missing%s")
+                and not lower:find("^missing_")
+            then
+                return text
+            end
+        end
+    end
+    return fallback or key
+end
+
 function DairyCoreManager.new()
     local self = setmetatable({}, DairyCoreManager_mt)
     self.barns        = {}      -- barnId -> barn record
@@ -34,7 +65,7 @@ function DairyCoreManager.new()
         defaultCollectionInterval = DairyConstants.COLLECTION.DEFAULT_INTERVAL_HOURS,
         spoilageEnabled         = true,
         contractsEnabled        = true,
-        saleMargin              = DairyConstants.SALE.DEFAULT_MARGIN,
+        saleFeePer1000L         = DairyConstants.SALE.FEE_PER_1000L,
     }
     -- FP-1: the feed provenance ledger (authority #5). DairyCore is the sole writer.
     self.feedProvenance = FeedProvenance.new(self)
@@ -446,6 +477,63 @@ function DairyCoreManager:_milkBasePrice()
         end
     end)
     return base or 1.0
+end
+
+-- RSF-F216: the office/rota sale resolves its own per-litre price, rung by rung. This
+-- is NOT an edit to _milkSpotPrice: that helper's other production caller is
+-- _payContract, and Arissani ratified active-only pricing for the sale, not for
+-- contract settlement. _milkSpotPrice stays byte-identical and _payContract keeps
+-- today's behaviour exactly.
+--
+-- Rung 1 is an economy that is actually running: the mission handle exists, isActive is
+-- true, the PriceHook settings predicate allows pricing, the engine and getPrice exist,
+-- and the quote is a positive number. Anything else, INCLUDING A THROWING PROVIDER,
+-- falls through to DairyCore's own fill-type base price.
+--
+-- Each rung is guarded SEPARATELY and deliberately. A single outer pcall is the defect
+-- the shared helper has: one throwing MarketDynamics read would abort the whole ladder
+-- and land the sale on 1.0 having never tried the fill type.
+function DairyCoreManager:_milkSaleUnitPrice(fillType)
+    fillType = fillType or DairyConstants.CONTRACTS.MILK_FILLTYPE
+
+    local ftIndex = nil
+    pcall(function()
+        local ftm = g_fillTypeManager
+        if ftm ~= nil then ftIndex = ftm:getFillTypeIndexByName(fillType) end
+    end)
+
+    -- Rung 1: accepted MarketDynamics quote. Same acceptance test PriceHook applies
+    -- before the selling station uses a dynamic price. A present settings table with
+    -- nil or false pricesEnabled rejects; an absent settings object does not by itself.
+    local quote = nil
+    pcall(function()
+        local md = g_currentMission ~= nil and g_currentMission.MarketDynamics or nil
+        if md == nil or md.isActive ~= true then return end
+        if md.settings ~= nil and not md.settings.pricesEnabled then return end
+        local engine = md.marketEngine
+        if engine == nil or engine.getPrice == nil or ftIndex == nil then return end
+        quote = engine:getPrice(ftIndex)
+    end)
+    if type(quote) == "number" and quote > 0 then
+        return quote
+    end
+
+    -- Rung 2: DairyCore's existing fill-type base price. This is our own base rung, not
+    -- a promise of parity with the selling station's effective price, and not a
+    -- seasonal or quality-adjusted figure.
+    local base = nil
+    pcall(function()
+        local ftm = g_fillTypeManager
+        if ftm == nil or ftIndex == nil then return end
+        local desc = ftm:getFillTypeByIndex(ftIndex)
+        base = desc ~= nil and desc.pricePerLiter or nil
+    end)
+    if type(base) == "number" then
+        return base
+    end
+
+    -- Rung 3: the existing literal, unchanged and still DC-23's.
+    return 1.0
 end
 
 -- RandomWorldEvents: the new top-level getActiveEvent() -> {name,intensity,category,remainingMs}.
@@ -925,16 +1013,42 @@ function DairyCoreManager:unassignCollectionWorker(barnId)
 end
 
 -- DC-21 3.1: the internal office/rota sale. ONE ordinary mechanism, no permission
--- check inside it. Reads the level, prices it through the spot market, applies the
--- margin, removes the milk by the standard removal path (pricing against what ACTUALLY
--- came out), credits the money and records the collection. Permission lives at the
--- boundary: the NetworkSync action wrapper for office, the server tick for rota.
+-- check inside it. Prices the milk and resolves the handling fee FIRST, refuses
+-- outright if the fee meets or beats the price, and only then removes the milk by the
+-- standard removal path (pricing against what ACTUALLY came out), credits the money
+-- and records the collection. Permission lives at the boundary: the NetworkSync action
+-- wrapper for office, the server tick for rota.
 -- DC-9 3.4: this is what the rota calls directly on the server.
+--
+-- RSF-F216: the charge is a fixed amount per litre, not a share of the price. The
+-- price and the fee are resolved ONCE, above the withdrawal, and the same two numbers
+-- are spent by the calculation below, so the refusal and the payment can never
+-- disagree about which economy is live.
 function DairyCoreManager:_adminSellMilk(barn, quantity, source, nowHours, monotonicDay)
     if barn == nil or not self:_isServer() then
         return nil, "server_only"
     end
     local fillType = DairyConstants.CONTRACTS.MILK_FILLTYPE
+
+    -- RSF-F216: refuse before anything moves. This sits above the tank draw, above the
+    -- barn read and above the _suppressDetection bracket on purpose: a refusal must
+    -- leave the tank, the barn, the passive detector, the money and the collection
+    -- record exactly as it found them.
+    local spot = self:_milkSaleUnitPrice(fillType)
+    -- The sale enforces its own declared type. A hub value arrives whole, but a
+    -- standalone build, a console write or a direct assignment can put a fraction in
+    -- self.settings, and that must not become a second fractional charge.
+    local feePer1000 = self.settings.saleFeePer1000L or DairyConstants.SALE.FEE_PER_1000L
+    feePer1000 = math.floor(tonumber(feePer1000) or DairyConstants.SALE.FEE_PER_1000L)
+    feePer1000 = math.max(DairyConstants.SALE.FEE_MIN_PER_1000L,
+                          math.min(DairyConstants.SALE.FEE_MAX_PER_1000L, feePer1000))
+    local fee = feePer1000 / DairyConstants.SALE.FEE_DIVISOR
+    -- <= and not <: at exact equality the sale would pay nothing.
+    if spot <= fee then
+        DCLogger.info("Milk sale refused (%s): fee %.4f/L meets or beats price %.4f/L (barn %s)",
+            tostring(source), fee, spot, tostring(barn.barnId))
+        return nil, "fee_exceeds_price"
+    end
 
     -- DC-25: read tank then barn in one server tick.
     local tankRemoved = 0
@@ -979,11 +1093,11 @@ function DairyCoreManager:_adminSellMilk(barn, quantity, source, nowHours, monot
     local removed = tankRemoved + barnRemoved
     if removed <= 0 then return nil, "no_milk" end
 
-    local spot = self:_milkSpotPrice()
-    local margin = self.settings.saleMargin or DairyConstants.SALE.DEFAULT_MARGIN
-    margin = math.max(DairyConstants.SALE.MARGIN_MIN,
-                      math.min(DairyConstants.SALE.MARGIN_MAX, margin))
-    local income = math.floor(removed * spot * (1 - margin))
+    -- RSF-F216: subtract the per-litre fee from the per-litre price, against the litres
+    -- ACTUALLY removed. spot and fee are the same two numbers the refusal decided on.
+    -- The clamp cannot bite with the refusal in front; it keeps the non-negative
+    -- guarantee local to the price rather than depending on the refusal staying correct.
+    local income = math.floor(removed * math.max(0, spot - fee))
     if income > 0 then
         pcall(function()
             g_currentMission:addMoney(income, barn.farmId, MoneyType.OTHER, true, true)
@@ -1005,7 +1119,9 @@ end
 
 -- DC-21 3.3: the rota's entry point, called directly by the hour tick on the server.
 function DairyCoreManager:_rotaCollection(barn, nowHours, monotonicDay)
-    self:_adminSellMilk(barn, nil, DairyConstants.COLLECTION.SOURCES.rota, nowHours, monotonicDay)
+    -- RSF-F216: the rota must observe the refusal. The hour tick already captures this
+    -- value into `local removed`; without the return it read nil on every round.
+    return self:_adminSellMilk(barn, nil, DairyConstants.COLLECTION.SOURCES.rota, nowHours, monotonicDay)
 end
 
 -- DC-21 3.2: the thin admin wrapper the office menu invokes.
@@ -1710,16 +1826,23 @@ function DairyCoreManager:_bindBedrock()
                   adminOnly = true, label = "Default Collection Interval (h)" },
                 { id = "spoilageEnabled", type = "bool", default = true, adminOnly = true, label = "Milk Spoilage" },
                 { id = "contractsEnabled", type = "bool", default = true, adminOnly = true, label = "Dairy Contracts" },
-                { id = "saleMargin", type = "float", default = DairyConstants.SALE.DEFAULT_MARGIN,
-                  min = DairyConstants.SALE.MARGIN_MIN, max = DairyConstants.SALE.MARGIN_MAX,
-                  adminOnly = true, label = "Milk Sale Margin (fraction)" },
+                -- RSF-F216: an integer per 1000 L, not a float fraction. The shared
+                -- editor steps a float by 0.1 and prints %.2f, so a float def would
+                -- paint 0.011 as 0.01 and snap to 0.00 or 0.05 on the first press,
+                -- putting the ratified default out of reach. The int path steps by 1,
+                -- clamps, and prints through tostring. The KEY IS NEW ON PURPOSE: a
+                -- stored saleMargin of 0.05 would floor to 0 and silently waive the
+                -- fee on every existing save.
+                { id = "saleFeePer1000L", type = "int", default = DairyConstants.SALE.FEE_PER_1000L,
+                  min = DairyConstants.SALE.FEE_MIN_PER_1000L, max = DairyConstants.SALE.FEE_MAX_PER_1000L,
+                  step = 1, adminOnly = true, label = _tr("dc_setting_saleFee", "Milk Sale Fee (per 1000 L)") },
             },
             onChange = function(key, value)
                 if key == "enabled" then self.settings.enabled = value ~= false
                 elseif key == "defaultCollectionInterval" then self.settings.defaultCollectionInterval = value
                 elseif key == "spoilageEnabled" then self.settings.spoilageEnabled = value ~= false
                 elseif key == "contractsEnabled" then self.settings.contractsEnabled = value ~= false
-                elseif key == "saleMargin" then self.settings.saleMargin = value end
+                elseif key == "saleFeePer1000L" then self.settings.saleFeePer1000L = value end
             end,
         })
         bound = true

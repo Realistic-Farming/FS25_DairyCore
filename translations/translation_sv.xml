@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Mejeri&#10;&#10;Ett kort per ladugard pa din gard. Bladdra med , och . eller sidknapparna.&#10;&#10;Besattning nu ar mjolkbesattningen som star i ladugarden i dag, per ras. Mjolk i tank ar den lagrade mjolken per ras som gav den. Mjolk utan raspost forblir okand. En ny besattning bredvid gammal mjolk ar normalt.&#10;&#10;Forskamningsklocka: startar nar en hamtning registreras. Klockan star betyder inte startad, sa Farsk ar annu ingen lopande timer.&#10;&#10;Fodersjukdomsklocka: sjukt foder i lagret ger besattningen mykotoxin. Det avtar dag for dag. Sidtipset namnger ladugarden sa lange det varar.&#10;&#10;Lagrat foder: kvaliteten lases pa grodan vid skorden och blandas i gardens silor. Traget hamtar fran det lagret och mjolken foljer det. Ekologiskt betyder over 80% ekologisk andel. Vantar pa skordedata tills den forsta skorden ar registrerad." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Raser" />
         <text name="dairy_rf_pda_breed_next" text="Raser (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Mjölkförsäljningsavgift (per 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Kontor och rutt tar en avgift per liter." />
+        <text name="dc_guide_saleFee_02" text="Per 1000 L: 11 som standard, från 0 till 50." />
+        <text name="dc_guide_saleFee_03" text="Det är 0,011/L som standard, upp till 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Gamla procentvärden återställs till 11." />
+        <text name="dc_guide_saleFee_05" text="Aktiva dynamiska priser gäller; annars" />
+        <text name="dc_guide_saleFee_06" text="används baspriset, inte ett stationspris." />
+        <text name="dc_guide_saleFee_07" text="Avgift vid eller över priset: mjölken säljs inte." />
+        <text name="dc_guide_saleFee_08" text="En nekad runda använder ändå sin tur." />
+        <text name="dc_guide_saleFee_09" text="Åldrandet fortsätter; se serverloggen." />
     </texts>
 </l10n>

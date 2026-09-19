@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="酪農&#10;&#10;農場中每座畜舍一張卡片。用 , 與 . 鍵或翻頁按鈕換頁。&#10;&#10;目前牛群是今日在畜舍中的擠乳牛群，依品種顯示。槽中牛乳是貯存的牛乳，依生產它的品種顯示。沒有品種記錄的牛乳維持未知。舊牛乳旁有新牛群是正常的。&#10;&#10;腐壞時鐘: 記錄一次收取後開始。時鐘停止表示尚未開始，所以新鮮還不是運作中的計時器。&#10;&#10;飼料病害時鐘: 存量中的帶病飼料會讓牛群沾上黴菌毒素。它逐日減少。持續期間頁面提示會點名該畜舍。&#10;&#10;貯存飼料: 品質在收割時鎖定於作物上，並在農場的青貯槽中混合。飼槽取自該存量，牛乳隨之而變。有機表示有機占比超過 80%。在第一次收割記錄前顯示等待收成資料。" />
         <text name="dairy_rf_pda_breed_prev" text="&lt; 品種" />
         <text name="dairy_rf_pda_breed_next" text="品種 (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="牛奶銷售費用 (每1000公升)" />
+        <text name="dc_guide_saleFee_01" text="辦公室與巡迴每公升收取手續費。" />
+        <text name="dc_guide_saleFee_02" text="每1000公升：預設11，範圍0至50。" />
+        <text name="dc_guide_saleFee_03" text="即預設0.011/公升，最高0.05/公升。" />
+        <text name="dc_guide_saleFee_04" text="舊的百分比設定會重設為11。" />
+        <text name="dc_guide_saleFee_05" text="採用啟用中的動態價格；否則" />
+        <text name="dc_guide_saleFee_06" text="使用基礎價格，而非收購站報價。" />
+        <text name="dc_guide_saleFee_07" text="費用達到或超過價格時牛奶不會售出。" />
+        <text name="dc_guide_saleFee_08" text="被拒絕的巡迴仍會用掉排定時段。" />
+        <text name="dc_guide_saleFee_09" text="陳化照常進行；請查看伺服器日誌。" />
     </texts>
 </l10n>

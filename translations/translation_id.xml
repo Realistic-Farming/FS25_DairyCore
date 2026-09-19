@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Peternakan susu&#10;&#10;Satu kartu per kandang di pertanianmu. Ganti halaman dengan , dan . atau tombol halaman.&#10;&#10;Kawanan sekarang adalah kawanan perah yang ada di kandang hari ini, per ras. Susu di tangki adalah susu tersimpan menurut ras yang menghasilkannya. Susu tanpa catatan ras tetap tidak diketahui. Kawanan baru di samping susu lama itu normal.&#10;&#10;Jam pembusukan: mulai saat pengambilan tercatat. Jam berhenti berarti belum mulai, jadi Segar belum menjadi pewaktu yang berjalan.&#10;&#10;Jam penyakit pakan: pakan berpenyakit di persediaan menaruh mikotoksin pada kawanan. Turun hari demi hari. Petunjuk halaman menyebut kandangnya selama masih berlangsung.&#10;&#10;Pakan tersimpan: kualitas terkunci pada tanaman saat dipotong dan dicampur di silo pertanian. Palung mengambil dari persediaan itu dan susu mengikutinya. Organik berarti bagian organik di atas 80%. Menunggu data panen sampai pemotongan pertama tercatat." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Ras" />
         <text name="dairy_rf_pda_breed_next" text="Ras (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Biaya penjualan susu (per 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Kantor dan rute mengambil biaya per liter." />
+        <text name="dc_guide_saleFee_02" text="Per 1000 L: bawaan 11, dari 0 sampai 50." />
+        <text name="dc_guide_saleFee_03" text="Yaitu 0,011/L bawaan, hingga 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Pengaturan persen lama kembali ke 11." />
+        <text name="dc_guide_saleFee_05" text="Harga dinamis aktif berlaku; jika tidak" />
+        <text name="dc_guide_saleFee_06" text="harga dasar dipakai, bukan harga stasiun." />
+        <text name="dc_guide_saleFee_07" text="Biaya setara atau di atas harga: susu tidak terjual." />
+        <text name="dc_guide_saleFee_08" text="Ronde yang ditolak tetap memakai jadwalnya." />
+        <text name="dc_guide_saleFee_09" text="Penuaan tetap berjalan; lihat log server." />
     </texts>
 </l10n>

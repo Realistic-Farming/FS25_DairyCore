@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Latte&#10;&#10;Una scheda per ogni stalla della tua fattoria. Cambia pagina con , e . o con i pulsanti pagina.&#10;&#10;Mandria ora e la mandria da latte oggi in stalla, per razza. Latte in cisterna e il latte stoccato per le razze che lo hanno prodotto. Il latte senza dato di razza resta sconosciuto. Una mandria nuova accanto a latte vecchio e normale.&#10;&#10;Orologio del deperimento: parte quando viene registrata una raccolta. Orologio fermo significa non partito, quindi Fresco non e ancora un timer attivo.&#10;&#10;Orologio della malattia del foraggio: foraggio malato nella scorta mette micotossina sulla mandria. Cala giorno dopo giorno. Il suggerimento di pagina nomina la stalla finche dura.&#10;&#10;Foraggio stoccato: la qualita si fissa sulla coltura al taglio e si mescola nei silos della fattoria. La mangiatoia attinge a quella scorta e il latte la segue. Biologico significa oltre l'80% di quota biologica. In attesa dei dati di raccolta fino al primo taglio registrato." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Razze" />
         <text name="dairy_rf_pda_breed_next" text="Razze (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Commissione vendita latte (per 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Ufficio e turno applicano una tariffa al litro." />
+        <text name="dc_guide_saleFee_02" text="Per 1000 L: 11 predefinito, da 0 a 50." />
+        <text name="dc_guide_saleFee_03" text="Cioè 0,011/L di base, fino a 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Le vecchie percentuali tornano a 11." />
+        <text name="dc_guide_saleFee_05" text="Si applicano i prezzi dinamici attivi; altrimenti" />
+        <text name="dc_guide_saleFee_06" text="si usa il prezzo base, non quello di una stazione." />
+        <text name="dc_guide_saleFee_07" text="Tariffa pari o oltre il prezzo: latte invenduto." />
+        <text name="dc_guide_saleFee_08" text="Un giro rifiutato usa comunque il suo turno." />
+        <text name="dc_guide_saleFee_09" text="L'invecchiamento continua; vedi il log del server." />
     </texts>
 </l10n>

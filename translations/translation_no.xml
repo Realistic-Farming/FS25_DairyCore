@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Meieri&#10;&#10;Ett kort per fjos pa garden din. Bla med , og . eller sideknappene.&#10;&#10;Besetning na er melkebesetningen som star i fjoset i dag, etter rase. Melk i tank er den lagrede melken etter rasene som ga den. Melk uten raseoppforing forblir ukjent. En ny besetning ved siden av gammel melk er normalt.&#10;&#10;Forderv-klokke: starter nar en henting registreres. Klokken star betyr ikke startet, sa Fersk er enna ikke en lopende timer.&#10;&#10;Forsykdom-klokke: sykt for i lageret gir besetningen mykotoksin. Det avtar dag for dag. Sidehintet navngir fjoset sa lenge det varer.&#10;&#10;Lagret for: kvaliteten lases pa avlingen ved slatten og blandes i gardens siloer. Trauet henter fra det lageret, og melken folger det. Okologisk betyr over 80% okologisk andel. Venter pa innhostingsdata til forste slatt er registrert." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Raser" />
         <text name="dairy_rf_pda_breed_next" text="Raser (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Melkesalgsgebyr (per 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Kontor og rute tar et gebyr per liter." />
+        <text name="dc_guide_saleFee_02" text="Per 1000 L: 11 som standard, fra 0 til 50." />
+        <text name="dc_guide_saleFee_03" text="Det er 0,011/L som standard, opptil 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Gamle prosentverdier settes til 11." />
+        <text name="dc_guide_saleFee_05" text="Aktive dynamiske priser gjelder; ellers" />
+        <text name="dc_guide_saleFee_06" text="brukes grunnprisen, ikke en stasjonspris." />
+        <text name="dc_guide_saleFee_07" text="Gebyr på eller over prisen: melken blir usolgt." />
+        <text name="dc_guide_saleFee_08" text="En avvist runde bruker likevel sin tur." />
+        <text name="dc_guide_saleFee_09" text="Aldring fortsetter; se serverloggen." />
     </texts>
 </l10n>

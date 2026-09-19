@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Tejgazdasag&#10;&#10;Istallonkent egy kartya a farmodon. Lapozz a , es . billentyuvel vagy a lapozoval.&#10;&#10;Allomany most: a ma az istalloban allo fejoallomany, fajtank szerint. Tej a tartalyban: a tarolt tej a fajtak szerint, amelyek adtak. A fajtabejegyzes nelkuli tej ismeretlen marad. Uj allomany regi tej mellett normalis.&#10;&#10;Romlasi ora: akkor indul, amikor egy begyujtest rogzitenek. Az ora all azt jelenti, nem indult el, igy a Friss meg nem futo idozito.&#10;&#10;Takarmanybetegseg ora: a keszletben levo beteg takarmany mikotoxint tesz az allomanyra. Naprol napra csokken. Az oldal tippje megnevezi az istallot, amig tart.&#10;&#10;Tarolt takarmany: a minoseg a kaszalaskor rogzul a novenyen, es a farm siloiban keveredik. A valyu ebbol a keszletbol merit, a tej pedig koveti. A bio 80% feletti bio aranyt jelent. Varakozas a betakaritasi adatokra az elso rogzitett kaszalasig." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Fajtak" />
         <text name="dairy_rf_pda_breed_next" text="Fajtak (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Tejeladási díj (1000 literenként)" />
+        <text name="dc_guide_saleFee_01" text="Az iroda és a kör literenkénti díjat számít." />
+        <text name="dc_guide_saleFee_02" text="1000 literenként: alap 11, 0-tól 50-ig." />
+        <text name="dc_guide_saleFee_03" text="Ez alapból 0,011/l, legfeljebb 0,05/l." />
+        <text name="dc_guide_saleFee_04" text="A régi százalékos értékek 11-re állnak." />
+        <text name="dc_guide_saleFee_05" text="Az aktív dinamikus árak érvényesek; egyébként" />
+        <text name="dc_guide_saleFee_06" text="az alapár számít, nem az átvevő ára." />
+        <text name="dc_guide_saleFee_07" text="Díj az ár szintjén: a tej eladatlan marad." />
+        <text name="dc_guide_saleFee_08" text="Az elutasított kör is elhasználja az idejét." />
+        <text name="dc_guide_saleFee_09" text="Az öregedés folytatódik; lásd a szervernaplót." />
     </texts>
 </l10n>

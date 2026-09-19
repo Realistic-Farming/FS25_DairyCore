@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Mejeri&#10;&#10;Et kort pr. stald pa din gard. Blad med , og . eller sideknapperne.&#10;&#10;Besaetning nu er malkebesaetningen, der star i stalden i dag, efter race. Maelk i tank er den lagrede maelk efter de racer, der gav den. Maelk uden racepost forbliver ukendt. En ny besaetning ved siden af gammel maelk er normalt.&#10;&#10;Fordaervelses-ur: starter, nar en afhentning registreres. Uret star stille betyder ikke startet, sa Frisk er endnu ikke en korende timer.&#10;&#10;Fodersygdoms-ur: sygt foder i lageret giver besaetningen mykotoksin. Det aftager dag for dag. Sidetippet navngiver stalden, sa laenge det varer.&#10;&#10;Lagret foder: kvaliteten lases pa afgroden ved slaet og blandes i gardens siloer. Truget henter fra det lager, og maelken folger det. Okologisk betyder over 80% okologisk andel. Venter pa hostdata, indtil den forste slaet er registreret." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Racer" />
         <text name="dairy_rf_pda_breed_next" text="Racer (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Mælkesalgsgebyr (pr. 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Kontor og rute tager et gebyr pr. liter." />
+        <text name="dc_guide_saleFee_02" text="Pr. 1000 L: 11 som standard, fra 0 til 50." />
+        <text name="dc_guide_saleFee_03" text="Det er 0,011/L som standard, op til 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Gamle procentsatser sættes til 11." />
+        <text name="dc_guide_saleFee_05" text="Aktive dynamiske priser gælder; ellers" />
+        <text name="dc_guide_saleFee_06" text="bruges basisprisen, ikke en stationspris." />
+        <text name="dc_guide_saleFee_07" text="Gebyr på eller over prisen: mælken sælges ikke." />
+        <text name="dc_guide_saleFee_08" text="En afvist runde bruger alligevel sin tur." />
+        <text name="dc_guide_saleFee_09" text="Ældning fortsætter; se serverloggen." />
     </texts>
 </l10n>

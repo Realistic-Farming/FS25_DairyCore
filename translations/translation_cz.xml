@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Mlekarna&#10;&#10;Jedna karta na kazdy chlev na tve farme. Stranky prepinas , a . nebo tlacitky stranek.&#10;&#10;Stado ted je dojne stado, ktere dnes stoji v chleve, podle plemen. Mleko v tanku je uskladnene mleko podle plemen, ktera ho dala. Mleko bez zaznamu plemene zustava nezname. Nove stado vedle stareho mleka je normalni.&#10;&#10;Hodiny kazeni: spousti se, kdyz je zaznamenan svoz. Hodiny stoji znamena nespusteno, takze Cerstve zatim neni bezici casovac.&#10;&#10;Hodiny nemoci krmiva: nemocne krmivo v zasobe dava stadu mykotoxin. Klesa den po dni. Napoveda stranky jmenuje chlev, dokud to trva.&#10;&#10;Uskladnene krmivo: kvalita se zafixuje na plodine pri seci a smicha se v silech farmy. Zlab cerpa z teto zasoby a mleko ji nasleduje. Bio znamena pres 80% bio podilu. Cekam na data ze sklizne do prvni zaznamenane sece." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Plemena" />
         <text name="dairy_rf_pda_breed_next" text="Plemena (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Poplatek za prodej mléka (na 1000 l)" />
+        <text name="dc_guide_saleFee_01" text="Kancelář a svoz účtují poplatek za litr." />
+        <text name="dc_guide_saleFee_02" text="Na 1000 l: výchozí 11, od 0 do 50." />
+        <text name="dc_guide_saleFee_03" text="To je výchozích 0,011/l, až 0,05/l." />
+        <text name="dc_guide_saleFee_04" text="Stará procenta se vrací na 11." />
+        <text name="dc_guide_saleFee_05" text="Platí aktivní dynamické ceny; jinak" />
+        <text name="dc_guide_saleFee_06" text="se použije základní cena, ne cena výkupu." />
+        <text name="dc_guide_saleFee_07" text="Poplatek na úrovni ceny: mléko neprodáno." />
+        <text name="dc_guide_saleFee_08" text="Odmítnutý svoz stejně spotřebuje svůj termín." />
+        <text name="dc_guide_saleFee_09" text="Stárnutí pokračuje; viz log serveru." />
     </texts>
 </l10n>
