@@ -2447,56 +2447,233 @@ function DairyCoreManager:getBarnRows()
 end
 
 -- =========================================================
--- DC-19: the co-op herd advisory (read-only, gated by the ProStaff flag)
+-- DC-19 / RSF-F166: the co-op herd advisory (read-only, gated by the ProStaff flag)
 -- =========================================================
 
--- The gate flag: has the farm's co-op reached the level that publishes the herd
--- advisory? Read through the shared ProStaff accessor with NO farmId, deliberately
--- inheriting the farmId-blind read the DC-6/DC-7 read architecture fixes once (the
--- same class as F75; a local patch here would leave two patches for one bug). The
--- flag's level gate lives in the ProStaffCoOp callback itself (false below L12);
--- DairyCore never checks a level. Neutral-false when ProStaffCoOp is absent, so the
--- advisory stays off until the flag exists. farmId is accepted for the published
--- getter contract and matches the ProStaff flag's own signature; the read itself is
--- farmId-blind by design.
+-- RSF-F166: the farm id admission that every advisory entry point runs FIRST.
+-- Returns the id when it is a real, usable farm; nil otherwise.
+--
+-- NIL IS THE DANGEROUS CASE AND THE REASON THIS EXISTS. _proStaff builds
+-- `local args = {...}` and calls `unpack(args)`, so a nil farmId truncates the
+-- call to ZERO arguments. ProStaff's _resolveFarm then treats "no argument" as
+-- "ask the mission", and the mission answers farm 1. So a nil does not fail
+-- closed on the provider side; it silently reports FARM 1's entitlement to
+-- whoever asked. It has to be rejected here, before the provider is asked, and
+-- forwarding a nil in the hope that the far side refuses it is not a guard.
+--
+-- _isRealFarmId is necessary but NOT sufficient. It tests `type ~= "number" or
+-- <= 0` plus the three reserved ids, which lets NaN, the infinities and
+-- non-integers through: `NaN <= 0` is false, and NaN is equal to none of the
+-- reserved ids. Each of those does fail closed further down, but for an
+-- unrelated reason (it misses `self.farms[id]` on the ProStaff side and lands on
+-- level 0), and a guard that works by coincidence is not a guard either. They
+-- are rejected here on their own terms.
+--
+-- _isRealFarmId itself is deliberately NOT changed: it has other callers, and
+-- widening it for this feature would be a silent behaviour change across the
+-- manager for the sake of one getter.
+function DairyCoreManager:_advisoryFarmId(farmId)
+    if type(farmId) ~= "number" then return nil end
+    if farmId ~= farmId then return nil end                                -- NaN
+    if farmId == math.huge or farmId == -math.huge then return nil end
+    if math.floor(farmId) ~= farmId then return nil end
+    if not self:_isRealFarmId(farmId) then return nil end
+    return farmId
+end
+
+-- The gate flag: has this farm's co-op reached the level that publishes the herd
+-- advisory?
+--
+-- RSF-F166 made this farm-EXPLICIT. It used to call _proStaff with no farmId at
+-- all, inheriting the farm-blind read as a deliberate choice; that choice is what
+-- the nil-to-farm-1 fallback above turns into a disclosure, so the argument is now
+-- admitted and forwarded. The level gate still lives entirely in ProStaffCoOp
+-- (false below L12) and DairyCore still never looks at a level.
+--
+-- Neutral-false on every absence: no manager, settings off, provider missing,
+-- method missing, a throwing provider, or any return that is not boolean true.
+-- "Not false" is not entitlement.
 function DairyCoreManager:hasHerdAdvisory(farmId)
-    return self:_proStaff("hasHerdAdvisory", false)
+    if self.disabled then return false end
+    if self.settings == nil or self.settings.enabled == false then return false end
+    local id = self:_advisoryFarmId(farmId)
+    if id == nil then return false end
+    return self:_proStaff("hasHerdAdvisory", false, id) == true
 end
 
--- The public advisory getter: a list of advisory strings, one per barn of the farm
--- that needs attention, or an empty list when the gate does not apply. Advisory-only:
--- formats state that already exists (herdHealthScore and the spoilage stage), NEVER
--- writes state, moves money or applies economics. farmId filters to that farm's barns;
--- nil returns every barn (the optional-farm convention the ProStaff getters use).
+-- The public advisory getter: an array of fresh row tables, one per admitted barn
+-- of the requested farm that needs attention, or an empty array.
+--
+-- Each row is
+--   { barnId = <stable barn id>, farmId = <requested real farm>,
+--     label  = <locally resolved barn name>, reasons = { "HEALTH_ATTENTION", ... } }
+-- in stable barnId order, with the reasons array in health-then-milk order.
+--
+-- RSF-F166 CHANGED THIS RETURN TYPE from English sentences to rows, and removed
+-- the nil/all-barn route. The old signature accepted nil and then walked EVERY
+-- barn on the map, and separately admitted any barn whose own farmId was nil for
+-- any requested farm. Either path could name another farm's barn to a player. A
+-- fleet-wide sweep of every FS25_* repo on its development branch finds no caller
+-- of this getter outside DairyCore, so nothing outside breaks; the Dairy bench is
+-- updated with it.
+--
+-- Advisory-only: this reads. It creates no barn, mutates no record, starts no
+-- discovery and repairs no ownership. A temporary omission is safer than naming
+-- another farm's barn, and an empty result NEVER means the herd is healthy.
 function DairyCoreManager:getHerdAdvisories(farmId)
-    if not self:hasHerdAdvisory(farmId) then return {} end
-    local out = {}
+    local id = self:_advisoryFarmId(farmId)
+    if id == nil then return {} end
+    if not self:hasHerdAdvisory(id) then return {} end
+
+    -- Resolved ONCE per read, and its absence is announced rather than
+    -- absorbed. See _advisoryPlaceableSystem for why that distinction matters.
+    local ps = self:_advisoryPlaceableSystem()
+    if ps == nil then return {} end
+
+    local isServer = self:_isServer()
+    local rows = {}
     for barnId, barn in pairs(self.barns) do
-        if farmId == nil or barn.farmId == nil or barn.farmId == farmId then
-            local sentence = self:_herdAdvisoryForBarn(barn)
-            if sentence ~= nil then out[#out + 1] = sentence end
-        end
+        local row = self:_herdAdvisoryRow(barnId, barn, id, isServer, ps)
+        if row ~= nil then rows[#rows + 1] = row end
     end
-    return out
+    table.sort(rows, function(a, b) return tostring(a.barnId) < tostring(b.barnId) end)
+    return rows
 end
 
--- The advisory sentence for one barn, or nil when the barn needs no attention.
--- EITHER condition qualifies: herd health at or below the needs-attention cutoff
--- (the Standard tier's minScore, reused from QUALITY.TIERS so the language cannot
--- drift from what _qualityTierForScore / the Financial Cockpit show), or a spoilage
--- stage that is Ageing or worse (DC-8 lifecycle). Both reasons join into one sentence.
-function DairyCoreManager:_herdAdvisoryForBarn(barn)
+-- The admitted row for one barn, or nil when the barn is not admissible or needs
+-- no attention. Every rejection below is a separate reason and none of them falls
+-- back to a weaker check.
+--
+-- ADMISSION, in order:
+--   1. a real record with a stable id that is not a dead probe;
+--   2. the barn's own farmId EQUALS the requested farm (no nil-owner route);
+--   3. facts we are allowed to trust: server, or a client whose wire arrived;
+--   4. a placeable that resolves RIGHT NOW for that barn id;
+--   5. a protected getOwnerFarmId() on that placeable equal to the same farm.
+--
+-- 3 is the one worth naming. A client barn record begins at herdHealthScore 60
+-- and the attention cutoff is an inclusive 60, so an unreceived default would be
+-- reported as an observation of a herd in trouble. _wireReceived is what stops
+-- that; it is a knowledge-state gate, not a freshness promise, and it does not
+-- prove the snapshot is current.
+--
+-- 5 is not redundant with 2. The stored farmId can lag native ownership after a
+-- sale or a farm merge, so the cached row can still match a farm that no longer
+-- owns the building. The placeable names its own owner, and where the two
+-- disagree the barn is omitted rather than resolved in either direction.
+function DairyCoreManager:_herdAdvisoryRow(barnId, barn, farmId, isServer, ps)
+    if type(barn) ~= "table" then return nil end
+    if barnId == nil or barn._probeDead then return nil end
+    if barn.farmId ~= farmId then return nil end
+    if not isServer and barn._wireReceived ~= true then return nil end
+
+    local placeable = self:_advisoryPlaceable(barnId, ps)
+    if placeable == nil then return nil end
+    if type(placeable.getOwnerFarmId) ~= "function" then return nil end
+    local ok, owner = pcall(function() return placeable:getOwnerFarmId() end)
+    if not ok or owner ~= farmId then return nil end
+
     local reasons = {}
-    if (barn.herdHealthScore or 0) <= self:_herdAdvisoryCutoff() then
-        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.HEALTH
+    local score = barn.herdHealthScore
+    if type(score) == "number" and score == score
+        and score ~= math.huge and score ~= -math.huge
+        and score <= self:_herdAdvisoryCutoff() then
+        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.REASONS.HEALTH
     end
-    local stage = self:_normalizeSpoilageKey(barn.spoilageStatus)
-    if DairyConstants.HERD_ADVISORY.SPOILAGE_STAGES[stage] then
-        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.SPOILAGE
+    if DairyConstants.HERD_ADVISORY.SPOILAGE_STAGES[
+            self:_normalizeSpoilageKey(barn.spoilageStatus)] then
+        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.REASONS.MILK
     end
     if #reasons == 0 then return nil end
-    return string.format(DairyConstants.HERD_ADVISORY.SENTENCE, tostring(barn.barnId),
-        table.concat(reasons, DairyConstants.HERD_ADVISORY.JOIN))
+
+    -- A fresh table every call. The caller must never hold a writable reference
+    -- into the simulation, and the reasons array is its own copy for the same
+    -- reason.
+    return {
+        barnId  = barnId,
+        farmId  = farmId,
+        label   = self:_advisoryBarnLabel(barnId, placeable),
+        reasons = reasons,
+    }
+end
+
+-- The placeable system, or nil ONCE THE ABSENCE HAS BEEN ANNOUNCED.
+--
+-- THIS IS THE ONE PRECONDITION THAT FAILS GLOBALLY RATHER THAN PER BARN, and
+-- that asymmetry is why it gets a log line when the other four admission rules
+-- do not. A barn excluded by its farm, its probe, its wire or its native owner
+-- is ordinary operation. But if the placeable system is missing, or
+-- getPlaceableByUniqueId is not a function, then EVERY barn fails and the
+-- advisory is permanently empty, which is indistinguishable from "no barn needs
+-- attention" to anyone reading the result. That is a feature unable to run,
+-- wearing operation's output.
+--
+-- It is not hypothetical: getPlaceableByUniqueId is decompiled evidence rather
+-- than an official signature, so a game update removing or renaming it silently
+-- turns this feature off. Once per session, in log.txt, is what makes that
+-- diagnosable instead of a support thread about an advisory that never appears.
+function DairyCoreManager:_advisoryPlaceableSystem()
+    local ps = g_currentMission ~= nil and g_currentMission.placeableSystem or nil
+    if ps ~= nil and type(ps.getPlaceableByUniqueId) == "function" then return ps end
+    if not self._advisoryLookupWarned then
+        self._advisoryLookupWarned = true
+        DCLogger.warning("Herd advisory stood down: %s. Every barn fails the "
+            .. "native owner check, so the advisory is permanently EMPTY. That is "
+            .. "not the same as no barn needing attention.",
+            ps == nil and "no placeable system"
+                      or "placeableSystem:getPlaceableByUniqueId is not a function")
+    end
+    return nil
+end
+
+-- The placeable currently registered for this barn id, or nil.
+--
+-- Deliberately the LOOKUP rather than barn._placeable: admission needs "resolves
+-- right now", and a cached handle can outlive the building it pointed at. The
+-- engine call is protected because getPlaceableByUniqueId is decompiled evidence
+-- rather than an official signature.
+--
+-- A nil here is an ordinary per-barn exclusion: this barn has no live placeable.
+-- The system-level absence is _advisoryPlaceableSystem's, and it is announced.
+function DairyCoreManager:_advisoryPlaceable(barnId, ps)
+    if ps == nil then return nil end
+    local ok, p = pcall(function() return ps:getPlaceableByUniqueId(barnId) end)
+    if not ok or type(p) ~= "table" then return nil end
+    return p
+end
+
+-- The barn's display name, resolved on the viewing machine.
+--
+-- This is an IDENTITY string, never advisory prose: it is whatever the player
+-- calls that building, passed through as opaque text. It is never used as a
+-- format string, so a barn named "100%" or "Barn: North" cannot corrupt a view's
+-- formatting, and a view must keep treating it as a literal argument.
+--
+-- The ladder mirrors DairyRfPdaGuest's barnLabel deliberately, so the same barn
+-- reads the same in both surfaces, minus that one's first rung: it starts from
+-- name fields on a published ROW, and barn records in the manager carry none.
+-- The placeable passed in is the one admission already resolved, so this makes
+-- no second engine lookup.
+function DairyCoreManager:_advisoryBarnLabel(barnId, placeable)
+    if placeable ~= nil then
+        if type(placeable.getName) == "function" then
+            local ok, n = pcall(function() return placeable:getName() end)
+            if ok and type(n) == "string" and n ~= "" then return n end
+        end
+        if type(placeable.nameCustom) == "string" and placeable.nameCustom ~= "" then
+            return placeable.nameCustom
+        end
+        if type(placeable.nameL10n) == "string" and placeable.nameL10n ~= "" then
+            return placeable.nameL10n
+        end
+        local si = placeable.storeItem
+        if si ~= nil and type(si.name) == "string" and si.name ~= "" then
+            return si.name
+        end
+    end
+    local id = tostring(barnId or "?")
+    if #id > 24 then return id:sub(1, 22) .. "..." end
+    return id
 end
 
 -- The needs-attention health cutoff: the minScore of the tier named by

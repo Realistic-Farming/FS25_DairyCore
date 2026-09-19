@@ -22,6 +22,10 @@
   herd-advisory state computation (health at/below the Standard tier boundary, or spoilage
   stage Ageing/worse). Advisory-only: no write, no money, no economics. 28 assertions in
   `dc19_coop_herd_advisory_test.lua`. Branch `feat/DC-19-coop-herd-advisory` pushed; no PR.
+- [x] Herd advisory repair (RSF-F166, **producer half**, 2026-09-19): farm-id admission before
+  the provider call, the nil/all-barn route removed, barn admission against the native owner,
+  and row tables of semantic codes in place of English sentences. 99 assertions in
+  `dc19_coop_herd_advisory_test.lua`, 10 mutations killed. Wizard's view/Tablet/door half remains.
 - [x] Contract archetypes + sovereign floor anchor (DC-16, 2026-08-14): two new
   contract rows in `CONTRACTS.TYPES` (spot_run 14d/1.15x, standing_order 60d/0.92x),
   both gated by `prostaffLevel` like the shipped standard row; the settlement floor
