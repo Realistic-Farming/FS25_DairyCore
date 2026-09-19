@@ -58,6 +58,16 @@ local function placeable(over)
   return merge(p, over)
 end
 
+-- The stand-down line is part of the contract, so it is captured rather than
+-- swallowed. An empty result and an announced stand-down look identical from the
+-- return value, which is the entire reason the line exists.
+local warnings = {}
+local realWarning = DCLogger.warning
+DCLogger.warning = function(msg, ...)
+  local ok, formatted = pcall(string.format, msg, ...)
+  warnings[#warnings + 1] = ok and formatted or tostring(msg)
+end
+
 local function newManager()
   local m = DairyCoreManager.new()
   m.disabled = false
@@ -487,5 +497,53 @@ T.ok("money is untouched",                 equalTables(g_currentMission.money, m
 T.eq("repeated reads discovered no barn",  (function()
   local n = 0 for _ in pairs(m8.barns) do n = n + 1 end return n
 end)(), 2)
+
+-- ==========================================================
+-- BAR 9: THE ONE PRECONDITION THAT FAILS GLOBALLY IS ANNOUNCED
+--
+-- Bob's MINOR on this PR. The other four admission rules exclude ONE barn each,
+-- which is ordinary operation. If the placeable system is missing, or
+-- getPlaceableByUniqueId is not a function, EVERY barn fails and the advisory is
+-- permanently empty, which is indistinguishable from "no barn needs attention"
+-- to anyone reading the result. getPlaceableByUniqueId is decompiled evidence
+-- rather than an official signature, so this is a live risk, not a hypothetical.
+-- ==========================================================
+
+local realPs = g_currentMission.placeableSystem
+local m9 = newManager()
+setGate(true)
+placeables = {}
+addBarn(m9, "sick", { farmId = 1, herdHealthScore = 10 })
+
+-- The witness first: with the system present this barn DOES appear, so an empty
+-- result below is the stand-down and not the fixture.
+T.eq("the witness barn appears while the system is present",
+     joined(advisories(m9, 1)), "sick")
+
+warnings = {}
+g_currentMission.placeableSystem = nil
+T.eq("no placeable system yields no rows",  #advisories(m9, 1), 0)
+T.eq("and says so exactly once",            #warnings, 1)
+T.ok("the line names the stand-down",       warnings[1] ~= nil and
+     warnings[1]:match("stood down") ~= nil, warnings[1])
+T.ok("the line says EMPTY is not all-clear", warnings[1] ~= nil and
+     warnings[1]:match("not the same as no barn") ~= nil, warnings[1])
+
+-- Once per session, not once per read: a line on every read is noise nobody reads.
+advisories(m9, 1); advisories(m9, 1)
+T.eq("repeated reads do not repeat the line", #warnings, 1)
+
+-- The other failing shape: the system exists but the method does not.
+warnings = {}
+local m9b = newManager()
+g_currentMission.placeableSystem = { getPlaceableByUniqueId = "not a function" }
+addBarn(m9b, "sick", { farmId = 1, herdHealthScore = 10 })
+T.eq("a non-function lookup yields no rows", #advisories(m9b, 1), 0)
+T.eq("and says so once",                     #warnings, 1)
+T.ok("the line names the method",            warnings[1] ~= nil and
+     warnings[1]:match("getPlaceableByUniqueId") ~= nil, warnings[1])
+
+g_currentMission.placeableSystem = realPs
+DCLogger.warning = realWarning
 
 T.summary()

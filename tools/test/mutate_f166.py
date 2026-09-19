@@ -102,6 +102,25 @@ MUTATIONS = [
     "    -- sort removed", 1)],
   "rows come back in pairs() order, so the list reshuffles between reads and a "
   "view's selection lands on a different barn"),
+
+ ("M11-stand-down-is-silent", M,
+  [('    if not self._advisoryLookupWarned then',
+    '    if false and not self._advisoryLookupWarned then', 1)],
+  "the placeable system is missing and nothing says so, so a permanently empty "
+  "advisory is indistinguishable from no barn needing attention"),
+
+ ("M12-stand-down-repeats-every-read", M,
+  [("        self._advisoryLookupWarned = true",
+    "        -- latch removed", 1)],
+  "the stand-down line is written on every read, which is the shape people filter "
+  "out of a log and therefore stop seeing"),
+
+ ("M13-lookup-precondition-per-barn-again", M,
+  [("""    local ps = self:_advisoryPlaceableSystem()
+    if ps == nil then return {} end""",
+    "    local ps = g_currentMission ~= nil and g_currentMission.placeableSystem or nil", 1)],
+  "the global precondition is absorbed back into the per-barn path, where its "
+  "failure looks exactly like ordinary exclusion"),
 ]
 
 

@@ -2525,10 +2525,15 @@ function DairyCoreManager:getHerdAdvisories(farmId)
     if id == nil then return {} end
     if not self:hasHerdAdvisory(id) then return {} end
 
+    -- Resolved ONCE per read, and its absence is announced rather than
+    -- absorbed. See _advisoryPlaceableSystem for why that distinction matters.
+    local ps = self:_advisoryPlaceableSystem()
+    if ps == nil then return {} end
+
     local isServer = self:_isServer()
     local rows = {}
     for barnId, barn in pairs(self.barns) do
-        local row = self:_herdAdvisoryRow(barnId, barn, id, isServer)
+        local row = self:_herdAdvisoryRow(barnId, barn, id, isServer, ps)
         if row ~= nil then rows[#rows + 1] = row end
     end
     table.sort(rows, function(a, b) return tostring(a.barnId) < tostring(b.barnId) end)
@@ -2556,13 +2561,13 @@ end
 -- sale or a farm merge, so the cached row can still match a farm that no longer
 -- owns the building. The placeable names its own owner, and where the two
 -- disagree the barn is omitted rather than resolved in either direction.
-function DairyCoreManager:_herdAdvisoryRow(barnId, barn, farmId, isServer)
+function DairyCoreManager:_herdAdvisoryRow(barnId, barn, farmId, isServer, ps)
     if type(barn) ~= "table" then return nil end
     if barnId == nil or barn._probeDead then return nil end
     if barn.farmId ~= farmId then return nil end
     if not isServer and barn._wireReceived ~= true then return nil end
 
-    local placeable = self:_advisoryPlaceable(barnId)
+    local placeable = self:_advisoryPlaceable(barnId, ps)
     if placeable == nil then return nil end
     if type(placeable.getOwnerFarmId) ~= "function" then return nil end
     local ok, owner = pcall(function() return placeable:getOwnerFarmId() end)
@@ -2592,15 +2597,46 @@ function DairyCoreManager:_herdAdvisoryRow(barnId, barn, farmId, isServer)
     }
 end
 
+-- The placeable system, or nil ONCE THE ABSENCE HAS BEEN ANNOUNCED.
+--
+-- THIS IS THE ONE PRECONDITION THAT FAILS GLOBALLY RATHER THAN PER BARN, and
+-- that asymmetry is why it gets a log line when the other four admission rules
+-- do not. A barn excluded by its farm, its probe, its wire or its native owner
+-- is ordinary operation. But if the placeable system is missing, or
+-- getPlaceableByUniqueId is not a function, then EVERY barn fails and the
+-- advisory is permanently empty, which is indistinguishable from "no barn needs
+-- attention" to anyone reading the result. That is a feature unable to run,
+-- wearing operation's output.
+--
+-- It is not hypothetical: getPlaceableByUniqueId is decompiled evidence rather
+-- than an official signature, so a game update removing or renaming it silently
+-- turns this feature off. Once per session, in log.txt, is what makes that
+-- diagnosable instead of a support thread about an advisory that never appears.
+function DairyCoreManager:_advisoryPlaceableSystem()
+    local ps = g_currentMission ~= nil and g_currentMission.placeableSystem or nil
+    if ps ~= nil and type(ps.getPlaceableByUniqueId) == "function" then return ps end
+    if not self._advisoryLookupWarned then
+        self._advisoryLookupWarned = true
+        DCLogger.warning("Herd advisory stood down: %s. Every barn fails the "
+            .. "native owner check, so the advisory is permanently EMPTY. That is "
+            .. "not the same as no barn needing attention.",
+            ps == nil and "no placeable system"
+                      or "placeableSystem:getPlaceableByUniqueId is not a function")
+    end
+    return nil
+end
+
 -- The placeable currently registered for this barn id, or nil.
 --
 -- Deliberately the LOOKUP rather than barn._placeable: admission needs "resolves
 -- right now", and a cached handle can outlive the building it pointed at. The
 -- engine call is protected because getPlaceableByUniqueId is decompiled evidence
 -- rather than an official signature.
-function DairyCoreManager:_advisoryPlaceable(barnId)
-    local ps = g_currentMission ~= nil and g_currentMission.placeableSystem or nil
-    if ps == nil or type(ps.getPlaceableByUniqueId) ~= "function" then return nil end
+--
+-- A nil here is an ordinary per-barn exclusion: this barn has no live placeable.
+-- The system-level absence is _advisoryPlaceableSystem's, and it is announced.
+function DairyCoreManager:_advisoryPlaceable(barnId, ps)
+    if ps == nil then return nil end
     local ok, p = pcall(function() return ps:getPlaceableByUniqueId(barnId) end)
     if not ok or type(p) ~= "table" then return nil end
     return p
