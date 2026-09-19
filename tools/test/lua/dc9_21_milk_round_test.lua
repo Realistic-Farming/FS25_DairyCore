@@ -517,6 +517,37 @@ do
   T.eq("an over-ceiling setting clamps to 50 per 1000 L", lastIncome(), 95)
 end
 
+-- BAR: a non-finite setting falls back to the ratified default instead of reaching
+-- the comparison. spot <= fee is FALSE for a NaN, so without the guard the refusal
+-- would not fire and math.max(0, spot - fee) would floor the income to zero with the
+-- milk already gone, which is the exact defect this repair removes. The clamp alone
+-- happens to sanitise a NaN through math.min's argument order; this pins the
+-- behaviour rather than that accident. (Bob, PR #57 cold review.)
+do
+  asServer(true)
+  local mN = newManager()
+  local pN = makePlaceable(1000)
+  local bN = mN:_getOrCreateBarn("bN", 1, pN)
+  mN._markBarnsDirty = function() end
+  local nan = 0 / 0
+  T.ok("the fixture really holds a NaN", nan ~= nan, "0/0 did not produce a NaN here")
+  mN.settings.saleFeePer1000L = nan
+  g_currentMission.money = {}
+  local removedN, statusN = mN:_adminSellMilk(bN, 100, SRC.office, 2412, 100)
+  T.eq("a NaN setting does not suppress the sale", statusN, "ok")
+  T.eq("and the milk moves", removedN, 100)
+  T.eq("a NaN setting falls back to the ratified default fee", lastIncome(), 98)
+
+  local mI2 = newManager()
+  local pI2 = makePlaceable(1000)
+  local bI2 = mI2:_getOrCreateBarn("bI2", 1, pI2)
+  mI2._markBarnsDirty = function() end
+  mI2.settings.saleFeePer1000L = math.huge
+  g_currentMission.money = {}
+  mI2:_adminSellMilk(bI2, 100, SRC.office, 2412, 100)
+  T.eq("an infinite setting falls back to the ratified default fee", lastIncome(), 98)
+end
+
 -- BAR: THE REFUSAL, and that nothing moved. Fee exactly equal to the price.
 do
   asServer(true)

@@ -521,6 +521,14 @@ function DairyCoreManager:_milkSaleUnitPrice(fillType)
     -- Rung 2: DairyCore's existing fill-type base price. This is our own base rung, not
     -- a promise of parity with the selling station's effective price, and not a
     -- seasonal or quality-adjusted figure.
+    --
+    -- It accepts any number INCLUDING zero, deliberately, where rung 1 requires a
+    -- positive quote. The asymmetry is principled: rung 3's 1.0 is a last-resort
+    -- fabrication, so falling to it from a base we successfully read as zero would
+    -- convert "we know the price is zero" into "we pretend it is one", and then sell
+    -- at the pretended price. A real zero should reach the refusal, not be papered
+    -- over. Rung 1 rejects a non-positive quote because that is the provider saying
+    -- it has no opinion, which is different from a base price of zero.
     local base = nil
     pcall(function()
         local ftm = g_fillTypeManager
@@ -1038,8 +1046,18 @@ function DairyCoreManager:_adminSellMilk(barn, quantity, source, nowHours, monot
     -- The sale enforces its own declared type. A hub value arrives whole, but a
     -- standalone build, a console write or a direct assignment can put a fraction in
     -- self.settings, and that must not become a second fractional charge.
-    local feePer1000 = self.settings.saleFeePer1000L or DairyConstants.SALE.FEE_PER_1000L
-    feePer1000 = math.floor(tonumber(feePer1000) or DairyConstants.SALE.FEE_PER_1000L)
+    local raw = tonumber(self.settings.saleFeePer1000L)
+    -- A non-finite value must not reach the comparison. spot <= fee is FALSE for a
+    -- NaN, so the refusal would not fire, and math.max(0, spot - fee) would then
+    -- floor the income to zero with the milk already gone: exactly the defect this
+    -- repair removes, through the door this block exists to shut. The clamp below
+    -- does happen to sanitise a NaN, but only because math.min returns its first
+    -- argument when the comparison is false, so it is correct by argument order
+    -- rather than by design. That is a fragility to remove, not to document.
+    if raw == nil or raw ~= raw or raw == math.huge or raw == -math.huge then
+        raw = DairyConstants.SALE.FEE_PER_1000L
+    end
+    local feePer1000 = math.floor(raw)
     feePer1000 = math.max(DairyConstants.SALE.FEE_MIN_PER_1000L,
                           math.min(DairyConstants.SALE.FEE_MAX_PER_1000L, feePer1000))
     local fee = feePer1000 / DairyConstants.SALE.FEE_DIVISOR
