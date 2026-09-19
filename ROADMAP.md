@@ -42,6 +42,21 @@
   `dc19_coop_herd_advisory_test.lua`. **The ProStaff half remains:** the one-row
   `hasHerdAdvisory = 12` FLAGS row + the `ProStaffManager:hasHerdAdvisory` getter on the
   ProStaffCoOp side (SF-40 shape), and the ProStaffApp "Dairy & Logistics" render wiring.
+
+- [x] Herd advisory repair (RSF-F166, **DairyCore producer half**, 2026-09-19): the DC-19
+  getter above was reachable but not safe to show a player. `getHerdAdvisories(farmId)` now
+  RETURNS ROW TABLES, not sentences: `{ barnId, farmId, label, reasons }` with semantic
+  codes `HEALTH_ATTENTION` and `MILK_AGEING`, in stable barn-id order, health reason first.
+  Each view owns its own words in its own locale; `HERD_ADVISORY.SENTENCE/HEALTH/SPOILAGE/JOIN`
+  are gone. Both entry points now admit the farm id before asking the provider (a nil used to
+  truncate the `_proStaff` varargs call and report farm 1's entitlement), and the nil/all-barn
+  route is removed. Barn admission requires a live record, a farmId equal to the requested farm,
+  server or `_wireReceived` facts, a currently resolvable placeable and a native
+  `getOwnerFarmId()` that agrees. A missing or malformed health fact now produces no reason,
+  where it used to read as 0 and publish the worst possible observation. Bench: 99 assertions
+  in `dc19_coop_herd_advisory_test.lua`, 10 mutations killed in `tools/test/mutate_f166.py`.
+  **Wizard's half remains:** the Dairy module view, the FarmTablet consumer, `appText`'s
+  `literalText` bypass, the locale strings and the ten-host shared-door distribution.
 - [ ] FarmTablet Dairy tab / DairyRfPdaGuest consumption of the read model.
 - [ ] Contract economics confirmations (DC-10/DC-13): SDK per-cow yield curve, the
   conversion-chain hooks, the exact storage aggregate, the trough consumption trigger.

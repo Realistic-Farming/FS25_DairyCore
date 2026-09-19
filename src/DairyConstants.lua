@@ -24,14 +24,24 @@ DairyConstants.QUALITY = {
     },
 }
 
--- DC-19: the co-op herd advisory. A formatted read of state that already exists,
+-- DC-19 / RSF-F166: the co-op herd advisory. A read of state that already exists,
 -- gated by ProStaff's hasHerdAdvisory flag (L12). Advisory-only: it NEVER writes
 -- state, moves money or applies economics. The health cutoff REUSES a tier
 -- boundary from QUALITY.TIERS (by key) rather than inventing a number, so the
 -- advisory language cannot drift from what _qualityTierForScore / the Financial
 -- Cockpit already show. SPOILAGE_STAGES names the DC-8 lifecycle stages that
--- count as "Ageing or worse". The sentence and reason strings are dumb formatted
--- reads that live here, never in logic.
+-- count as "Ageing or worse".
+--
+-- RSF-F166 REPLACED THE SENTENCE STRINGS WITH REASON CODES. The producer used to
+-- format English here ("Barn %s: herd health trending down..."), which forced one
+-- mod's prose onto every consumer and could not be localized by the machine that
+-- displays it. It now emits semantic codes and each view owns its own words, in
+-- its own locale, on the viewer. That is why SENTENCE, HEALTH, SPOILAGE and JOIN
+-- are gone rather than merely unused: keeping them would leave a second, silent
+-- source of advisory wording for someone to reach for later.
+--
+-- The codes are the contract. They are part of the published row schema, so they
+-- are not free to rename: two views and their translation files key off them.
 DairyConstants.HERD_ADVISORY = {
     -- The tier whose minScore is the "needs attention" health cutoff. A barn at
     -- or below this boundary is flagged. Referenced by key so the value is the
@@ -41,10 +51,11 @@ DairyConstants.HERD_ADVISORY = {
     SPOILAGE_STAGES = {
         ageing = true, atrisk = true, condemned = true,
     },
-    SENTENCE = "Barn %s: %s",
-    HEALTH   = "herd health trending down, check feed quality",
-    SPOILAGE = "near spoilage risk, collection overdue",
-    JOIN     = "; ",
+    -- Semantic reason codes. Emitted in this order when both apply.
+    REASONS = {
+        HEALTH = "HEALTH_ATTENTION",
+        MILK   = "MILK_AGEING",
+    },
 }
 
 -- Time-based spoilage. Stages are keyed off in-game days since last collection,
