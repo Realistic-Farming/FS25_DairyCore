@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Leite&#10;&#10;Um cartao por estabulo da sua fazenda. Mude de pagina com , e . ou com o paginador.&#10;&#10;Rebanho agora e o rebanho leiteiro que esta no estabulo hoje, por raca. Leite no tanque e o leite armazenado pelas racas que o deram. Leite sem registro de raca fica desconhecido. Um rebanho novo ao lado de leite antigo e normal.&#10;&#10;Relogio de deterioracao: comeca quando uma coleta e registrada. Relogio parado significa nao iniciado, entao Fresco ainda nao e um temporizador rodando.&#10;&#10;Relogio de doenca da racao: racao doente na reserva poe micotoxina no rebanho. Cai dia a dia. A dica da pagina nomeia o estabulo enquanto durar.&#10;&#10;Racao armazenada: a qualidade e fixada na cultura no corte e misturada nos silos da fazenda. O cocho puxa dessa reserva e o leite a segue. Organica significa mais de 80% de parcela organica. Aguardando dados de colheita ate o primeiro corte registrado." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Racas" />
         <text name="dairy_rf_pda_breed_next" text="Racas (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Taxa de venda de leite (por 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Escritório e rota cobram uma taxa por litro." />
+        <text name="dc_guide_saleFee_02" text="Por 1000 L: padrão 11, de 0 a 50." />
+        <text name="dc_guide_saleFee_03" text="Ou seja 0,011/L no padrão, até 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="As porcentagens antigas voltam para 11." />
+        <text name="dc_guide_saleFee_05" text="Preços dinâmicos ativos se aplicam; senão" />
+        <text name="dc_guide_saleFee_06" text="usa-se o preço base, não o de uma estação." />
+        <text name="dc_guide_saleFee_07" text="Taxa igual ou acima do preço: leite não vendido." />
+        <text name="dc_guide_saleFee_08" text="Uma rodada recusada ainda usa seu horário." />
+        <text name="dc_guide_saleFee_09" text="O envelhecimento continua; veja o log." />
     </texts>
 </l10n>

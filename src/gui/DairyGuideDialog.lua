@@ -5,7 +5,36 @@
 -- guide, in its own mod, opened from the shared Help footer through this guest's onOpenHelp. The
 -- chrome is SoilGuideDialog's so all of them read as one family; only the words differ.
 -- Rows are { t = "H" | "B" | "S" | "COL", v = "text" }: header, body, spacer, column break.
+-- RSF-F216: a row may also carry key = "dc_...", which is resolved at render time with v
+-- as the readable English fallback. Only the nine sale-fee rows use it today.
 -- =========================================================
+
+-- This dialog's own translation lookup, used only for the sale-fee rows. Same shape
+-- DairyRfPdaGuest.lua:33-50 uses: the mod environment's i18n with g_i18n as a
+-- fallback, pcall getText, and reject a key echo, a $l10n_ echo or a Missing marker.
+-- Deliberately a local four-liner rather than a new shared helper, and deliberately
+-- not imported into the manager, which carries its own copy: that is how this mod
+-- already does it.
+local DC_GUIDE_MOD_NAME = (DairyCoreModName or g_currentModName or "FS25_DairyCore")
+
+local function tr(key, fallback)
+    local modEnv = g_modEnvironments and g_modEnvironments[DC_GUIDE_MOD_NAME]
+    local i18n = (modEnv and modEnv.i18n) or g_i18n
+    if i18n then
+        local ok, text = pcall(function() return i18n:getText(key) end)
+        if ok and type(text) == "string" and text ~= "" then
+            local lower = text:lower()
+            if lower ~= tostring(key):lower()
+                and text ~= ("$l10n_" .. key)
+                and not lower:find("^missing%s")
+                and not lower:find("^missing_")
+            then
+                return text
+            end
+        end
+    end
+    return fallback or key
+end
 
 ---@class DairyGuideDialog
 DairyGuideDialog = DairyGuideDialog or {}
@@ -231,10 +260,18 @@ DairyGuideDialog.PAGE5 = {
     { t="B", v="Dairy Contracts turns the dairy contract" },
     { t="B", v="machinery on or off." },
     { t="COL", v="" },
-    { t="B", v="Milk Sale Margin is the cut taken off the" },
-    { t="B", v="spot price on an administrative milk sale." },
-    { t="B", v="It runs from none up to a quarter and" },
-    { t="B", v="starts at one twentieth." },
+    -- RSF-F216. Only these nine rows carry a key; the rest of the guide is
+    -- unconverted and stays that way. row.v keeps a readable English fallback so a
+    -- missing key or a missing mod environment cannot put a raw key on the screen.
+    { t="B", key="dc_guide_saleFee_01", v="Office and rota take a handling fee per litre." },
+    { t="B", key="dc_guide_saleFee_02", v="Set per 1000 L: 11 by default, from 0 to 50." },
+    { t="B", key="dc_guide_saleFee_03", v="That is 0.011/L by default, up to 0.05/L." },
+    { t="B", key="dc_guide_saleFee_04", v="Old percentage settings reset to 11." },
+    { t="B", key="dc_guide_saleFee_05", v="Active dynamic pricing applies; otherwise" },
+    { t="B", key="dc_guide_saleFee_06", v="the base price is used, not a station quote." },
+    { t="B", key="dc_guide_saleFee_07", v="Fee at or above price leaves the milk unsold." },
+    { t="B", key="dc_guide_saleFee_08", v="A refused round still uses its scheduled slot." },
+    { t="B", key="dc_guide_saleFee_09", v="Ageing continues normally; see the server log." },
     { t="S", v=" " },
     { t="H", v="COMMON QUESTIONS" },
     { t="B", v="I see no Dairy entry in the list." },
@@ -359,7 +396,7 @@ function DairyGuideDialog:_buildContent(pageNum)
             if profile ~= nil then
                 local el = TextElement.new()
                 el:loadProfile(profile, true)
-                el:setText(row.v or "")
+                el:setText(row.key ~= nil and tr(row.key, row.v) or (row.v or ""))
                 currentBox:addElement(el)
                 el:onGuiSetupFinished()
                 table.insert(self._contentLineEls, { box = currentBox, el = el })

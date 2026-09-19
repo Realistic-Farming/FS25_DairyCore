@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Melkvee&#10;&#10;Een kaart per stal op je bedrijf. Blader met , en . of de pagineerknoppen.&#10;&#10;Kudde nu is de melkkudde die vandaag in de stal staat, per ras. Melk in tank is de opgeslagen melk per ras dat ze gaf. Melk zonder rasrecord blijft onbekend. Een nieuwe kudde naast oude melk is normaal.&#10;&#10;Bederfklok: start zodra een ophaling is vastgelegd. Klok staat stil betekent niet gestart, dus Vers is nog geen lopende timer.&#10;&#10;Voerziekteklok: ziek voer in de voorraad zet mycotoxine op de kudde. Het neemt dag na dag af. De paginahint noemt de stal zolang het duurt.&#10;&#10;Opgeslagen voer: de kwaliteit wordt bij het maaien op het gewas vastgelegd en in de silo's van het bedrijf gemengd. De trog put uit die voorraad en de melk volgt. Biologisch betekent meer dan 80% biologisch aandeel. Wacht op oogstgegevens tot de eerste snede is vastgelegd." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Rassen" />
         <text name="dairy_rf_pda_breed_next" text="Rassen (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Melkverkoopkosten (per 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Kantoor en route rekenen kosten per liter." />
+        <text name="dc_guide_saleFee_02" text="Per 1000 L: 11 standaard, van 0 tot 50." />
+        <text name="dc_guide_saleFee_03" text="Dat is 0,011/L standaard, tot 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Oude percentages gaan terug naar 11." />
+        <text name="dc_guide_saleFee_05" text="Actieve dynamische prijzen gelden; anders" />
+        <text name="dc_guide_saleFee_06" text="geldt de basisprijs, geen stationsprijs." />
+        <text name="dc_guide_saleFee_07" text="Kosten op of boven de prijs: melk blijft onverkocht." />
+        <text name="dc_guide_saleFee_08" text="Een geweigerde ronde gebruikt toch zijn beurt." />
+        <text name="dc_guide_saleFee_09" text="Veroudering loopt door; zie het serverlog." />
     </texts>
 </l10n>

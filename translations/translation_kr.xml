@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="낙농&#10;&#10;농장의 축사마다 카드 한 장. , 와 . 키 또는 페이지 버튼으로 넘깁니다.&#10;&#10;현재 가축은 오늘 축사에 있는 착유 가축을 품종별로 보여줍니다. 탱크 우유는 저장된 우유를 생산한 품종별로 보여줍니다. 품종 기록이 없는 우유는 알 수 없음으로 남습니다. 오래된 우유 옆의 새 가축은 정상입니다.&#10;&#10;부패 시계: 수거가 기록되면 시작됩니다. 시계 정지는 시작 전이라는 뜻이며, 신선함은 아직 작동 중인 타이머가 아닙니다.&#10;&#10;사료 질병 시계: 비축분의 병든 사료는 가축에 곰팡이독소를 남깁니다. 날마다 줄어듭니다. 지속되는 동안 페이지 힌트에 축사 이름이 표시됩니다.&#10;&#10;저장 사료: 품질은 수확 시 작물에 고정되고 농장 사일로에서 섞입니다. 여물통은 그 비축분에서 가져오고 우유가 그 뒤를 따릅니다. 유기농은 유기농 비율 80% 초과를 뜻합니다. 첫 수확이 기록될 때까지 수확 데이터를 기다립니다." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; 품종" />
         <text name="dairy_rf_pda_breed_next" text="품종 (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="우유 판매 수수료 (1000L당)" />
+        <text name="dc_guide_saleFee_01" text="사무실과 순회는 리터당 수수료를 받습니다." />
+        <text name="dc_guide_saleFee_02" text="1000L당: 기본 11, 0에서 50까지." />
+        <text name="dc_guide_saleFee_03" text="기본 0.011/L, 최대 0.05/L입니다." />
+        <text name="dc_guide_saleFee_04" text="기존 백분율 설정은 11로 초기화됩니다." />
+        <text name="dc_guide_saleFee_05" text="활성 동적 가격이 적용됩니다. 그렇지 않으면" />
+        <text name="dc_guide_saleFee_06" text="기본 가격을 사용하며 집하장 가격은 아닙니다." />
+        <text name="dc_guide_saleFee_07" text="수수료가 가격 이상이면 우유는 팔리지 않습니다." />
+        <text name="dc_guide_saleFee_08" text="거부된 순회도 예정된 시간을 사용합니다." />
+        <text name="dc_guide_saleFee_09" text="숙성은 계속됩니다. 서버 로그를 확인하세요." />
     </texts>
 </l10n>

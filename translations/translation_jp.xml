@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="酪農&#10;&#10;農場の畜舎ごとに1枚のカード。, と . キーまたはページボタンでめくります。&#10;&#10;現在の群れは今日畜舎にいる搾乳牛を品種別に示します。タンクの牛乳は貯蔵された牛乳を生産した品種別に示します。品種記録のない牛乳は不明のままです。古い牛乳の横に新しい群れがあるのは正常です。&#10;&#10;腐敗時計: 集荷が記録されると始まります。時計停止中は未開始の意味で、新鮮はまだ動いているタイマーではありません。&#10;&#10;飼料病害時計: 貯蔵分の病害飼料は群れにカビ毒を与えます。日ごとに減っていきます。続く間はページのヒントに畜舎名が出ます。&#10;&#10;貯蔵飼料: 品質は刈り取り時に作物に固定され、農場のサイロで混ざります。飼槽はその貯蔵分から供給され、牛乳はそれに従います。有機とは有機割合 80% 超のことです。最初の刈り取りが記録されるまで収穫データ待ちです。" />
         <text name="dairy_rf_pda_breed_prev" text="&lt; 品種" />
         <text name="dairy_rf_pda_breed_next" text="品種 (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="牛乳販売手数料 (1000Lあたり)" />
+        <text name="dc_guide_saleFee_01" text="事務所と巡回は1リットルごとに手数料を取ります。" />
+        <text name="dc_guide_saleFee_02" text="1000Lあたり: 既定は11、0から50まで。" />
+        <text name="dc_guide_saleFee_03" text="既定で0.011/L、最大0.05/Lです。" />
+        <text name="dc_guide_saleFee_04" text="古い割合設定は11に戻ります。" />
+        <text name="dc_guide_saleFee_05" text="有効な動的価格が適用されます。そうでなければ" />
+        <text name="dc_guide_saleFee_06" text="基本価格を使い、集荷所の価格は使いません。" />
+        <text name="dc_guide_saleFee_07" text="手数料が価格以上なら牛乳は売れません。" />
+        <text name="dc_guide_saleFee_08" text="拒否された巡回も予定枠を消費します。" />
+        <text name="dc_guide_saleFee_09" text="劣化は続きます。サーバーログを確認してください。" />
     </texts>
 </l10n>

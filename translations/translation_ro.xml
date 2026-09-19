@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Lactate&#10;&#10;Un card pentru fiecare grajd al fermei tale. Schimba pagina cu , si . sau cu paginatorul.&#10;&#10;Turma acum este turma de muls aflata azi in grajd, pe rase. Lapte in rezervor este laptele depozitat pe rasele care l-au dat. Laptele fara inregistrare de rasa ramane necunoscut. O turma noua langa lapte vechi este normal.&#10;&#10;Ceasul alterarii: porneste cand se inregistreaza o colectare. Ceas oprit inseamna nepornit, deci Proaspat nu este inca un cronometru activ.&#10;&#10;Ceasul bolii furajului: furajul bolnav din rezerva pune micotoxina pe turma. Scade zi de zi. Indiciul paginii numeste grajdul cat timp dureaza.&#10;&#10;Furaj depozitat: calitatea se fixeaza pe cultura la taiere si se amesteca in silozurile fermei. Ieslea se alimenteaza din acea rezerva si laptele o urmeaza. Ecologic inseamna peste 80% cota ecologica. Se asteapta datele recoltei pana la prima taiere inregistrata." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Rase" />
         <text name="dairy_rf_pda_breed_next" text="Rase (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Taxă vânzare lapte (la 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Biroul și rondul percep o taxă pe litru." />
+        <text name="dc_guide_saleFee_02" text="La 1000 L: implicit 11, de la 0 la 50." />
+        <text name="dc_guide_saleFee_03" text="Adică 0,011/L implicit, până la 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Vechile procente revin la 11." />
+        <text name="dc_guide_saleFee_05" text="Se aplică prețuri dinamice active; altfel" />
+        <text name="dc_guide_saleFee_06" text="se folosește prețul de bază, nu cel al stației." />
+        <text name="dc_guide_saleFee_07" text="Taxă la nivelul prețului: laptele rămâne nevândut." />
+        <text name="dc_guide_saleFee_08" text="Un rond refuzat își consumă totuși locul." />
+        <text name="dc_guide_saleFee_09" text="Învechirea continuă; vezi jurnalul serverului." />
     </texts>
 </l10n>

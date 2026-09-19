@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Mleczarnia&#10;&#10;Jedna karta na obore na twojej farmie. Strony zmieniasz , i . albo przyciskami stron.&#10;&#10;Stado teraz to stado mleczne stojace dzis w oborze, wedlug ras. Mleko w zbiorniku to zmagazynowane mleko wedlug ras, ktore je daly. Mleko bez zapisu rasy pozostaje nieznane. Nowe stado obok starego mleka to normalne.&#10;&#10;Zegar psucia: rusza, gdy zapisany zostanie odbior. Zegar zatrzymany znaczy nieuruchomiony, wiec Swieze nie jest jeszcze dzialajacym licznikiem.&#10;&#10;Zegar choroby paszy: chora pasza w zapasie naklada mykotoksyne na stado. Slabnie dzien po dniu. Podpowiedz strony wskazuje obore, poki to trwa.&#10;&#10;Pasza w magazynie: jakosc ustala sie na roslinie przy pokosie i miesza w silosach farmy. Koryto czerpie z tego zapasu, a mleko za nim podaza. Ekologiczna znaczy ponad 80% udzialu eko. Czekam na dane ze zbiorow do pierwszego zapisanego pokosu." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Rasy" />
         <text name="dairy_rf_pda_breed_next" text="Rasy (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Opłata za sprzedaż mleka (na 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Biuro i objazd pobierają opłatę za litr." />
+        <text name="dc_guide_saleFee_02" text="Na 1000 L: domyślnie 11, od 0 do 50." />
+        <text name="dc_guide_saleFee_03" text="To 0,011/L domyślnie, do 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Stare wartości procentowe wracają do 11." />
+        <text name="dc_guide_saleFee_05" text="Działają aktywne ceny dynamiczne; inaczej" />
+        <text name="dc_guide_saleFee_06" text="używana jest cena bazowa, nie cena skupu." />
+        <text name="dc_guide_saleFee_07" text="Opłata równa cenie: mleko niesprzedane." />
+        <text name="dc_guide_saleFee_08" text="Odrzucony objazd i tak zużywa swój termin." />
+        <text name="dc_guide_saleFee_09" text="Starzenie trwa dalej; sprawdź log serwera." />
     </texts>
 </l10n>

@@ -95,5 +95,15 @@
         <text name="dairy_rf_pda_side_teach" text="Leite&#10;&#10;Um cartao por estabulo da tua quinta. Muda de pagina com , e . ou com o paginador.&#10;&#10;Manada agora e a manada leiteira que hoje esta no estabulo, por raca. Leite no tanque e o leite armazenado pelas racas que o deram. Leite sem registo de raca fica desconhecido. Uma manada nova ao lado de leite antigo e normal.&#10;&#10;Relogio de deterioracao: arranca quando uma recolha e registada. Relogio parado significa nao arrancado, por isso Fresco ainda nao e um temporizador a correr.&#10;&#10;Relogio de doenca da racao: racao doente na reserva poe micotoxina na manada. Baixa dia a dia. A dica de pagina nomeia o estabulo enquanto durar.&#10;&#10;Racao armazenada: a qualidade fixa-se na cultura no corte e mistura-se nos silos da quinta. A manjedoura serve-se dessa reserva e o leite segue-a. Biologica significa mais de 80% de quota biologica. A aguardar dados de colheita ate ao primeiro corte registado." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Racas" />
         <text name="dairy_rf_pda_breed_next" text="Racas (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Taxa de venda de leite (por 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Escritório e rota cobram uma taxa por litro." />
+        <text name="dc_guide_saleFee_02" text="Por 1000 L: 11 por omissão, de 0 a 50." />
+        <text name="dc_guide_saleFee_03" text="Ou seja 0,011/L por omissão, até 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="As percentagens antigas voltam a 11." />
+        <text name="dc_guide_saleFee_05" text="Aplicam-se preços dinâmicos ativos; caso contrário" />
+        <text name="dc_guide_saleFee_06" text="usa-se o preço base, não o de uma estação." />
+        <text name="dc_guide_saleFee_07" text="Taxa igual ou acima do preço: leite por vender." />
+        <text name="dc_guide_saleFee_08" text="Uma ronda recusada gasta a sua vez na mesma." />
+        <text name="dc_guide_saleFee_09" text="O envelhecimento continua; ver o registo." />
     </texts>
 </l10n>
