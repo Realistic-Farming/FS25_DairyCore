@@ -74,8 +74,10 @@ function DairyCoreManager:_collectionRefusalState()
     return self.collectionRefusal
 end
 
---- The shown projection changed (an outcome, an admission or the next-due truth).
---- The revision feeds slice B's dataRevision; there is no transport to mark yet.
+--- The shown projection changed: a record write or clear, a worker assignment,
+--- every due round's next-due move, and every discovery census change (a barn
+--- bound, hidden, removed or moved to another farm). The revision feeds slice B's
+--- dataRevision; there is no transport to mark yet.
 function DairyCoreManager:_touchCollectionRefusal()
     local st = self:_collectionRefusalState()
     st.revision = st.revision + 1
@@ -334,13 +336,20 @@ end
 --- owner is invalidated before anything is returned. Slice B's transports call this
 --- with the trusted farm they derived; the local producer calls it with the strict
 --- local farm.
+---
+--- EXISTENCE IS RE-PROVED PER ROW. The cached barn._placeable can outlive the
+--- building it pointed at (a demolished barn keeps a readable owner until the next
+--- discovery pass), so a row is admitted only when the placeable system still
+--- resolves the barn id to that same handle, through F166's _advisoryPlaceable.
 function DairyCoreManager:_collectionRefusalRows(farmId)
     local R = DairyConstants.COLLECTION_REFUSAL
     local st = self:_collectionRefusalState()
     local rows = {}
+    local ps = self:_advisoryPlaceableSystem()
     for barnId, barn in pairs(self.barns) do
         local p = barn._placeable
-        if p ~= nil and not barn._probeDead then
+        local live = (p ~= nil and not barn._probeDead) and self:_advisoryPlaceable(barnId, ps) or nil
+        if live ~= nil and live == p then
             local owner = self:_collectionLiveOwner(barn)
             local record = st.records[barnId]
             if record ~= nil and owner ~= nil and record.recordedFarmId ~= owner then
@@ -389,9 +398,10 @@ end
 --- local farm itself and returns one detached { state, reason, rows } value.
 ---   nil                         PF stand-down: no collection surface exists
 ---   UNAVAILABLE / SETTINGS_OFF  Dairy simulation is off
----   WAITING / FIRST_SNAPSHOT    a pure client before its first complete snapshot
----                               (slice B brings the transports; until then always)
----   UNAVAILABLE / NO_REAL_FARM  no strict local real farm (spectator, dedicated)
+---   UNAVAILABLE / NO_REAL_FARM  no strict local real farm (spectator, dedicated),
+---                               decided before any route on every machine
+---   WAITING / FIRST_SNAPSHOT    a pure client with a real farm before its first
+---                               complete snapshot (slice B brings the transports)
 ---   READY                       the local producer's rows for the local farm
 function DairyCoreManager:getCollectionRefusalViews()
     local R = DairyConstants.COLLECTION_REFUSAL
@@ -399,12 +409,12 @@ function DairyCoreManager:getCollectionRefusalViews()
     if self.settings == nil or self.settings.enabled == false then
         return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.SETTINGS_OFF, rows = {} }
     end
-    if not self:_isServer() then
-        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }
-    end
     local farmId = self:_collectionLocalFarmId()
     if farmId == nil then
         return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }
+    end
+    if not self:_isServer() then
+        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }
     end
     return { state = R.STATES.READY, reason = nil, rows = self:_collectionRefusalRows(farmId) }
 end

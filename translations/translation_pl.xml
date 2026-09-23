@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Mleko pozostało" />
         <text name="dc14_collection_row_none" text="Brak raportu" />
         <text name="dc14_collection_row_unavailable" text="Niedostępne" />
-        <text name="dc14_collection_fee_refused" text="Podczas zaplanowanego odbioru w dniu %s o %s mleko pozostało w oborze, ponieważ opłata manipulacyjna dorównała cenie sprzedaży lub ją przekroczyła przy tej próbie." />
+        <text name="dc14_collection_fee_refused" text="Podczas zaplanowanego odbioru w dniu %s o %s mleko nie zostało odebrane, ponieważ opłata manipulacyjna dorównała cenie sprzedaży lub ją przekroczyła przy tej próbie." />
         <text name="dc14_collection_next_due" text="Następny odbiór: dzień %s o %s." />
         <text name="dc14_collection_no_worker" text="Obecnie nie przydzielono pracownika do odbioru." />
         <text name="dc14_collection_no_report" text="Brak raportu o odmowie odbioru w tej sesji." />

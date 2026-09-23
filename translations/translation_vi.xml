@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Sữa còn lại" />
         <text name="dc14_collection_row_none" text="Không có báo cáo" />
         <text name="dc14_collection_row_unavailable" text="Không có sẵn" />
-        <text name="dc14_collection_fee_refused" text="Trong lần thu gom theo lịch vào ngày %s lúc %s, sữa vẫn ở lại chuồng vì phí xử lý ở lần đó bằng hoặc vượt giá bán." />
+        <text name="dc14_collection_fee_refused" text="Trong lần thu gom theo lịch vào ngày %s lúc %s, sữa đã không được thu gom vì phí xử lý ở lần đó bằng hoặc vượt giá bán." />
         <text name="dc14_collection_next_due" text="Lần thu gom tới: ngày %s lúc %s." />
         <text name="dc14_collection_no_worker" text="Hiện chưa có công nhân thu gom nào được phân công." />
         <text name="dc14_collection_no_report" text="Không có báo cáo từ chối thu gom trong phiên này." />

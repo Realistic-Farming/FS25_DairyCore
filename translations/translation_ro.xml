@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Lapte rămas" />
         <text name="dc14_collection_row_none" text="Niciun raport" />
         <text name="dc14_collection_row_unavailable" text="Indisponibil" />
-        <text name="dc14_collection_fee_refused" text="La colectarea programată din ziua %s la %s, laptele a rămas în grajd deoarece taxa de manipulare a egalat sau a depășit prețul de vânzare la acea încercare." />
+        <text name="dc14_collection_fee_refused" text="La colectarea programată din ziua %s la %s, laptele nu a fost colectat deoarece taxa de manipulare a egalat sau a depășit prețul de vânzare la acea încercare." />
         <text name="dc14_collection_next_due" text="Următoarea colectare programată: ziua %s la %s." />
         <text name="dc14_collection_no_worker" text="În prezent nu este alocat niciun muncitor pentru colectare." />
         <text name="dc14_collection_no_report" text="Niciun raport de colectare refuzată în această sesiune." />

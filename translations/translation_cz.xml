@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Mléko zůstalo" />
         <text name="dc14_collection_row_none" text="Bez hlášení" />
         <text name="dc14_collection_row_unavailable" text="Nedostupné" />
-        <text name="dc14_collection_fee_refused" text="Při plánovaném svozu dne %s v %s zůstalo mléko ve stáji, protože manipulační poplatek při tomto pokusu dosáhl prodejní ceny nebo ji převýšil." />
+        <text name="dc14_collection_fee_refused" text="Při plánovaném svozu dne %s v %s mléko zůstalo nesvezené, protože manipulační poplatek při tomto pokusu dosáhl prodejní ceny nebo ji převýšil." />
         <text name="dc14_collection_next_due" text="Příští svoz: den %s v %s." />
         <text name="dc14_collection_no_worker" text="Momentálně není přidělen žádný pracovník svozu." />
         <text name="dc14_collection_no_report" text="V této relaci není žádné hlášení o odmítnutém svozu." />

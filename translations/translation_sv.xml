@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Mjölk kvarlämnad" />
         <text name="dc14_collection_row_none" text="Ingen rapport" />
         <text name="dc14_collection_row_unavailable" text="Ej tillgänglig" />
-        <text name="dc14_collection_fee_refused" text="Vid den planerade hämtningen dag %s kl. %s blev mjölken kvar i ladugården eftersom hanteringsavgiften vid det försöket nådde eller översteg försäljningspriset." />
+        <text name="dc14_collection_fee_refused" text="Vid den planerade hämtningen dag %s kl. %s hämtades mjölken inte, eftersom hanteringsavgiften vid det försöket nådde eller översteg försäljningspriset." />
         <text name="dc14_collection_next_due" text="Nästa hämtning: dag %s kl. %s." />
         <text name="dc14_collection_no_worker" text="Ingen hämtningsarbetare är tilldelad just nu." />
         <text name="dc14_collection_no_report" text="Ingen rapport om nekad hämtning under den här sessionen." />

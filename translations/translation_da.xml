@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Mælk efterladt" />
         <text name="dc14_collection_row_none" text="Ingen rapport" />
         <text name="dc14_collection_row_unavailable" text="Ikke tilgængelig" />
-        <text name="dc14_collection_fee_refused" text="Ved den planlagte afhentning på dag %s kl. %s blev mælken i stalden, fordi håndteringsgebyret ved dette forsøg nåede eller oversteg salgsprisen." />
+        <text name="dc14_collection_fee_refused" text="Ved den planlagte afhentning på dag %s kl. %s blev mælken ikke hentet, fordi håndteringsgebyret ved dette forsøg nåede eller oversteg salgsprisen." />
         <text name="dc14_collection_next_due" text="Næste afhentning: dag %s kl. %s." />
         <text name="dc14_collection_no_worker" text="Der er i øjeblikket ingen afhentningsarbejder tildelt." />
         <text name="dc14_collection_no_report" text="Ingen rapport om afvist afhentning i denne session." />

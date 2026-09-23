@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Leche sin recoger" />
         <text name="dc14_collection_row_none" text="Sin informe" />
         <text name="dc14_collection_row_unavailable" text="No disponible" />
-        <text name="dc14_collection_fee_refused" text="En la recogida programada del día %s a las %s, la leche se quedó en el establo porque la tasa de manipulación igualó o superó el precio de venta en ese intento." />
+        <text name="dc14_collection_fee_refused" text="En la recogida programada del día %s a las %s, la leche quedó sin recoger porque la tasa de manipulación igualó o superó el precio de venta en ese intento." />
         <text name="dc14_collection_next_due" text="Próxima recogida prevista: día %s a las %s." />
         <text name="dc14_collection_no_worker" text="Actualmente no hay ningún trabajador de recogida asignado." />
         <text name="dc14_collection_no_report" text="No hay informe de recogida rechazada en esta sesión." />

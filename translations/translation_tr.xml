@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Süt kaldı" />
         <text name="dc14_collection_row_none" text="Rapor yok" />
         <text name="dc14_collection_row_unavailable" text="Kullanılamıyor" />
-        <text name="dc14_collection_fee_refused" text="%s. gün %s saatindeki planlı toplamada süt ahırda kaldı, çünkü o denemede işlem ücreti satış fiyatına eşit ya da ondan yüksekti." />
+        <text name="dc14_collection_fee_refused" text="%s. gün %s saatindeki planlı toplamada süt toplanmadı, çünkü o denemede işlem ücreti satış fiyatına eşit ya da ondan yüksekti." />
         <text name="dc14_collection_next_due" text="Sonraki toplama: %s. gün, saat %s." />
         <text name="dc14_collection_no_worker" text="Şu anda atanmış bir toplama işçisi yok." />
         <text name="dc14_collection_no_report" text="Bu oturumda reddedilen toplama raporu yok." />

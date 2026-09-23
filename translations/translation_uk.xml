@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Молоко залишилось" />
         <text name="dc14_collection_row_none" text="Немає звіту" />
         <text name="dc14_collection_row_unavailable" text="Недоступно" />
-        <text name="dc14_collection_fee_refused" text="Під час запланованого збору в день %s о %s молоко залишилося в корівнику, бо плата за обробку при цій спробі дорівнювала ціні продажу або перевищувала її." />
+        <text name="dc14_collection_fee_refused" text="Під час запланованого збору в день %s о %s молоко не було забрано, бо плата за обробку при цій спробі дорівнювала ціні продажу або перевищувала її." />
         <text name="dc14_collection_next_due" text="Наступний збір: день %s о %s." />
         <text name="dc14_collection_no_worker" text="Працівника для збору зараз не призначено." />
         <text name="dc14_collection_no_report" text="У цій сесії немає звіту про відмову у зборі." />

@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Maito jäi" />
         <text name="dc14_collection_row_none" text="Ei raporttia" />
         <text name="dc14_collection_row_unavailable" text="Ei saatavilla" />
-        <text name="dc14_collection_fee_refused" text="Suunnitellussa noudossa päivänä %s klo %s maito jäi navettaan, koska käsittelymaksu ylitti myyntihinnan tai oli yhtä suuri kuin se tuolla yrityksellä." />
+        <text name="dc14_collection_fee_refused" text="Suunnitellussa noudossa päivänä %s klo %s maito jäi noutamatta, koska käsittelymaksu ylitti myyntihinnan tai oli yhtä suuri kuin se tuolla yrityksellä." />
         <text name="dc14_collection_next_due" text="Seuraava nouto: päivä %s klo %s." />
         <text name="dc14_collection_no_worker" text="Noutotyöntekijää ei ole tällä hetkellä määrätty." />
         <text name="dc14_collection_no_report" text="Tässä istunnossa ei ole raporttia hylätystä noudosta." />

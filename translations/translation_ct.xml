@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="牛奶留在牛舍" />
         <text name="dc14_collection_row_none" text="沒有報告" />
         <text name="dc14_collection_row_unavailable" text="無法取得" />
-        <text name="dc14_collection_fee_refused" text="在第 %s 天 %s 的預定收乳中，由於該次的處理費達到或超過售價，牛奶留在了牛舍。" />
+        <text name="dc14_collection_fee_refused" text="在第 %s 天 %s 的預定收乳中，由於該次的處理費達到或超過售價，牛奶未被收走。" />
         <text name="dc14_collection_next_due" text="下次收乳預定：第 %s 天 %s。" />
         <text name="dc14_collection_no_worker" text="目前沒有指派收乳工人。" />
         <text name="dc14_collection_no_report" text="本次工作階段沒有收乳遭拒的報告。" />

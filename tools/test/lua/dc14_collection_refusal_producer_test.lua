@@ -74,6 +74,14 @@ local function newMission()
   }
   function m:getIsServer() return self._isServer end
   function m:getFarmId() return self._localFarm end
+  -- PlaceableSystem:getPlaceableByUniqueId (decompiled evidence, guarded by the
+  -- caller): the placeable currently registered under that id, or nil.
+  function m.placeableSystem:getPlaceableByUniqueId(id)
+    for _, p in ipairs(self.placeables) do
+      if p:getUniqueId() == id then return p end
+    end
+    return nil
+  end
   function m:addMoney(income, farmId) self.money[#self.money + 1] = { income = income, farmId = farmId } end
   return m
 end
@@ -212,6 +220,9 @@ group("N", function()
   T.eq("N2 [world] the next round sold the milk and paid the farm",
     tostring(barn._storage.fillLevels[MILK_INDEX]) .. "/" .. tostring(#m.money), "0/1")
   T.eq("N3 an ordinary result clears the explanation", describe(rowOf(view(mgr), "b1")), "NONE_RECORDED/0/nil/2478/nil")
+  local rev = mgr.collectionRefusal.revision
+  hourTick(m, 1)
+  T.eq("N3b a due round with nothing to report still moves the next due, so the revision moves", describe(rowOf(view(mgr), "b1")) .. "/" .. tostring(mgr.collectionRefusal.revision > rev), "NONE_RECORDED/0/nil/2502/nil/true")
 
   -- A sale the husbandry honours only in part: an ordinary result with milk still
   -- in the barn is no refusal.
@@ -363,10 +374,16 @@ group("U", function()
   mgr:assignCollectionWorker("b2", "w1")
   setPrice(1.0)
   m.networkSync = { markDirty = function() error("companion down") end }
-  hourTick(m, 1)
+  local okTick = pcall(hourTick, m, 1)
   local v = view(mgr)
-  T.eq("U7 a raising sale leaves the barn unavailable", describe(rowOf(v, "b1")), "UNAVAILABLE/2/nil/2598/EVALUATION_ERROR")
-  T.eq("U7b the tick still reached the second barn", rowOf(v, "b2") ~= nil and mgr.barns.b2.nextCollectionDue ~= nil, true)
+  T.eq("U7 the hour tick survives a raising sale", okTick, true)
+  T.eq("U7a and leaves that barn unavailable", describe(rowOf(v, "b1")), "UNAVAILABLE/2/nil/2598/EVALUATION_ERROR")
+  -- b2 was registered after the last tick, so only this tick can have touched it: its
+  -- next due set, its detector seeded (this tick also sells it, since it has a worker,
+  -- a price and no due yet, and the sale re-seeds at the post-sale level, :1146) and
+  -- its milk gone. Those are the proof the loop went on past the raise.
+  T.eq("U7b the tick still reached the second barn: due set, detector seeded, its own sale made",
+    tostring(mgr.barns.b2.nextCollectionDue ~= nil) .. "/" .. tostring(mgr.barns.b2.lastKnownMilkLevel[MILK_NAME]) .. "/" .. tostring(barn2._station.fillLevels[MILK_NAME]), "true/0/0")
   m.networkSync = nil
 end)
 
@@ -473,6 +490,10 @@ group("G", function()
   m._isServer = false
   v = view(mgr)
   T.eq("G3 a pure client before any snapshot is WAITING with FIRST_SNAPSHOT, never no-report", tostring(v.state) .. "/" .. tostring(v.reason) .. "/" .. tostring(#v.rows), "WAITING/FIRST_SNAPSHOT/0")
+  m._localFarm = 0
+  v = view(mgr)
+  T.eq("G3b a pure client with no real farm is NO_REAL_FARM before any route", tostring(v.state) .. "/" .. tostring(v.reason), "UNAVAILABLE/NO_REAL_FARM")
+  m._localFarm = 1
   m._isServer = true
 
   -- PF present at the next load of the SAME manager object: the session map is
@@ -545,9 +566,14 @@ group("R", function()
   local barn = makeBarn("b1", 1, 500)
   local m, mgr = boot({ barn }, 0.05, 50)
   dueRound(m, mgr, "b1")
+  -- Demolished between two discovery passes: the cached handle still answers an
+  -- owner, but the placeable system no longer resolves the id, so no row.
   m.placeableSystem.placeables = {}
+  T.eq("R0 a demolished barn gets no row before the next discovery pass, whatever its cached handle says", #view(mgr).rows, 0)
+  local rev = mgr.collectionRefusal.revision
   mgr:discoverBarns()
   T.eq("R1 one miss retains the record and hides the row", tostring(mgr.barns.b1 ~= nil) .. "/" .. tostring(#view(mgr).rows), "true/0")
+  T.ok("R1b hiding the barn moved the revision", mgr.collectionRefusal.revision > rev)
   mgr:discoverBarns()
   T.eq("R2 the second miss removes the barn and its explanation", tostring(mgr.barns.b1) .. "/" .. tostring(mgr.collectionRefusal.records.b1), "nil/nil")
 end)

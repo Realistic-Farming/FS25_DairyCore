@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Latte lasciato" />
         <text name="dc14_collection_row_none" text="Nessun rapporto" />
         <text name="dc14_collection_row_unavailable" text="Non disponibile" />
-        <text name="dc14_collection_fee_refused" text="Al ritiro programmato del giorno %s alle %s, il latte è rimasto nella stalla perché la tariffa di gestione ha eguagliato o superato il prezzo di vendita in quel tentativo." />
+        <text name="dc14_collection_fee_refused" text="Al ritiro programmato del giorno %s alle %s, il latte è rimasto perché la tariffa di gestione ha eguagliato o superato il prezzo di vendita in quel tentativo." />
         <text name="dc14_collection_next_due" text="Prossimo ritiro previsto: giorno %s alle %s." />
         <text name="dc14_collection_no_worker" text="Nessun addetto al ritiro è attualmente assegnato." />
         <text name="dc14_collection_no_report" text="Nessun rapporto di ritiro rifiutato in questa sessione." />

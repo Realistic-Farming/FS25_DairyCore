@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Susu tertinggal" />
         <text name="dc14_collection_row_none" text="Tidak ada laporan" />
         <text name="dc14_collection_row_unavailable" text="Tidak tersedia" />
-        <text name="dc14_collection_fee_refused" text="Pada pengambilan terjadwal hari %s pukul %s, susu tetap berada di kandang karena biaya penanganan pada percobaan itu sama dengan atau melebihi harga jual." />
+        <text name="dc14_collection_fee_refused" text="Pada pengambilan terjadwal hari %s pukul %s, susu tidak diambil karena biaya penanganan pada percobaan itu sama dengan atau melebihi harga jual." />
         <text name="dc14_collection_next_due" text="Pengambilan berikutnya: hari %s pukul %s." />
         <text name="dc14_collection_no_worker" text="Saat ini tidak ada pekerja pengambilan yang ditugaskan." />
         <text name="dc14_collection_no_report" text="Tidak ada laporan pengambilan yang ditolak pada sesi ini." />

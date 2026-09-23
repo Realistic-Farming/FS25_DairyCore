@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Leite deixado" />
         <text name="dc14_collection_row_none" text="Sem relatório" />
         <text name="dc14_collection_row_unavailable" text="Indisponível" />
-        <text name="dc14_collection_fee_refused" text="Na recolha agendada do dia %s às %s, o leite ficou no estábulo porque a taxa de manuseamento igualou ou excedeu o preço de venda nessa tentativa." />
+        <text name="dc14_collection_fee_refused" text="Na recolha agendada do dia %s às %s, o leite não foi recolhido porque a taxa de manuseamento igualou ou excedeu o preço de venda nessa tentativa." />
         <text name="dc14_collection_next_due" text="Próxima recolha prevista: dia %s às %s." />
         <text name="dc14_collection_no_worker" text="Não há nenhum trabalhador de recolha atribuído de momento." />
         <text name="dc14_collection_no_report" text="Nenhum relatório de recolha recusada nesta sessão." />

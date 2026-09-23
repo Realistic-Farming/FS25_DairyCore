@@ -8,10 +8,11 @@
 # KILLED* means killed only by a Lua error: a weak kill, treated as a failure.
 #
 # NOT RUN, and why:
-#   - _isRealFarmId inside _collectionRealFarmId: masked by the bound on the same
-#     function (farm 0 fails farmId < 1, 14 and 15 fail farmId > MAX_FARM_ID = 8), so
-#     removing it changes no answer the bar can see; it stays as the belt under the
-#     braces for an engine whose FarmManager cannot be read;
+#   - "farm 0 admitted" (Bob's intake): farm 0 is refused twice on the same line of
+#     _collectionRealFarmId (farmId < 1, then _isRealFarmId), and 14 and 15 fall to the
+#     MAX_FARM_ID bound before _isRealFarmId sees them, so the two guards mask each
+#     other and no one-line edit admits 0; V6 and V7 pin the bound and the integer
+#     test, which are the guards a bar can see;
 #   - main.lua's source() of the new file: the bench loads modules from the --!load
 #     list, so a missing source line is invisible here; the pre-commit gate parses
 #     main.lua and the build check verifies the zip carries the file;
@@ -127,6 +128,14 @@ MUTATIONS = [
  ("V7-fraction-admitted", CR,
   [("    if not dc14IsFinite(farmId) or math.floor(farmId) ~= farmId then return nil end", "    if not dc14IsFinite(farmId) then return nil end", 1)],
   "a fractional farm id is admitted"),
+ ("V8a-placeable-existence-not-reproved", CR,
+  [("        local live = (p ~= nil and not barn._probeDead) and self:_advisoryPlaceable(barnId, ps) or nil\n        if live ~= nil and live == p then",
+    "        local live = (p ~= nil and not barn._probeDead) and p or nil\n        if live ~= nil and live == p then", 1)],
+  "a demolished barn keeps its row until the next discovery pass"),
+ ("V8b-getter-farm-after-server-branch", CR,
+  [("    local farmId = self:_collectionLocalFarmId()\n    if farmId == nil then\n        return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }\n    end\n    if not self:_isServer() then\n        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }\n    end",
+    "    if not self:_isServer() then\n        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }\n    end\n    local farmId = self:_collectionLocalFarmId()\n    if farmId == nil then\n        return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }\n    end", 1)],
+  "a pure client with no real farm reads updating instead of NO_REAL_FARM"),
  ("V8-client-reads-as-ready", CR,
   [("        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }",
     "        return { state = R.STATES.READY, reason = nil, rows = {} }", 1)],
@@ -146,6 +155,13 @@ MUTATIONS = [
  ("L1-collection-does-not-clear", MGR,
   [("    -- DC-14: an actual collection from any real source clears the refusal explanation.\n    self:_clearCollectionRefusal(barn.barnId)\n", "", 1)],
   "an office sale or a detected haul leaves the explanation standing"),
+ ("L1b-due-round-does-not-bump", MGR,
+  [("            barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)\n            -- DC-14: the next due moved; a worker's barn publishes it.\n            if barn.assignedWorkerId ~= nil then self:_touchCollectionRefusal() end\n",
+    "            barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)\n", 1)],
+  "a due round moves the published next due without moving the revision"),
+ ("L1c-census-change-does-not-bump", MGR,
+  [("        -- DC-14: the census moved (bound, hidden, removed or re-owned), so the\n        -- admitted rows moved with it.\n        self:_touchCollectionRefusal()\n", "", 1)],
+  "a barn hidden or bound by discovery changes the rows without moving the revision"),
  ("L2-unassign-clears", MGR,
   [("    barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED\n    -- DC-14: the past attempt is retained; only the next-due publication changes.\n    self:_touchCollectionRefusal()",
     "    barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED\n    self:_clearCollectionRefusal(barnId)", 1)],

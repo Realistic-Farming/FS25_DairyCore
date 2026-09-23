@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Melk achtergebleven" />
         <text name="dc14_collection_row_none" text="Geen melding" />
         <text name="dc14_collection_row_unavailable" text="Niet beschikbaar" />
-        <text name="dc14_collection_fee_refused" text="Bij de geplande ophaling op dag %s om %s bleef de melk in de stal, omdat de verwerkingskosten bij die poging de verkoopprijs evenaarden of overschreden." />
+        <text name="dc14_collection_fee_refused" text="Bij de geplande ophaling op dag %s om %s bleef de melk achter, omdat de verwerkingskosten bij die poging de verkoopprijs evenaarden of overschreden." />
         <text name="dc14_collection_next_due" text="Volgende ophaling gepland: dag %s om %s." />
         <text name="dc14_collection_no_worker" text="Er is momenteel geen ophaalwerknemer toegewezen." />
         <text name="dc14_collection_no_report" text="Geen melding van een geweigerde ophaling in deze sessie." />

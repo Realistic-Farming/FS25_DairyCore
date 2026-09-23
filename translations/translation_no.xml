@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Melk igjen" />
         <text name="dc14_collection_row_none" text="Ingen rapport" />
         <text name="dc14_collection_row_unavailable" text="Ikke tilgjengelig" />
-        <text name="dc14_collection_fee_refused" text="Ved den planlagte hentingen på dag %s kl. %s ble melken igjen i fjøset, fordi håndteringsgebyret ved dette forsøket nådde eller oversteg salgsprisen." />
+        <text name="dc14_collection_fee_refused" text="Ved den planlagte hentingen på dag %s kl. %s ble melken ikke hentet, fordi håndteringsgebyret ved dette forsøket nådde eller oversteg salgsprisen." />
         <text name="dc14_collection_next_due" text="Neste henting: dag %s kl. %s." />
         <text name="dc14_collection_no_worker" text="Ingen hentearbeider er tildelt for øyeblikket." />
         <text name="dc14_collection_no_report" text="Ingen rapport om avvist henting i denne økten." />

@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="우유가 남음" />
         <text name="dc14_collection_row_none" text="보고 없음" />
         <text name="dc14_collection_row_unavailable" text="확인 불가" />
-        <text name="dc14_collection_fee_refused" text="%s일째 %s의 정기 수거에서 해당 시도의 취급 수수료가 판매 가격과 같거나 높아 우유가 축사에 남았습니다." />
+        <text name="dc14_collection_fee_refused" text="%s일째 %s의 정기 수거에서 해당 시도의 취급 수수료가 판매 가격과 같거나 높아 우유가 수거되지 않았습니다." />
         <text name="dc14_collection_next_due" text="다음 수거 예정: %s일째 %s." />
         <text name="dc14_collection_no_worker" text="현재 배정된 수거 작업자가 없습니다." />
         <text name="dc14_collection_no_report" text="이번 세션에는 수거 거부 보고가 없습니다." />

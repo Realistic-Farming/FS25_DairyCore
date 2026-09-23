@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="Milch verblieb" />
         <text name="dc14_collection_row_none" text="Keine Meldung" />
         <text name="dc14_collection_row_unavailable" text="Nicht verfügbar" />
-        <text name="dc14_collection_fee_refused" text="Bei der geplanten Abholung an Tag %s um %s blieb die Milch im Stall, weil die Bearbeitungsgebühr den Verkaufspreis bei diesem Versuch erreichte oder überstieg." />
+        <text name="dc14_collection_fee_refused" text="Bei der geplanten Abholung an Tag %s um %s blieb die Milch zurück, weil die Bearbeitungsgebühr den Verkaufspreis bei diesem Versuch erreichte oder überstieg." />
         <text name="dc14_collection_next_due" text="Nächste Abholung fällig: Tag %s um %s." />
         <text name="dc14_collection_no_worker" text="Derzeit ist kein Abholarbeiter zugewiesen." />
         <text name="dc14_collection_no_report" text="In dieser Sitzung liegt keine Meldung über eine abgelehnte Abholung vor." />

@@ -112,7 +112,7 @@
         <text name="dc14_collection_row_refused" text="牛乳が残りました" />
         <text name="dc14_collection_row_none" text="報告なし" />
         <text name="dc14_collection_row_unavailable" text="利用不可" />
-        <text name="dc14_collection_fee_refused" text="%s日目 %s の定期集乳では、その回の取扱手数料が販売価格以上だったため、牛乳は牛舎に残りました。" />
+        <text name="dc14_collection_fee_refused" text="%s日目 %s の定期集乳では、その回の取扱手数料が販売価格以上だったため、牛乳は集乳されませんでした。" />
         <text name="dc14_collection_next_due" text="次回の集乳予定: %s日目 %s。" />
         <text name="dc14_collection_no_worker" text="現在、集乳の作業員は割り当てられていません。" />
         <text name="dc14_collection_no_report" text="このセッションでは集乳拒否の報告はありません。" />

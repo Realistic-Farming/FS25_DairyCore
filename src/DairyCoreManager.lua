@@ -341,6 +341,9 @@ function DairyCoreManager:discoverBarns(retainUnresolved)
     if changed or next(previous) ~= nil then
         self:_markBarnsDirty()
         self:_markBreedSurfaceDirty()
+        -- DC-14: the census moved (bound, hidden, removed or re-owned), so the
+        -- admitted rows moved with it.
+        self:_touchCollectionRefusal()
     end
 end
 
@@ -1192,8 +1195,10 @@ function DairyCoreManager:_reconcileBarns(retainUnresolved)
                     barn.assignedWorkerId = nil
                     barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
                     barn.farmId = owner
-                    -- DC-14: owner reconciliation invalidates the old owner's explanation.
+                    -- DC-14: owner reconciliation invalidates the old owner's explanation
+                    -- and moves the barn between two farms' views.
                     self:_clearCollectionRefusal(barnId)
+                    self:_touchCollectionRefusal()
                 end
             end
         end
@@ -1230,6 +1235,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
 
         if barn.nextCollectionDue == nil then
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
+            -- DC-14: a worker's published next due is part of the shown projection.
+            if barn.assignedWorkerId ~= nil then self:_touchCollectionRefusal() end
         elseif nowHours >= barn.nextCollectionDue then
             -- A scheduled window has arrived. If no worker is assigned the window is
             -- MISSED: the milk ages on, which the elapsed-time clock already shows.
@@ -1252,6 +1259,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
                 DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
             end
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
+            -- DC-14: the next due moved; a worker's barn publishes it.
+            if barn.assignedWorkerId ~= nil then self:_touchCollectionRefusal() end
         end
     end
 end
