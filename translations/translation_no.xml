@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Gebyr på eller over prisen: melken blir usolgt." />
         <text name="dc_guide_saleFee_08" text="En avvist runde bruker likevel sin tur." />
         <text name="dc_guide_saleFee_09" text="Aldring fortsetter; se serverloggen." />
+        <text name="dc14_collection_heading_barn" text="Fjøs" />
+        <text name="dc14_collection_heading_status" text="Henting" />
+        <text name="dc14_collection_heading_worker" text="Arbeider" />
+        <text name="dc14_collection_heading_next_due" text="Neste planlagt" />
+        <text name="dc14_collection_row_refused" text="Melk igjen" />
+        <text name="dc14_collection_row_none" text="Ingen rapport" />
+        <text name="dc14_collection_row_unavailable" text="Ikke tilgjengelig" />
+        <text name="dc14_collection_fee_refused" text="Ved den planlagte hentingen på dag %s kl. %s ble melken igjen i fjøset, fordi håndteringsgebyret ved dette forsøket nådde eller oversteg salgsprisen." />
+        <text name="dc14_collection_next_due" text="Neste henting: dag %s kl. %s." />
+        <text name="dc14_collection_no_worker" text="Ingen hentearbeider er tildelt for øyeblikket." />
+        <text name="dc14_collection_no_report" text="Ingen rapport om avvist henting i denne økten." />
+        <text name="dc14_collection_updating" text="Oppdaterer hentestatus." />
+        <text name="dc14_collection_unavailable" text="Hentestatus ikke tilgjengelig." />
+        <text name="dc14_collection_barn_unavailable" text="Hentestatus ikke tilgjengelig for dette fjøset." />
+        <text name="dc14_collection_settings_off" text="Melkesimuleringen er slått av." />
+        <text name="dc14_collection_no_real_farm" text="Velg eller bli med i en gård for å se hentestatus." />
     </texts>
 </l10n>

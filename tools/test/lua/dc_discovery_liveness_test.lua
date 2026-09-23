@@ -3,7 +3,7 @@
 -- The own file can restore a barn before the engine has populated placeableSystem.
 -- Startup discovery must keep that state quietly pending, while ordinary later
 -- discovery retains the established two-miss deletion rule.
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
 
 local function newManager()
     local m = DairyCoreManager.new()

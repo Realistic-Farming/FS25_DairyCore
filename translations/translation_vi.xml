@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Phí bằng hoặc hơn giá: sữa không bán được." />
         <text name="dc_guide_saleFee_08" text="Lượt bị từ chối vẫn dùng khung giờ của nó." />
         <text name="dc_guide_saleFee_09" text="Sữa vẫn cũ đi; xem nhật ký máy chủ." />
+        <text name="dc14_collection_heading_barn" text="Chuồng bò" />
+        <text name="dc14_collection_heading_status" text="Thu gom" />
+        <text name="dc14_collection_heading_worker" text="Công nhân" />
+        <text name="dc14_collection_heading_next_due" text="Lần tới" />
+        <text name="dc14_collection_row_refused" text="Sữa còn lại" />
+        <text name="dc14_collection_row_none" text="Không có báo cáo" />
+        <text name="dc14_collection_row_unavailable" text="Không có sẵn" />
+        <text name="dc14_collection_fee_refused" text="Trong lần thu gom theo lịch vào ngày %s lúc %s, sữa vẫn ở lại chuồng vì phí xử lý ở lần đó bằng hoặc vượt giá bán." />
+        <text name="dc14_collection_next_due" text="Lần thu gom tới: ngày %s lúc %s." />
+        <text name="dc14_collection_no_worker" text="Hiện chưa có công nhân thu gom nào được phân công." />
+        <text name="dc14_collection_no_report" text="Không có báo cáo từ chối thu gom trong phiên này." />
+        <text name="dc14_collection_updating" text="Đang cập nhật tình trạng thu gom." />
+        <text name="dc14_collection_unavailable" text="Không có tình trạng thu gom." />
+        <text name="dc14_collection_barn_unavailable" text="Không có tình trạng thu gom cho chuồng này." />
+        <text name="dc14_collection_settings_off" text="Mô phỏng chăn nuôi bò sữa đang tắt." />
+        <text name="dc14_collection_no_real_farm" text="Hãy chọn hoặc tham gia một trang trại để xem tình trạng thu gom." />
     </texts>
 </l10n>

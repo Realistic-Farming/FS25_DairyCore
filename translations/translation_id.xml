@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Biaya setara atau di atas harga: susu tidak terjual." />
         <text name="dc_guide_saleFee_08" text="Ronde yang ditolak tetap memakai jadwalnya." />
         <text name="dc_guide_saleFee_09" text="Penuaan tetap berjalan; lihat log server." />
+        <text name="dc14_collection_heading_barn" text="Kandang" />
+        <text name="dc14_collection_heading_status" text="Pengambilan" />
+        <text name="dc14_collection_heading_worker" text="Pekerja" />
+        <text name="dc14_collection_heading_next_due" text="Jadwal berikutnya" />
+        <text name="dc14_collection_row_refused" text="Susu tertinggal" />
+        <text name="dc14_collection_row_none" text="Tidak ada laporan" />
+        <text name="dc14_collection_row_unavailable" text="Tidak tersedia" />
+        <text name="dc14_collection_fee_refused" text="Pada pengambilan terjadwal hari %s pukul %s, susu tetap berada di kandang karena biaya penanganan pada percobaan itu sama dengan atau melebihi harga jual." />
+        <text name="dc14_collection_next_due" text="Pengambilan berikutnya: hari %s pukul %s." />
+        <text name="dc14_collection_no_worker" text="Saat ini tidak ada pekerja pengambilan yang ditugaskan." />
+        <text name="dc14_collection_no_report" text="Tidak ada laporan pengambilan yang ditolak pada sesi ini." />
+        <text name="dc14_collection_updating" text="Memperbarui status pengambilan." />
+        <text name="dc14_collection_unavailable" text="Status pengambilan tidak tersedia." />
+        <text name="dc14_collection_barn_unavailable" text="Status pengambilan tidak tersedia untuk kandang ini." />
+        <text name="dc14_collection_settings_off" text="Simulasi peternakan sapi perah dimatikan." />
+        <text name="dc14_collection_no_real_farm" text="Pilih atau bergabung dengan pertanian untuk melihat status pengambilan." />
     </texts>
 </l10n>

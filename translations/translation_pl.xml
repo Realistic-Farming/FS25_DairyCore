@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Opłata równa cenie: mleko niesprzedane." />
         <text name="dc_guide_saleFee_08" text="Odrzucony objazd i tak zużywa swój termin." />
         <text name="dc_guide_saleFee_09" text="Starzenie trwa dalej; sprawdź log serwera." />
+        <text name="dc14_collection_heading_barn" text="Obora" />
+        <text name="dc14_collection_heading_status" text="Odbiór" />
+        <text name="dc14_collection_heading_worker" text="Pracownik" />
+        <text name="dc14_collection_heading_next_due" text="Następny termin" />
+        <text name="dc14_collection_row_refused" text="Mleko pozostało" />
+        <text name="dc14_collection_row_none" text="Brak raportu" />
+        <text name="dc14_collection_row_unavailable" text="Niedostępne" />
+        <text name="dc14_collection_fee_refused" text="Podczas zaplanowanego odbioru w dniu %s o %s mleko pozostało w oborze, ponieważ opłata manipulacyjna dorównała cenie sprzedaży lub ją przekroczyła przy tej próbie." />
+        <text name="dc14_collection_next_due" text="Następny odbiór: dzień %s o %s." />
+        <text name="dc14_collection_no_worker" text="Obecnie nie przydzielono pracownika do odbioru." />
+        <text name="dc14_collection_no_report" text="Brak raportu o odmowie odbioru w tej sesji." />
+        <text name="dc14_collection_updating" text="Aktualizowanie stanu odbioru." />
+        <text name="dc14_collection_unavailable" text="Stan odbioru niedostępny." />
+        <text name="dc14_collection_barn_unavailable" text="Stan odbioru niedostępny dla tej obory." />
+        <text name="dc14_collection_settings_off" text="Symulacja mleczarska jest wyłączona." />
+        <text name="dc14_collection_no_real_farm" text="Wybierz gospodarstwo lub dołącz do niego, aby zobaczyć stan odbioru." />
     </texts>
 </l10n>

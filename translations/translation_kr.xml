@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="수수료가 가격 이상이면 우유는 팔리지 않습니다." />
         <text name="dc_guide_saleFee_08" text="거부된 순회도 예정된 시간을 사용합니다." />
         <text name="dc_guide_saleFee_09" text="숙성은 계속됩니다. 서버 로그를 확인하세요." />
+        <text name="dc14_collection_heading_barn" text="축사" />
+        <text name="dc14_collection_heading_status" text="수거" />
+        <text name="dc14_collection_heading_worker" text="작업자" />
+        <text name="dc14_collection_heading_next_due" text="다음 예정" />
+        <text name="dc14_collection_row_refused" text="우유가 남음" />
+        <text name="dc14_collection_row_none" text="보고 없음" />
+        <text name="dc14_collection_row_unavailable" text="확인 불가" />
+        <text name="dc14_collection_fee_refused" text="%s일째 %s의 정기 수거에서 해당 시도의 취급 수수료가 판매 가격과 같거나 높아 우유가 축사에 남았습니다." />
+        <text name="dc14_collection_next_due" text="다음 수거 예정: %s일째 %s." />
+        <text name="dc14_collection_no_worker" text="현재 배정된 수거 작업자가 없습니다." />
+        <text name="dc14_collection_no_report" text="이번 세션에는 수거 거부 보고가 없습니다." />
+        <text name="dc14_collection_updating" text="수거 상태를 업데이트하는 중입니다." />
+        <text name="dc14_collection_unavailable" text="수거 상태를 확인할 수 없습니다." />
+        <text name="dc14_collection_barn_unavailable" text="이 축사의 수거 상태를 확인할 수 없습니다." />
+        <text name="dc14_collection_settings_off" text="낙농 시뮬레이션이 꺼져 있습니다." />
+        <text name="dc14_collection_no_real_farm" text="수거 상태를 보려면 농장을 선택하거나 농장에 참여하세요." />
     </texts>
 </l10n>

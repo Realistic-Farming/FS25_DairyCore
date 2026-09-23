@@ -26,6 +26,8 @@ source(modDirectory .. "src/RLBridge.lua")
 source(modDirectory .. "src/FeedProvenance.lua")
 source(modDirectory .. "src/MilkTank.lua")
 source(modDirectory .. "src/DairyCoreManager.lua")
+-- DC-14: the collection-refusal session report and its safe view (extends the manager).
+source(modDirectory .. "src/DairyCollectionRefusal.lua")
 -- DC-27: the direct-event fallback for the breed surface mirror (used only when
 -- NetworkSync is absent or refuses the module).
 source(modDirectory .. "src/network/DairyBreedSurfaceEvent.lua")

@@ -331,6 +331,30 @@ DairyConstants.ACTIONS = {
     UNASSIGN_ROTA = "DairyCore_UnassignRota",  -- DC-9 rota release (args: barnId)
 }
 
+-- DC-14 collection refusal (SDS v0.9, brief v1.0): the session-lived, farm-private
+-- explanation of a scheduled round that left milk behind. View states and reasons
+-- are the getter's; row states, their wire codes and the per-row reasons are the
+-- producer's; the module id is slice B's NetworkSync scoped module.
+DairyConstants.COLLECTION_REFUSAL = {
+    NETWORK_MODULE = "dairy.collectionRefusal.v1",
+    SCHEMA = 1,
+    STATES = { WAITING = "WAITING", READY = "READY", UNAVAILABLE = "UNAVAILABLE" },
+    REASONS = {
+        FIRST_SNAPSHOT    = "FIRST_SNAPSHOT",
+        NS_READY_WAIT     = "NS_READY_WAIT",
+        TRANSPORT_TIMEOUT = "TRANSPORT_TIMEOUT",
+        TRANSPORT_ERROR   = "TRANSPORT_ERROR",
+        SETTINGS_OFF      = "SETTINGS_OFF",
+        NO_REAL_FARM      = "NO_REAL_FARM",
+    },
+    ROW_STATES = { NONE_RECORDED = "NONE_RECORDED", FEE_EXCEEDS_PRICE = "FEE_EXCEEDS_PRICE", UNAVAILABLE = "UNAVAILABLE" },
+    ROW_CODES  = { NONE_RECORDED = 0, FEE_EXCEEDS_PRICE = 1, UNAVAILABLE = 2 },
+    ROW_REASONS = { OWNER_UNRESOLVED = "OWNER_UNRESOLVED", EVALUATION_ERROR = "EVALUATION_ERROR" },
+    MAX_KEY_BYTES = 128,
+    MAX_LABEL_BYTES = 128,
+    LABEL_FALLBACK_PREFIX = "Barn ",
+}
+
 -- DC-25: milk tank placeable. A mod-owned storage within reach of a barn.
 DairyConstants.MILK_TANK = {
     TANK_RADIUS = 150,

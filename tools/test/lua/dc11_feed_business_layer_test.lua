@@ -8,7 +8,7 @@
 -- Also pins F106: undesignateFeedField marks the barns dirty, symmetric with
 -- designateFeedField, so a co-op partner sees the undesignation immediately.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
 
 local HERD = DairyConstants.HERD
 

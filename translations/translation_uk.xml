@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Збір не нижче ціни: молоко не продано." />
         <text name="dc_guide_saleFee_08" text="Відхилений об'їзд усе одно витрачає слот." />
         <text name="dc_guide_saleFee_09" text="Старіння триває; дивіться лог сервера." />
+        <text name="dc14_collection_heading_barn" text="Корівник" />
+        <text name="dc14_collection_heading_status" text="Збір" />
+        <text name="dc14_collection_heading_worker" text="Працівник" />
+        <text name="dc14_collection_heading_next_due" text="Наступний термін" />
+        <text name="dc14_collection_row_refused" text="Молоко залишилось" />
+        <text name="dc14_collection_row_none" text="Немає звіту" />
+        <text name="dc14_collection_row_unavailable" text="Недоступно" />
+        <text name="dc14_collection_fee_refused" text="Під час запланованого збору в день %s о %s молоко залишилося в корівнику, бо плата за обробку при цій спробі дорівнювала ціні продажу або перевищувала її." />
+        <text name="dc14_collection_next_due" text="Наступний збір: день %s о %s." />
+        <text name="dc14_collection_no_worker" text="Працівника для збору зараз не призначено." />
+        <text name="dc14_collection_no_report" text="У цій сесії немає звіту про відмову у зборі." />
+        <text name="dc14_collection_updating" text="Оновлення стану збору." />
+        <text name="dc14_collection_unavailable" text="Стан збору недоступний." />
+        <text name="dc14_collection_barn_unavailable" text="Стан збору для цього корівника недоступний." />
+        <text name="dc14_collection_settings_off" text="Симуляцію молочної ферми вимкнено." />
+        <text name="dc14_collection_no_real_farm" text="Оберіть ферму або приєднайтеся до неї, щоб побачити стан збору." />
     </texts>
 </l10n>

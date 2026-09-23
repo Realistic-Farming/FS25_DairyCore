@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Díj az ár szintjén: a tej eladatlan marad." />
         <text name="dc_guide_saleFee_08" text="Az elutasított kör is elhasználja az idejét." />
         <text name="dc_guide_saleFee_09" text="Az öregedés folytatódik; lásd a szervernaplót." />
+        <text name="dc14_collection_heading_barn" text="Istálló" />
+        <text name="dc14_collection_heading_status" text="Begyűjtés" />
+        <text name="dc14_collection_heading_worker" text="Munkás" />
+        <text name="dc14_collection_heading_next_due" text="Következő esedékes" />
+        <text name="dc14_collection_row_refused" text="Tej ott maradt" />
+        <text name="dc14_collection_row_none" text="Nincs jelentés" />
+        <text name="dc14_collection_row_unavailable" text="Nem elérhető" />
+        <text name="dc14_collection_fee_refused" text="A %s. napon %s-kor ütemezett begyűjtéskor a tej az istállóban maradt, mert a kezelési díj ennél a próbálkozásnál elérte vagy meghaladta az eladási árat." />
+        <text name="dc14_collection_next_due" text="Következő begyűjtés esedékes: %s. nap, %s." />
+        <text name="dc14_collection_no_worker" text="Jelenleg nincs begyűjtő munkás kijelölve." />
+        <text name="dc14_collection_no_report" text="Ebben a munkamenetben nincs jelentés elutasított begyűjtésről." />
+        <text name="dc14_collection_updating" text="A begyűjtés állapotának frissítése." />
+        <text name="dc14_collection_unavailable" text="A begyűjtés állapota nem elérhető." />
+        <text name="dc14_collection_barn_unavailable" text="A begyűjtés állapota ehhez az istállóhoz nem elérhető." />
+        <text name="dc14_collection_settings_off" text="A tejgazdasági szimuláció ki van kapcsolva." />
+        <text name="dc14_collection_no_real_farm" text="Válassz farmot vagy csatlakozz egyhez a begyűjtés állapotának megtekintéséhez." />
     </texts>
 </l10n>

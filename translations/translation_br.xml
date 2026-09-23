@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Taxa igual ou acima do preço: leite não vendido." />
         <text name="dc_guide_saleFee_08" text="Uma rodada recusada ainda usa seu horário." />
         <text name="dc_guide_saleFee_09" text="O envelhecimento continua; veja o log." />
+        <text name="dc14_collection_heading_barn" text="Estábulo" />
+        <text name="dc14_collection_heading_status" text="Coleta" />
+        <text name="dc14_collection_heading_worker" text="Trabalhador" />
+        <text name="dc14_collection_heading_next_due" text="Próxima prevista" />
+        <text name="dc14_collection_row_refused" text="Leite deixado" />
+        <text name="dc14_collection_row_none" text="Sem relatório" />
+        <text name="dc14_collection_row_unavailable" text="Indisponível" />
+        <text name="dc14_collection_fee_refused" text="Na coleta agendada do dia %s às %s, o leite ficou no estábulo porque a taxa de manuseio igualou ou excedeu o preço de venda nessa tentativa." />
+        <text name="dc14_collection_next_due" text="Próxima coleta prevista: dia %s às %s." />
+        <text name="dc14_collection_no_worker" text="Nenhum trabalhador de coleta está atribuído no momento." />
+        <text name="dc14_collection_no_report" text="Nenhum relatório de coleta recusada nesta sessão." />
+        <text name="dc14_collection_updating" text="Atualizando o status da coleta." />
+        <text name="dc14_collection_unavailable" text="Status da coleta indisponível." />
+        <text name="dc14_collection_barn_unavailable" text="Status da coleta indisponível para este estábulo." />
+        <text name="dc14_collection_settings_off" text="A simulação de leite está desligada." />
+        <text name="dc14_collection_no_real_farm" text="Selecione ou entre em uma fazenda para ver o status da coleta." />
     </texts>
 </l10n>
