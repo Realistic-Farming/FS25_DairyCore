@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Taxă la nivelul prețului: laptele rămâne nevândut." />
         <text name="dc_guide_saleFee_08" text="Un rond refuzat își consumă totuși locul." />
         <text name="dc_guide_saleFee_09" text="Învechirea continuă; vezi jurnalul serverului." />
+        <text name="dc14_collection_heading_barn" text="Grajd" />
+        <text name="dc14_collection_heading_status" text="Colectare" />
+        <text name="dc14_collection_heading_worker" text="Muncitor" />
+        <text name="dc14_collection_heading_next_due" text="Următoarea programată" />
+        <text name="dc14_collection_row_refused" text="Lapte rămas" />
+        <text name="dc14_collection_row_none" text="Niciun raport" />
+        <text name="dc14_collection_row_unavailable" text="Indisponibil" />
+        <text name="dc14_collection_fee_refused" text="La colectarea programată din ziua %s la %s, laptele nu a fost colectat deoarece taxa de manipulare a egalat sau a depășit prețul de vânzare la acea încercare." />
+        <text name="dc14_collection_next_due" text="Următoarea colectare programată: ziua %s la %s." />
+        <text name="dc14_collection_no_worker" text="În prezent nu este alocat niciun muncitor pentru colectare." />
+        <text name="dc14_collection_no_report" text="Niciun raport de colectare refuzată în această sesiune." />
+        <text name="dc14_collection_updating" text="Se actualizează starea colectării." />
+        <text name="dc14_collection_unavailable" text="Starea colectării nu este disponibilă." />
+        <text name="dc14_collection_barn_unavailable" text="Starea colectării nu este disponibilă pentru acest grajd." />
+        <text name="dc14_collection_settings_off" text="Simularea fermei de lapte este oprită." />
+        <text name="dc14_collection_no_real_farm" text="Selectează sau alătură-te unei ferme pentru a vedea starea colectării." />
     </texts>
 </l10n>

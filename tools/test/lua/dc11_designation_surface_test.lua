@@ -11,7 +11,7 @@
 --   * getOwnedFeedFields enumerates only the farm's own fields and attaches the
 --     live SF state the readout shows (the same read the score eats)
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
 
 local function asServer(flag) g_currentMission._isServer = flag end
 

@@ -11,7 +11,7 @@
 -- admitted any barn whose own farmId was nil for any requested farm. It now
 -- returns row tables of semantic codes for exactly one admitted farm.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
 
 -- Engine mock
 g_currentMission = {

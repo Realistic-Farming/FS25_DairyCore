@@ -89,6 +89,9 @@ end
 -- =========================================================
 
 function DairyCoreManager:onMissionLoaded()
+    -- DC-14: the session report is mission-lived and the manager object is not
+    -- (main.lua builds it once per process); reset above the PF stand-down return.
+    self:_resetCollectionRefusalSession()
     self._discoveryRetries = 0
     self._discoveryTimer = 0
     self._discoveryPending = true
@@ -130,6 +133,7 @@ function DairyCoreManager:onMissionLoaded()
 end
 
 function DairyCoreManager:onMissionDelete()
+    self:_resetCollectionRefusalSession()
     self:_teardownMilkBreed()
     if self.animalMoveBound and g_messageCenter ~= nil then
         pcall(function() g_messageCenter:unsubscribeAll(self) end)
@@ -337,6 +341,9 @@ function DairyCoreManager:discoverBarns(retainUnresolved)
     if changed or next(previous) ~= nil then
         self:_markBarnsDirty()
         self:_markBreedSurfaceDirty()
+        -- DC-14: the census moved (bound, hidden, removed or re-owned), so the
+        -- admitted rows moved with it.
+        self:_touchCollectionRefusal()
     end
 end
 
@@ -405,6 +412,8 @@ function DairyCoreManager:_getOrCreateBarn(barnId, farmId, placeable)
     if farmId ~= nil and self:_isRealFarmId(barn.farmId) and barn.farmId ~= farmId then
         barn.assignedWorkerId = nil
         barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+        -- DC-14: a barn that changed hands carries no old owner's explanation.
+        self:_clearCollectionRefusal(barnId)
     end
     barn.farmId = farmId or barn.farmId
     barn._placeable = placeable  -- transient runtime reference, not saved
@@ -890,6 +899,8 @@ function DairyCoreManager:markCollected(barn, currentDay, nowHours, source)
     if source ~= nil then barn.lastCollectionSource = source end
     barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key
     barn._spoilageTierDrop = 0
+    -- DC-14: an actual collection from any real source clears the refusal explanation.
+    self:_clearCollectionRefusal(barn.barnId)
     self:_markBarnsDirty()
 end
 
@@ -1007,6 +1018,8 @@ function DairyCoreManager:assignCollectionWorker(barnId, workerId)
     if barn.nextCollectionDue == nil then
         barn.nextCollectionDue = self:_nowHours() + (barn.collectionInterval or 24)
     end
+    -- DC-14: assignment changes the published next-due truth, never the last attempt.
+    self:_touchCollectionRefusal()
     self:_markBarnsDirty()
     return true
 end
@@ -1016,6 +1029,8 @@ function DairyCoreManager:unassignCollectionWorker(barnId)
     if barn == nil or not self:_isServer() then return false end
     barn.assignedWorkerId = nil
     barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+    -- DC-14: the past attempt is retained; only the next-due publication changes.
+    self:_touchCollectionRefusal()
     self:_markBarnsDirty()
     return true
 end
@@ -1162,6 +1177,8 @@ function DairyCoreManager:_reconcileBarns(retainUnresolved)
             if barn._probeDead and not retainUnresolved and not barn._startupUnresolved then
                 self:_detachStorageListeners(barn)
                 self:_forgetMilkBreedBarn(barn, barnId)
+                -- DC-14: a confirmed removal clears its explanation.
+                self:_clearCollectionRefusal(barnId)
                 self.barns[barnId] = nil
             else
                 barn._probeDead = true
@@ -1178,6 +1195,10 @@ function DairyCoreManager:_reconcileBarns(retainUnresolved)
                     barn.assignedWorkerId = nil
                     barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
                     barn.farmId = owner
+                    -- DC-14: owner reconciliation invalidates the old owner's explanation
+                    -- and moves the barn between two farms' views.
+                    self:_clearCollectionRefusal(barnId)
+                    self:_touchCollectionRefusal()
                 end
             end
         end
@@ -1214,6 +1235,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
 
         if barn.nextCollectionDue == nil then
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
+            -- DC-14: a worker's published next due is part of the shown projection.
+            if barn.assignedWorkerId ~= nil then self:_touchCollectionRefusal() end
         elseif nowHours >= barn.nextCollectionDue then
             -- A scheduled window has arrived. If no worker is assigned the window is
             -- MISSED: the milk ages on, which the elapsed-time clock already shows.
@@ -1223,14 +1246,21 @@ function DairyCoreManager:onCollectionHourTick(ctx)
                 -- which actually removes, prices and credits the milk.
                 local skill = DairyConstants.COLLECTION.SKILL[self:_workerLevelName(barn)]
                               or DairyConstants.COLLECTION.SKILL.experienced
-                local removed = self:_rotaCollection(barn, nowHours, monotonicDay)
-                if removed and removed > 0 then
+                -- DC-14: capture the COMPLETE rota return. The status used to be
+                -- dropped here; a raising sale used to abort the whole tick loop.
+                -- Only ok with "fee_exceeds_price" can produce an explanation, and
+                -- only after the presence read proves milk was left behind.
+                local ok, removed, status = pcall(self._rotaCollection, self, barn, nowHours, monotonicDay)
+                self:_recordCollectionAttempt(barn, ok, removed, status, nowHours)
+                if ok and type(removed) == "number" and removed > 0 then
                     barn._lastRunSpeedMod = skill.speedMod
                 end
             else
                 DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
             end
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
+            -- DC-14: the next due moved; a worker's barn publishes it.
+            if barn.assignedWorkerId ~= nil then self:_touchCollectionRefusal() end
         end
     end
 end

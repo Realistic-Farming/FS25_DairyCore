@@ -28,7 +28,7 @@
 -- Every scored cow has health 100 and productivity 1.0, so the per-animal base is
 -- (1.0 * 0.6) + (0.5 * 0.4) = 0.80, i.e. a barn score of 80 with no penalty.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/RLBridge.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/RLBridge.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
 
 local BASE = 80          -- clean animal score, see header
 local PER_RECORD = 8     -- 0.08 * 100

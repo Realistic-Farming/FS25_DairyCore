@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Poplatek na úrovni ceny: mléko neprodáno." />
         <text name="dc_guide_saleFee_08" text="Odmítnutý svoz stejně spotřebuje svůj termín." />
         <text name="dc_guide_saleFee_09" text="Stárnutí pokračuje; viz log serveru." />
+        <text name="dc14_collection_heading_barn" text="Stáj" />
+        <text name="dc14_collection_heading_status" text="Svoz" />
+        <text name="dc14_collection_heading_worker" text="Pracovník" />
+        <text name="dc14_collection_heading_next_due" text="Příští termín" />
+        <text name="dc14_collection_row_refused" text="Mléko zůstalo" />
+        <text name="dc14_collection_row_none" text="Bez hlášení" />
+        <text name="dc14_collection_row_unavailable" text="Nedostupné" />
+        <text name="dc14_collection_fee_refused" text="Při plánovaném svozu dne %s v %s mléko zůstalo nesvezené, protože manipulační poplatek při tomto pokusu dosáhl prodejní ceny nebo ji převýšil." />
+        <text name="dc14_collection_next_due" text="Příští svoz: den %s v %s." />
+        <text name="dc14_collection_no_worker" text="Momentálně není přidělen žádný pracovník svozu." />
+        <text name="dc14_collection_no_report" text="V této relaci není žádné hlášení o odmítnutém svozu." />
+        <text name="dc14_collection_updating" text="Aktualizace stavu svozu." />
+        <text name="dc14_collection_unavailable" text="Stav svozu není dostupný." />
+        <text name="dc14_collection_barn_unavailable" text="Stav svozu pro tuto stáj není dostupný." />
+        <text name="dc14_collection_settings_off" text="Simulace mléčné farmy je vypnutá." />
+        <text name="dc14_collection_no_real_farm" text="Vyberte farmu nebo se k ní připojte, abyste viděli stav svozu." />
     </texts>
 </l10n>

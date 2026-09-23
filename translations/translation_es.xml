@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Tarifa igual o mayor al precio: leche sin vender." />
         <text name="dc_guide_saleFee_08" text="Una ronda rechazada gasta igualmente su turno." />
         <text name="dc_guide_saleFee_09" text="El envejecimiento sigue; mira el registro." />
+        <text name="dc14_collection_heading_barn" text="Establo" />
+        <text name="dc14_collection_heading_status" text="Recogida" />
+        <text name="dc14_collection_heading_worker" text="Trabajador" />
+        <text name="dc14_collection_heading_next_due" text="Próxima prevista" />
+        <text name="dc14_collection_row_refused" text="Leche sin recoger" />
+        <text name="dc14_collection_row_none" text="Sin informe" />
+        <text name="dc14_collection_row_unavailable" text="No disponible" />
+        <text name="dc14_collection_fee_refused" text="En la recogida programada del día %s a las %s, la leche quedó sin recoger porque la tasa de manipulación igualó o superó el precio de venta en ese intento." />
+        <text name="dc14_collection_next_due" text="Próxima recogida prevista: día %s a las %s." />
+        <text name="dc14_collection_no_worker" text="Actualmente no hay ningún trabajador de recogida asignado." />
+        <text name="dc14_collection_no_report" text="No hay informe de recogida rechazada en esta sesión." />
+        <text name="dc14_collection_updating" text="Actualizando el estado de la recogida." />
+        <text name="dc14_collection_unavailable" text="Estado de la recogida no disponible." />
+        <text name="dc14_collection_barn_unavailable" text="Estado de la recogida no disponible para este establo." />
+        <text name="dc14_collection_settings_off" text="La simulación lechera está desactivada." />
+        <text name="dc14_collection_no_real_farm" text="Selecciona una granja o únete a una para ver el estado de la recogida." />
     </texts>
 </l10n>

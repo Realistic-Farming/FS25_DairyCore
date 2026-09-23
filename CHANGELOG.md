@@ -13,6 +13,9 @@ the repo's git history and README.
 
 ## [Unreleased]
 
+### Added
+- DC-14 host, slice A: DairyCore now records, for the session only, why a scheduled milk round left milk behind (the handling fee met or exceeded the sale price at that attempt), read fail-closed from the barn's native storage and the Dairy milk tanks in reach, and offers it through one farm-private getter. No surface shows it yet (slice C paints the Esc sheet; slice B carries it to joined clients), and the new feedback surface stays release-locked until its observations pass. The sale, the fee, the money and the round's timing are unchanged. Sixteen new strings in all 26 languages.
+
 ### Changed
 - The office and rota milk sale now charges a fixed handling fee per litre instead of a percentage of the price. The default is 0.011 per litre, set as 11 per 1000 L and tunable from 0 to 50. At the usual milk price that is a smaller cut than the old 5 percent, so most sales pay more than before. A fixed fee is a small share of a dear market and a larger share of a cheap one, which is the point of charging what the handling costs rather than a slice of the sale.
 - The admin setting is now **Milk Sale Fee (per 1000 L)**, a whole number from 0 to 50, replacing the old Milk Sale Margin. Existing savegames start at the new default of 11; the old percentage value is not carried over, because a fraction cannot be honestly converted into a rate without knowing the price it was applied at. Set it to 0 to waive the fee entirely.

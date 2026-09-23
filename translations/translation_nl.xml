@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Kosten op of boven de prijs: melk blijft onverkocht." />
         <text name="dc_guide_saleFee_08" text="Een geweigerde ronde gebruikt toch zijn beurt." />
         <text name="dc_guide_saleFee_09" text="Veroudering loopt door; zie het serverlog." />
+        <text name="dc14_collection_heading_barn" text="Stal" />
+        <text name="dc14_collection_heading_status" text="Ophaling" />
+        <text name="dc14_collection_heading_worker" text="Werknemer" />
+        <text name="dc14_collection_heading_next_due" text="Volgende gepland" />
+        <text name="dc14_collection_row_refused" text="Melk achtergebleven" />
+        <text name="dc14_collection_row_none" text="Geen melding" />
+        <text name="dc14_collection_row_unavailable" text="Niet beschikbaar" />
+        <text name="dc14_collection_fee_refused" text="Bij de geplande ophaling op dag %s om %s bleef de melk achter, omdat de verwerkingskosten bij die poging de verkoopprijs evenaarden of overschreden." />
+        <text name="dc14_collection_next_due" text="Volgende ophaling gepland: dag %s om %s." />
+        <text name="dc14_collection_no_worker" text="Er is momenteel geen ophaalwerknemer toegewezen." />
+        <text name="dc14_collection_no_report" text="Geen melding van een geweigerde ophaling in deze sessie." />
+        <text name="dc14_collection_updating" text="Ophaalstatus wordt bijgewerkt." />
+        <text name="dc14_collection_unavailable" text="Ophaalstatus niet beschikbaar." />
+        <text name="dc14_collection_barn_unavailable" text="Ophaalstatus niet beschikbaar voor deze stal." />
+        <text name="dc14_collection_settings_off" text="De melkveesimulatie staat uit." />
+        <text name="dc14_collection_no_real_farm" text="Selecteer een boerderij of sluit je aan om de ophaalstatus te zien." />
     </texts>
 </l10n>

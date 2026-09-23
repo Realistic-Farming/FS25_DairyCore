@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Avgift vid eller över priset: mjölken säljs inte." />
         <text name="dc_guide_saleFee_08" text="En nekad runda använder ändå sin tur." />
         <text name="dc_guide_saleFee_09" text="Åldrandet fortsätter; se serverloggen." />
+        <text name="dc14_collection_heading_barn" text="Ladugård" />
+        <text name="dc14_collection_heading_status" text="Hämtning" />
+        <text name="dc14_collection_heading_worker" text="Arbetare" />
+        <text name="dc14_collection_heading_next_due" text="Nästa planerad" />
+        <text name="dc14_collection_row_refused" text="Mjölk kvarlämnad" />
+        <text name="dc14_collection_row_none" text="Ingen rapport" />
+        <text name="dc14_collection_row_unavailable" text="Ej tillgänglig" />
+        <text name="dc14_collection_fee_refused" text="Vid den planerade hämtningen dag %s kl. %s hämtades mjölken inte, eftersom hanteringsavgiften vid det försöket nådde eller översteg försäljningspriset." />
+        <text name="dc14_collection_next_due" text="Nästa hämtning: dag %s kl. %s." />
+        <text name="dc14_collection_no_worker" text="Ingen hämtningsarbetare är tilldelad just nu." />
+        <text name="dc14_collection_no_report" text="Ingen rapport om nekad hämtning under den här sessionen." />
+        <text name="dc14_collection_updating" text="Uppdaterar hämtningsstatus." />
+        <text name="dc14_collection_unavailable" text="Hämtningsstatus ej tillgänglig." />
+        <text name="dc14_collection_barn_unavailable" text="Hämtningsstatus ej tillgänglig för den här ladugården." />
+        <text name="dc14_collection_settings_off" text="Mjölksimuleringen är avstängd." />
+        <text name="dc14_collection_no_real_farm" text="Välj eller gå med i en gård för att se hämtningsstatus." />
     </texts>
 </l10n>

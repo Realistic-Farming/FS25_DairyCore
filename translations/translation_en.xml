@@ -104,5 +104,21 @@
         <text name="dc_guide_saleFee_07" text="Fee at or above price leaves the milk unsold." />
         <text name="dc_guide_saleFee_08" text="A refused round still uses its scheduled slot." />
         <text name="dc_guide_saleFee_09" text="Ageing continues normally; see the server log." />
+        <text name="dc14_collection_heading_barn" text="Barn" />
+        <text name="dc14_collection_heading_status" text="Collection" />
+        <text name="dc14_collection_heading_worker" text="Worker" />
+        <text name="dc14_collection_heading_next_due" text="Next due" />
+        <text name="dc14_collection_row_refused" text="Milk left behind" />
+        <text name="dc14_collection_row_none" text="No report" />
+        <text name="dc14_collection_row_unavailable" text="Unavailable" />
+        <text name="dc14_collection_fee_refused" text="At the scheduled collection on day %s at %s, the milk remained because the handling fee met or exceeded the sale price at that attempt." />
+        <text name="dc14_collection_next_due" text="Next collection due: day %s at %s." />
+        <text name="dc14_collection_no_worker" text="No collection worker is currently assigned." />
+        <text name="dc14_collection_no_report" text="No collection-refusal report this session." />
+        <text name="dc14_collection_updating" text="Updating collection status." />
+        <text name="dc14_collection_unavailable" text="Collection status unavailable." />
+        <text name="dc14_collection_barn_unavailable" text="Collection status unavailable for this barn." />
+        <text name="dc14_collection_settings_off" text="Dairy simulation is off." />
+        <text name="dc14_collection_no_real_farm" text="Select or join a farm to view collection status." />
     </texts>
 </l10n>

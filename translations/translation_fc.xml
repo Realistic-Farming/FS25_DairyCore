@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="Frais au niveau du prix : le lait reste invendu." />
         <text name="dc_guide_saleFee_08" text="Une tournée refusée consomme son créneau." />
         <text name="dc_guide_saleFee_09" text="Le vieillissement continue ; voir le journal." />
+        <text name="dc14_collection_heading_barn" text="Étable" />
+        <text name="dc14_collection_heading_status" text="Collecte" />
+        <text name="dc14_collection_heading_worker" text="Ouvrier" />
+        <text name="dc14_collection_heading_next_due" text="Prochaine échéance" />
+        <text name="dc14_collection_row_refused" text="Lait resté sur place" />
+        <text name="dc14_collection_row_none" text="Aucun rapport" />
+        <text name="dc14_collection_row_unavailable" text="Non disponible" />
+        <text name="dc14_collection_fee_refused" text="Lors de la collecte prévue le jour %s à %s, le lait est resté sur place parce que les frais de manutention atteignaient ou dépassaient le prix de vente lors de cette tentative." />
+        <text name="dc14_collection_next_due" text="Prochaine collecte prévue : jour %s à %s." />
+        <text name="dc14_collection_no_worker" text="Aucun ouvrier de collecte n'est présentement affecté." />
+        <text name="dc14_collection_no_report" text="Aucun rapport de collecte refusée pour cette session." />
+        <text name="dc14_collection_updating" text="Mise à jour de l'état de la collecte." />
+        <text name="dc14_collection_unavailable" text="État de la collecte non disponible." />
+        <text name="dc14_collection_barn_unavailable" text="État de la collecte non disponible pour cette étable." />
+        <text name="dc14_collection_settings_off" text="La simulation laitière est désactivée." />
+        <text name="dc14_collection_no_real_farm" text="Sélectionnez ou joignez une ferme pour voir l'état de la collecte." />
     </texts>
 </l10n>

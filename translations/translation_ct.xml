@@ -105,5 +105,21 @@
         <text name="dc_guide_saleFee_07" text="費用達到或超過價格時牛奶不會售出。" />
         <text name="dc_guide_saleFee_08" text="被拒絕的巡迴仍會用掉排定時段。" />
         <text name="dc_guide_saleFee_09" text="陳化照常進行；請查看伺服器日誌。" />
+        <text name="dc14_collection_heading_barn" text="牛舍" />
+        <text name="dc14_collection_heading_status" text="收乳" />
+        <text name="dc14_collection_heading_worker" text="工人" />
+        <text name="dc14_collection_heading_next_due" text="下次預定" />
+        <text name="dc14_collection_row_refused" text="牛奶留在牛舍" />
+        <text name="dc14_collection_row_none" text="沒有報告" />
+        <text name="dc14_collection_row_unavailable" text="無法取得" />
+        <text name="dc14_collection_fee_refused" text="在第 %s 天 %s 的預定收乳中，由於該次的處理費達到或超過售價，牛奶未被收走。" />
+        <text name="dc14_collection_next_due" text="下次收乳預定：第 %s 天 %s。" />
+        <text name="dc14_collection_no_worker" text="目前沒有指派收乳工人。" />
+        <text name="dc14_collection_no_report" text="本次工作階段沒有收乳遭拒的報告。" />
+        <text name="dc14_collection_updating" text="正在更新收乳狀態。" />
+        <text name="dc14_collection_unavailable" text="無法取得收乳狀態。" />
+        <text name="dc14_collection_barn_unavailable" text="無法取得此牛舍的收乳狀態。" />
+        <text name="dc14_collection_settings_off" text="乳牛模擬已關閉。" />
+        <text name="dc14_collection_no_real_farm" text="請選擇或加入一個農場以檢視收乳狀態。" />
     </texts>
 </l10n>

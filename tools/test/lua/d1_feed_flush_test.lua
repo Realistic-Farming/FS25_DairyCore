@@ -6,7 +6,7 @@
 -- when the spine is absent). The passive daily decay stays the free never-stuck
 -- floor. Mirrors the C2 disease-flush shape (ProStaffDiseaseFlush.lua).
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
 
 g_currentMission = {
   _isServer = true,
