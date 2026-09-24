@@ -1691,22 +1691,29 @@ function DairyCoreManager:_bindActions()
     local ns = self:_getNetworkSync()
     if ns == nil or ns.registerAction == nil then return end
 
+    -- The args are the POSITIONAL array the transport carries, in the order
+    -- DairyConstants.ACTIONS documents (barnId, quantity / barnId, workerId / barnId):
+    -- a keyed table arrives empty (see requestFeedFlush). No sender exists for these
+    -- three yet; the first one written must send that array.
     ns:registerAction(DairyConstants.ACTIONS.SELL_MILK, {
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.barnId == nil then return end
-            self:sellMilk(args.barnId, args.quantity)
+            local barnId = type(args) == "table" and args[1] or nil
+            if barnId == nil then return end
+            self:sellMilk(barnId, args[2])
         end,
     })
     ns:registerAction(DairyConstants.ACTIONS.ASSIGN_ROTA, {
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.barnId == nil then return end
-            self:assignCollectionWorker(args.barnId, args.workerId)
+            local barnId = type(args) == "table" and args[1] or nil
+            if barnId == nil then return end
+            self:assignCollectionWorker(barnId, args[2])
         end,
     })
     ns:registerAction(DairyConstants.ACTIONS.UNASSIGN_ROTA, {
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.barnId == nil then return end
-            self:unassignCollectionWorker(args.barnId)
+            local barnId = type(args) == "table" and args[1] or nil
+            if barnId == nil then return end
+            self:unassignCollectionWorker(barnId)
         end,
     })
     -- D1: the feed flush is a FARM action (a farm flushes its own feed), not an
@@ -1716,14 +1723,18 @@ function DairyCoreManager:_bindActions()
     ns:registerAction(DairyConstants.FEED_FLUSH.ACTION, {
         adminOnly = false,
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.farmId == nil then return end
+            -- The farm is args[1], a positive number: getFarmByUserId answers farm 0 for a
+            -- user in no farm (FarmManager.lua:201), so a spectator's 0 would otherwise
+            -- pass the ownership equality below.
+            local farmId = type(args) == "table" and args[1] or nil
+            if type(farmId) ~= "number" or farmId <= 0 then return end
             local farm = g_farmManager ~= nil and g_farmManager:getFarmByUserId(userId) or nil
-            if farm == nil or farm.farmId ~= args.farmId then
+            if farm == nil or farm.farmId ~= farmId then
                 DCLogger.warning("FEED_FLUSH rejected: userId %s is not a member of farm %s",
-                    tostring(userId), tostring(args.farmId))
+                    tostring(userId), tostring(farmId))
                 return
             end
-            self:_doFeedFlush(args.farmId)
+            self:_doFeedFlush(farmId)
         end,
     })
     self.actionsBound = true
@@ -2876,7 +2887,11 @@ function DairyCoreManager:requestFeedFlush(farmId)
     if self:_isServer() then return self:_doFeedFlush(farmId) end
     local ns = self:_getNetworkSync()
     if ns ~= nil and ns.requestAction ~= nil then
-        ns:requestAction(DairyConstants.FEED_FLUSH.ACTION, { farmId = farmId })
+        -- A POSITIONAL ARRAY: NetworkSync's action event writes args[1..#args]
+        -- (RealisticFarmingSyncEvent.lua:209-216), so a keyed table has length zero and
+        -- arrives empty; a joined client's flush silently did nothing (PLAYER-REPORTS
+        -- row 199). A host never sees it: requestAction applies in memory there.
+        ns:requestAction(DairyConstants.FEED_FLUSH.ACTION, { farmId })
         return true, "requested"
     end
     DCLogger.warning("requestFeedFlush: no server authority and NetworkSync absent - cannot flush on a pure client")
