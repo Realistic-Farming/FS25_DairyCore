@@ -16,7 +16,7 @@
 -- 7 pcall wrapping. Plus the two things the flag has to survive to make the
 -- uninstall fallback possible: the StateLedger serialize path and the wire record.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/RLBridge.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/RLBridge.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua
 
 local W = DairyConstants.HERD.RITTER_GENETICS_WEIGHT
 

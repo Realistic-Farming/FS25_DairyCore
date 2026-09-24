@@ -8,7 +8,7 @@
 -- Two new contract archetypes, spot_run and standing_order, are pure data rows
 -- gated by prostaffLevel like the shipped standard row.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua
 
 local FF = DairyConstants.CONTRACTS.TYPES.sovereign_floor.floorFraction
 

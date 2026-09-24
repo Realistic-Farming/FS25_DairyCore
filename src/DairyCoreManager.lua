@@ -119,6 +119,9 @@ function DairyCoreManager:onMissionLoaded()
     -- DC-27: storage/herd change messages and the hook verify line.
     self:_bindMilkBreedMessages()
     self:_logMilkBreedVerify()
+    -- DC-14 slice B: the routes (scoped provider on the server, the pure client's
+    -- selection, the local farm-change subscription).
+    self:_collectionRouteBind()
 
     -- Trailer-transfer completion (Ritter mode, Integration 29C): base-game event.
     pcall(function()
@@ -133,6 +136,7 @@ function DairyCoreManager:onMissionLoaded()
 end
 
 function DairyCoreManager:onMissionDelete()
+    self:_collectionRouteTeardown()
     self:_resetCollectionRefusalSession()
     self:_teardownMilkBreed()
     if self.animalMoveBound and g_messageCenter ~= nil then
@@ -148,6 +152,8 @@ function DairyCoreManager:update(dt)
     if not self.clockBound then self:_subscribeClock() end
     self:_retryDiscovery(dt)
     self:_updateBreedSurfaceFallback(dt)
+    -- DC-14 slice B: real-time clocks of the routes (waits, timeouts, retries).
+    self:_collectionRouteUpdate(dt)
 end
 
 -- DC-32: on a dedicated server and on a client join, onMissionLoaded can fire before the

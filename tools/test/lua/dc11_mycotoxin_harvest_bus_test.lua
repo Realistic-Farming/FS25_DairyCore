@@ -7,7 +7,7 @@
 -- A clean cut (diseasePressure 0) is not contamination and must not route,
 -- because a zero-severity call still imposes MIN_PENALTY for MIN_DAYS.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua
 
 -- Engine mock
 g_currentMission = {
