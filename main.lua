@@ -28,9 +28,13 @@ source(modDirectory .. "src/MilkTank.lua")
 source(modDirectory .. "src/DairyCoreManager.lua")
 -- DC-14: the collection-refusal session report and its safe view (extends the manager).
 source(modDirectory .. "src/DairyCollectionRefusal.lua")
+-- DC-14 slice B: the routes a view travels (scoped module, DIRECT events, farm change).
+source(modDirectory .. "src/DairyCollectionRoute.lua")
 -- DC-27: the direct-event fallback for the breed surface mirror (used only when
 -- NetworkSync is absent or refuses the module).
 source(modDirectory .. "src/network/DairyBreedSurfaceEvent.lua")
+-- DC-14 slice B: the standalone DIRECT request/response events.
+source(modDirectory .. "src/network/DairyCollectionStatusEvents.lua")
 
 -- Esc RF PDA framework joiner (NO-HOST).
 source(DairyCoreModDirectory .. "src/gui/RfEscModules.lua")

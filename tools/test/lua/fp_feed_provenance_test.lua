@@ -4,7 +4,7 @@
 -- { contaminated, organic }, blended with one formula at every combine point,
 -- decayed daily, persisted, and read where organic feed affects the milk premium.
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua
 
 -- Engine mock
 g_currentMission = {

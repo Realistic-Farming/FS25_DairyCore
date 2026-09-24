@@ -20,7 +20,9 @@
 #     keeps a rows table to return, so no one-line edit creates that defect; row K3
 #     stands as the contract check;
 #   - the unkeyed-barn warning path: a placeable unique id that is empty or over 128
-#     bytes does not occur in the engine, and the path only logs.
+#     bytes does not occur in the engine, and the path only logs;
+#   - V8 (a pure client with no snapshot reading READY): the client's WAITING answer moved
+#     to slice B's _collectionClientView, so the mutation is RT16 in mutate_dc14b.py.
 #
 # Anchors are written with "\n"; in a CRLF file they are matched as "\r\n".
 #
@@ -133,13 +135,9 @@ MUTATIONS = [
     "        local live = (p ~= nil and not barn._probeDead) and p or nil\n        if live ~= nil and live == p then", 1)],
   "a demolished barn keeps its row until the next discovery pass"),
  ("V8b-getter-farm-after-server-branch", CR,
-  [("    local farmId = self:_collectionLocalFarmId()\n    if farmId == nil then\n        return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }\n    end\n    if not self:_isServer() then\n        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }\n    end",
-    "    if not self:_isServer() then\n        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }\n    end\n    local farmId = self:_collectionLocalFarmId()\n    if farmId == nil then\n        return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }\n    end", 1)],
-  "a pure client with no real farm reads updating instead of NO_REAL_FARM"),
- ("V8-client-reads-as-ready", CR,
-  [("        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }",
-    "        return { state = R.STATES.READY, reason = nil, rows = {} }", 1)],
-  "a pure client with no snapshot reads no-report instead of updating"),
+  [("    local farmId = self:_collectionLocalFarmId()\n    if farmId == nil then\n        return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }\n    end\n    if not self:_isServer() then\n        return self:_collectionClientView(farmId)\n    end",
+    "    if not self:_isServer() then\n        return self:_collectionClientView(self:_collectionLocalFarmId())\n    end\n    local farmId = self:_collectionLocalFarmId()\n    if farmId == nil then\n        return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }\n    end", 1)],
+  "a pure client with no real farm reads its route's answer instead of NO_REAL_FARM (slice B's client branch)"),
  ("V9-settings-off-answers", CR,
   [("    if self.settings == nil or self.settings.enabled == false then\n        return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.SETTINGS_OFF, rows = {} }\n    end\n", "", 1)],
   "with Dairy switched off the view still answers"),
@@ -177,7 +175,7 @@ MUTATIONS = [
     "    self._discoveryRetries = 0\n    self._discoveryTimer = 0\n    self._discoveryPending = true\n    -- Zero Precision Farming compatibility: stand down fully if PF is present.\n    if g_modIsLoaded ~= nil and g_modIsLoaded[\"FS25_precisionFarming\"] then\n        self.disabled = true\n        DCLogger.info(\"Precision Farming detected - DairyCore standing down\")\n        return\n    end\n    self:_resetCollectionRefusalSession()\n", 1)],
   "the reset sits below the PF stand-down return, so a PF load keeps the old map"),
  ("L6-no-reset-on-delete", MGR,
-  [("function DairyCoreManager:onMissionDelete()\n    self:_resetCollectionRefusalSession()\n", "function DairyCoreManager:onMissionDelete()\n", 1)],
+  [("function DairyCoreManager:onMissionDelete()\n    self:_collectionRouteTeardown()\n    self:_resetCollectionRefusalSession()\n", "function DairyCoreManager:onMissionDelete()\n    self:_collectionRouteTeardown()\n", 1)],
   "mission delete keeps the session map"),
  ("L7-removal-keeps-record", MGR,
   [("                -- DC-14: a confirmed removal clears its explanation.\n                self:_clearCollectionRefusal(barnId)\n", "", 1)],

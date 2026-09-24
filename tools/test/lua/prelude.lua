@@ -64,6 +64,27 @@ function g_currentMission:getIsServer() return self._isServer end
 g_server = nil
 g_modIsLoaded = {}
 
+-- ── Events (engine base) ───────────────────────────────────
+-- Event.new(customMt) instantiates a class table built with Class(x, Event);
+-- InitEventClass registers the class name and an event id (Event.lua:3-13). The
+-- stream primitives are NOT here: a test that carries an event over the wire
+-- models its own stream so the layout order is checked, not assumed.
+Event = Event or {}
+Event.__index = Event
+function Event.new(customMt, networkChannel)
+  local self = setmetatable({}, customMt or Event)
+  self.networkChannel = networkChannel
+  return self
+end
+function Event:delete() end
+function Event:readStream(streamId, connection) end
+function Event:writeStream(streamId, connection) end
+function Event:run(connection) end
+function InitEventClass(classTable, className)
+  classTable.className = className
+  classTable.eventId = classTable.eventId or className
+end
+
 -- ── tiny test framework (emits ##TEST_ markers parsed by run-tests.mjs) ──
 T = { _pass = 0, _fail = 0 }
 local function _pass(name) T._pass = T._pass + 1; print("##TEST_PASS " .. name) end

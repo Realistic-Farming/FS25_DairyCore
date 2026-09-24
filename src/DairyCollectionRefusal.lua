@@ -76,11 +76,16 @@ end
 
 --- The shown projection changed: a record write or clear, a worker assignment,
 --- every due round's next-due move, and every discovery census change (a barn
---- bound, hidden, removed or moved to another farm). The revision feeds slice B's
---- dataRevision; there is no transport to mark yet.
+--- bound, hidden, removed or moved to another farm). The revision is the scoped
+--- module's dataRevision; the route marks it dirty.
 function DairyCoreManager:_touchCollectionRefusal()
     local st = self:_collectionRefusalState()
     st.revision = st.revision + 1
+    self:_collectionRouteOnRevision()
+end
+
+--- Overridden by DairyCollectionRoute.lua (slice B); a no-op without it.
+function DairyCoreManager:_collectionRouteOnRevision()
 end
 
 --- Clear one barn's explanation: an actual collection from any real source, a
@@ -350,6 +355,7 @@ function DairyCoreManager:_collectionRefusalRows(farmId)
         local p = barn._placeable
         local live = (p ~= nil and not barn._probeDead) and self:_advisoryPlaceable(barnId, ps) or nil
         if live ~= nil and live == p then
+            barn._collectionLiveMiss = nil
             local owner = self:_collectionLiveOwner(barn)
             local record = st.records[barnId]
             if record ~= nil and owner ~= nil and record.recordedFarmId ~= owner then
@@ -388,6 +394,14 @@ function DairyCoreManager:_collectionRefusalRows(farmId)
                     rows[#rows + 1] = row
                 end
             end
+        elseif p ~= nil and not barn._collectionLiveMiss then
+            -- DC-14, DESIGN-CHECK row 94's window: the row is gone from the getter the
+            -- moment the live check fails, but the census does not move until the next
+            -- discovery pass (a day tick or a herd change), so the revision moves ONCE
+            -- here, the first time the builder sees the miss. Without it a client holding
+            -- the last snapshot would keep a demolished barn's row for up to a game day.
+            barn._collectionLiveMiss = true
+            self:_touchCollectionRefusal()
         end
     end
     table.sort(rows, function(a, b) return a.barnKey < b.barnKey end)
@@ -400,9 +414,11 @@ end
 ---   UNAVAILABLE / SETTINGS_OFF  Dairy simulation is off
 ---   UNAVAILABLE / NO_REAL_FARM  no strict local real farm (spectator, dedicated),
 ---                               decided before any route on every machine
----   WAITING / FIRST_SNAPSHOT    a pure client with a real farm before its first
----                               complete snapshot (slice B brings the transports)
----   READY                       the local producer's rows for the local farm
+---   WAITING / NS_READY_WAIT     a pure client while the scoped service is waiting
+---   WAITING / FIRST_SNAPSHOT    a pure client before its first complete snapshot
+---   UNAVAILABLE / TRANSPORT_*   a pure client whose DIRECT request timed out or broke
+---   READY                       the local producer's rows (server), or the
+---                               selected route's replica (pure client)
 function DairyCoreManager:getCollectionRefusalViews()
     local R = DairyConstants.COLLECTION_REFUSAL
     if self.disabled then return nil end
@@ -414,7 +430,7 @@ function DairyCoreManager:getCollectionRefusalViews()
         return { state = R.STATES.UNAVAILABLE, reason = R.REASONS.NO_REAL_FARM, rows = {} }
     end
     if not self:_isServer() then
-        return { state = R.STATES.WAITING, reason = R.REASONS.FIRST_SNAPSHOT, rows = {} }
+        return self:_collectionClientView(farmId)
     end
     return { state = R.STATES.READY, reason = nil, rows = self:_collectionRefusalRows(farmId) }
 end

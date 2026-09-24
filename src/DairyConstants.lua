@@ -353,6 +353,16 @@ DairyConstants.COLLECTION_REFUSAL = {
     MAX_KEY_BYTES = 128,
     MAX_LABEL_BYTES = 128,
     LABEL_FALLBACK_PREFIX = "Barn ",
+    -- Slice B, the transports (SDS v0.9 sections 4 and 5).
+    NS_WAIT_MS = 10000,                 -- WAITING_NS bound from the first enabled wait
+    NS_AVAILABILITY_MS = 10000,         -- visible demand with no APPLIED replica, then DIRECT
+    DIRECT_BUDGET_BYTES = 8192,         -- conservative application budget per response chunk
+    DIRECT_MAX_CHUNKS = 1024,
+    DIRECT_MAX_ROWS_PER_CHUNK = 512,
+    DIRECT_TIMEOUT_MS = 10000,
+    DIRECT_RETRY_MS = 5000,
+    DIRECT_MAX_REQUESTS_PER_SECOND = 8, -- per connection, excess ignored without reply
+    DEMAND_WINDOW_MS = 2500,            -- the Esc light refresh (2 s) plus 500 ms
 }
 
 -- DC-25: milk tank placeable. A mod-owned storage within reach of a barn.

@@ -11,6 +11,8 @@
 -- _rotaCollection reaches RSF-F216's fee gate in _adminSellMilk. The fee refusal
 -- comes from the sale's own comparison of the price rung against the fee setting,
 -- never from a hand-set status. Nothing here writes a record, a row or a view.
+-- group() runs each group under pcall and reports a raise as a named FAIL row of its
+-- own, so a raising group is a failure with a name, never a silent skip.
 --
 -- Groups:
 --   S  the entry-point bar: a fee refusal with milk in the barn is FEE_EXCEEDS_PRICE
@@ -28,7 +30,7 @@
 --   R  a confirmed removal
 --   K  sorting and detachment
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/MilkTank.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/MilkTank.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua
 
 local MILK_NAME = DairyConstants.CONTRACTS.MILK_FILLTYPE
 local MILK_INDEX = 1
@@ -400,7 +402,9 @@ group("O", function()
   m._localFarm = 2
   T.eq("O2 the new owner sees an unavailable row, never a fee reason read past a stale cache", describe(rowOf(view(mgr), "b1")), "UNAVAILABLE/2/nil/2454/OWNER_UNRESOLVED")
   -- Reconciliation corrects the cache; the next round is the new owner's own.
+  local revO = mgr.collectionRefusal.revision
   mgr:discoverBarns()
+  T.ok("O3c reconciliation moved the barn between two farms' views, so the revision moved", mgr.collectionRefusal.revision > revO)
   T.eq("O3 [world] reconciliation moved the barn to farm 2 and cleared its rota", tostring(mgr.barns.b1.farmId) .. "/" .. tostring(mgr.barns.b1.assignedWorkerId), "2/nil")
   T.eq("O3b re-registration under the new owner cleared the old row, before any new round", describe(rowOf(view(mgr), "b1")), "NONE_RECORDED/0/nil/nil/nil")
   dueRound(m, mgr, "b1")
@@ -569,7 +573,13 @@ group("R", function()
   -- Demolished between two discovery passes: the cached handle still answers an
   -- owner, but the placeable system no longer resolves the id, so no row.
   m.placeableSystem.placeables = {}
+  local rev0 = mgr.collectionRefusal.revision
   T.eq("R0 a demolished barn gets no row before the next discovery pass, whatever its cached handle says", #view(mgr).rows, 0)
+  -- Row 94's window: that first miss moved the revision once, so a client's UNCHANGED
+  -- answer cannot hold the row; a second build before the next discovery pass moves nothing.
+  local revMiss = mgr.collectionRefusal.revision
+  view(mgr)
+  T.eq("R0b the first failed live check moved the revision once, the second build not again", (revMiss - rev0) .. "/" .. (mgr.collectionRefusal.revision - revMiss), "1/0")
   local rev = mgr.collectionRefusal.revision
   mgr:discoverBarns()
   T.eq("R1 one miss retains the record and hides the row", tostring(mgr.barns.b1 ~= nil) .. "/" .. tostring(#view(mgr).rows), "true/0")
