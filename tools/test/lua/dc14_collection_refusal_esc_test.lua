@@ -395,10 +395,12 @@ group("F", function()
   registerGuest(m); selectDairy(m); show(m)
   clickRow(m, 1)
   T.eq("F0 [reached] farm 1's barn is on the sheet and selected", cellText(m, 1, "rfFwSheetA") .. "/" .. tostring(el(m, "rfFwSheetBand").visible), "Barn b1/true")
-  -- The local player switches to farm 2 (the manager's own listener clears its stores; the
-  -- guest sees the new strict farm on its next read).
+  -- The local player switches to farm 2: the manager's synchronous clear runs the guest's
+  -- listener inside the handler, so the old farm's paint is gone BEFORE the handler returns
+  -- and before any refresh (brief section 8, Bob's verdict on #62).
   m.mission._localFarm = 2
   on(m, function() g_messageCenter:publish(MessageType.PLAYER_FARM_CHANGED, nil) end)
+  T.eq("F0b the farm change clears the sheet, the band and the rail synchronously, before any refresh", tostring(el(m, "rfFwSheetBox").visible) .. "/" .. tostring(el(m, "rfFwSheetBand").visible) .. "/" .. el(m, "rfSideInfoBody").text, "false/false/")
   lightTick(m)
   T.eq("F1 after the switch the sheet holds farm 2's barn only and the selection is gone", #m.door.list.cells .. "/" .. cellText(m, 1, "rfFwSheetA") .. "/" .. tostring(el(m, "rfFwSheetBand").visible), "1/Far/false")
   m.mission._localFarm = 1

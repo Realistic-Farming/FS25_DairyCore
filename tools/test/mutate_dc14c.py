@@ -19,7 +19,11 @@
 #     nonnegative hours (dc14IsFinite), so the clamp is a belt with no reachable row;
 #   - the guest's own sort by barnKey (declared equivalent, it survived a run): the getter's rows
 #     arrive sorted by contract (the producer sorts, DairyCollectionRefusal.lua:409, and the wire
-#     keeps that order), so removing the guest's sort changes no order the bar can see. Kept as a belt.
+#     keeps that order), so removing the guest's sort changes no order the bar can see. Kept as a belt;
+#   - the refresh-time clear on a changed strict farm (declared equivalent, it survived a run once the
+#     listener was in): slice B's synchronous listener clears the selection inside the farm-change
+#     handler before any refresh runs, so the refresh's own check never finds a selection to clear.
+#     Kept as a belt for a manager that publishes no listener, which none does.
 #
 # Anchors are written with "\n"; in a CRLF file they are matched as "\r\n".
 #
@@ -45,6 +49,9 @@ MUTATIONS = [
  ("E3-registry-listener-keeps-demand", GUEST,
   [("        pcall(mgr.endCollectionDemand, mgr, \"ESC\")\n", "", 1)],
   "another module taking the door leaves the ESC demand running"),
+ ("E5-no-view-listener", GUEST,
+  [("        ensureViewListener(mgr)\n", "", 1)],
+  "a farm change leaves the previous farm's rows, band and rail painted until the next refresh"),
  ("E4-end-demand-is-a-no-op", RT,
   [("    st.demand[tostring(consumer or \"ESC\")] = nil\n", "    local _ = st.demand\n", 1)],
   "endCollectionDemand clears nothing"),
@@ -84,9 +91,6 @@ MUTATIONS = [
  ("S2-selection-survives-door-change", GUEST,
   [("    if host ~= nil and host.activeModuleId == PANEL_ID then return end\n    clearSelection()\n", "    if host ~= nil and host.activeModuleId == PANEL_ID then return end\n", 1)],
   "another module taking the door leaves Dairy's selection and band"),
- ("S3-selection-survives-farm-change", GUEST,
-  [("    if _lastFarmId ~= farmId then\n        clearSelection()\n", "    if _lastFarmId ~= farmId then\n", 1)],
-  "the farm switch keeps the old farm's selection"),
  ("S4-click-past-rows-keeps-selection", GUEST,
   [("    if row == nil then\n        clearSelection()\n    else\n        _selectedKey = row.key\n    end\n", "    if row ~= nil then\n        _selectedKey = row.key\n    end\n", 1)],
   "a click past the rows leaves the previous selection"),

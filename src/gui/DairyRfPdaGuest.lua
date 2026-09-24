@@ -636,6 +636,7 @@ local _selectedKey = nil
 local _lastSignature = nil
 local _lastFarmId = nil
 local _listenerHost = nil
+local _viewListenerMgr = nil  -- the manager whose collection view listener this guest holds
 
 local SHEET_RULES = {
     "rfFwRuleHead", "rfFwRuleRow1", "rfFwRuleRow2", "rfFwRuleRow3", "rfFwRuleRow4",
@@ -876,6 +877,28 @@ local function syncSheet(container)
     return true
 end
 
+--- Slice B's synchronous clear (DairyCoreManager:_collectionClearLocalContext) runs its
+--- listeners inside the farm-change handler, before it returns; this one clears the
+--- guest's selection, rows and Esc paint at that moment (brief section 8), so the previous
+--- farm's rows, band and rail never outlive the switch by a refresh. The next show or
+--- light tick paints the new farm. Registered once per manager: the manager keeps its
+--- listeners across its own route resets.
+local function onCollectionViewCleared(reason)
+    _selectedKey = nil
+    _sheetRows, _lastSignature, _lastFarmId = {}, nil, nil
+    local container = _sheetContainer
+    if container == nil then return end
+    setVis(findDescendant(container, "rfFwSheetBox"), false)
+    paintBand(container)
+    setText(findDescendant(container, "rfSideInfoBody"), "")
+end
+
+local function ensureViewListener(mgr)
+    if mgr == nil or mgr == _viewListenerMgr or type(mgr.addCollectionViewListener) ~= "function" then return end
+    local ok = pcall(mgr.addCollectionViewListener, mgr, onCollectionViewCleared)
+    if ok then _viewListenerMgr = mgr end
+end
+
 --- The whole-view state as the hint text: updating, unavailable, settings off, no real farm.
 local function stateText(view)
     if type(view) ~= "table" then return tr("dc14_collection_unavailable", "Collection status unavailable.") end
@@ -893,6 +916,7 @@ local function refreshSheet(container, full)
     local box = findDescendant(container, "rfFwSheetBox")
     local view = nil
     if mgr ~= nil then
+        ensureViewListener(mgr)
         if type(mgr.pulseCollectionDemand) == "function" then pcall(mgr.pulseCollectionDemand, mgr, "ESC") end
         if type(mgr.getCollectionRefusalViews) == "function" then
             local ok, v = pcall(mgr.getCollectionRefusalViews, mgr)
@@ -1137,4 +1161,5 @@ function DairyRfPdaGuest.reset()
     _selectedKey = nil
     _lastSignature = nil
     _lastFarmId = nil
+    _viewListenerMgr = nil
 end
