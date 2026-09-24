@@ -408,6 +408,15 @@ function DairyCoreManager:pulseCollectionDemand(consumer)
     end
 end
 
+--- A render path that stops showing ends its demand at once rather than letting the
+--- window run out: the Esc guest's registry listener calls this when another module takes
+--- the door (brief section 8). Clearing the mark only; an outstanding request completes or
+--- times out on its own and its reply is applied like any other.
+function DairyCoreManager:endCollectionDemand(consumer)
+    local st = self:_collectionRoute()
+    st.demand[tostring(consumer or "ESC")] = nil
+end
+
 function DairyCoreManager:_collectionDemandActive()
     local st = self:_collectionRoute()
     local window = rtCfg().DEMAND_WINDOW_MS

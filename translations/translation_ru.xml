@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Состояние сбора для этого коровника недоступно." />
         <text name="dc14_collection_settings_off" text="Симуляция молочной фермы выключена." />
         <text name="dc14_collection_no_real_farm" text="Выберите ферму или присоединитесь к ней, чтобы увидеть состояние сбора." />
+        <text name="dc14_collection_worker_assigned" text="Назначен" />
+        <text name="dc14_collection_worker_none" text="Нет" />
+        <text name="dc14_collection_due_cell" text="день %s в %s" />
     </texts>
 </l10n>

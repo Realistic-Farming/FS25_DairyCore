@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Noudon tila ei ole saatavilla tälle navetalle." />
         <text name="dc14_collection_settings_off" text="Maitotilan simulaatio on pois päältä." />
         <text name="dc14_collection_no_real_farm" text="Valitse tila tai liity tilaan nähdäksesi noudon tilan." />
+        <text name="dc14_collection_worker_assigned" text="Määrätty" />
+        <text name="dc14_collection_worker_none" text="Ei ole" />
+        <text name="dc14_collection_due_cell" text="päivä %s klo %s" />
     </texts>
 </l10n>

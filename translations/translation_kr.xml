@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="이 축사의 수거 상태를 확인할 수 없습니다." />
         <text name="dc14_collection_settings_off" text="낙농 시뮬레이션이 꺼져 있습니다." />
         <text name="dc14_collection_no_real_farm" text="수거 상태를 보려면 농장을 선택하거나 농장에 참여하세요." />
+        <text name="dc14_collection_worker_assigned" text="배정됨" />
+        <text name="dc14_collection_worker_none" text="없음" />
+        <text name="dc14_collection_due_cell" text="%s일째 %s" />
     </texts>
 </l10n>

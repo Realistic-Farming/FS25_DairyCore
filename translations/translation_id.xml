@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Status pengambilan tidak tersedia untuk kandang ini." />
         <text name="dc14_collection_settings_off" text="Simulasi peternakan sapi perah dimatikan." />
         <text name="dc14_collection_no_real_farm" text="Pilih atau bergabung dengan pertanian untuk melihat status pengambilan." />
+        <text name="dc14_collection_worker_assigned" text="Ditugaskan" />
+        <text name="dc14_collection_worker_none" text="Tidak ada" />
+        <text name="dc14_collection_due_cell" text="hari %s pukul %s" />
     </texts>
 </l10n>

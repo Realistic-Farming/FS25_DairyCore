@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Stan odbioru niedostępny dla tej obory." />
         <text name="dc14_collection_settings_off" text="Symulacja mleczarska jest wyłączona." />
         <text name="dc14_collection_no_real_farm" text="Wybierz gospodarstwo lub dołącz do niego, aby zobaczyć stan odbioru." />
+        <text name="dc14_collection_worker_assigned" text="Przydzielony" />
+        <text name="dc14_collection_worker_none" text="Brak" />
+        <text name="dc14_collection_due_cell" text="dzień %s o %s" />
     </texts>
 </l10n>

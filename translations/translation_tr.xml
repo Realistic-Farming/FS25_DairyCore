@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Bu ahır için toplama durumu kullanılamıyor." />
         <text name="dc14_collection_settings_off" text="Süt çiftliği simülasyonu kapalı." />
         <text name="dc14_collection_no_real_farm" text="Toplama durumunu görmek için bir çiftlik seç ya da birine katıl." />
+        <text name="dc14_collection_worker_assigned" text="Atandı" />
+        <text name="dc14_collection_worker_none" text="Yok" />
+        <text name="dc14_collection_due_cell" text="%s. gün, saat %s" />
     </texts>
 </l10n>
