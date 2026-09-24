@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="A begyűjtés állapota ehhez az istállóhoz nem elérhető." />
         <text name="dc14_collection_settings_off" text="A tejgazdasági szimuláció ki van kapcsolva." />
         <text name="dc14_collection_no_real_farm" text="Válassz farmot vagy csatlakozz egyhez a begyűjtés állapotának megtekintéséhez." />
+        <text name="dc14_collection_worker_assigned" text="Kijelölve" />
+        <text name="dc14_collection_worker_none" text="Nincs" />
+        <text name="dc14_collection_due_cell" text="%s. nap, %s" />
     </texts>
 </l10n>

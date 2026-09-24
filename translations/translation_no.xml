@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Hentestatus ikke tilgjengelig for dette fjøset." />
         <text name="dc14_collection_settings_off" text="Melkesimuleringen er slått av." />
         <text name="dc14_collection_no_real_farm" text="Velg eller bli med i en gård for å se hentestatus." />
+        <text name="dc14_collection_worker_assigned" text="Tildelt" />
+        <text name="dc14_collection_worker_none" text="Ingen" />
+        <text name="dc14_collection_due_cell" text="dag %s kl. %s" />
     </texts>
 </l10n>

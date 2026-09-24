@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Stav svozu pro tuto stáj není dostupný." />
         <text name="dc14_collection_settings_off" text="Simulace mléčné farmy je vypnutá." />
         <text name="dc14_collection_no_real_farm" text="Vyberte farmu nebo se k ní připojte, abyste viděli stav svozu." />
+        <text name="dc14_collection_worker_assigned" text="Přidělen" />
+        <text name="dc14_collection_worker_none" text="Žádný" />
+        <text name="dc14_collection_due_cell" text="den %s v %s" />
     </texts>
 </l10n>

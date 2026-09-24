@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="無法取得此牛舍的收乳狀態。" />
         <text name="dc14_collection_settings_off" text="乳牛模擬已關閉。" />
         <text name="dc14_collection_no_real_farm" text="請選擇或加入一個農場以檢視收乳狀態。" />
+        <text name="dc14_collection_worker_assigned" text="已指派" />
+        <text name="dc14_collection_worker_none" text="無" />
+        <text name="dc14_collection_due_cell" text="第 %s 天 %s" />
     </texts>
 </l10n>

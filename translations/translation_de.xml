@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Abholstatus für diesen Stall nicht verfügbar." />
         <text name="dc14_collection_settings_off" text="Die Milchviehsimulation ist ausgeschaltet." />
         <text name="dc14_collection_no_real_farm" text="Wähle einen Betrieb oder tritt einem bei, um den Abholstatus zu sehen." />
+        <text name="dc14_collection_worker_assigned" text="Zugewiesen" />
+        <text name="dc14_collection_worker_none" text="Keiner" />
+        <text name="dc14_collection_due_cell" text="Tag %s um %s" />
     </texts>
 </l10n>

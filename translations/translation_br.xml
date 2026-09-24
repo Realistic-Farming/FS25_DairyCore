@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Status da coleta indisponível para este estábulo." />
         <text name="dc14_collection_settings_off" text="A simulação de leite está desligada." />
         <text name="dc14_collection_no_real_farm" text="Selecione ou entre em uma fazenda para ver o status da coleta." />
+        <text name="dc14_collection_worker_assigned" text="Atribuído" />
+        <text name="dc14_collection_worker_none" text="Nenhum" />
+        <text name="dc14_collection_due_cell" text="dia %s às %s" />
     </texts>
 </l10n>

@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="État de la collecte indisponible pour cette étable." />
         <text name="dc14_collection_settings_off" text="La simulation laitière est désactivée." />
         <text name="dc14_collection_no_real_farm" text="Sélectionnez ou rejoignez une ferme pour voir l'état de la collecte." />
+        <text name="dc14_collection_worker_assigned" text="Affecté" />
+        <text name="dc14_collection_worker_none" text="Aucun" />
+        <text name="dc14_collection_due_cell" text="jour %s à %s" />
     </texts>
 </l10n>

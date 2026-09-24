@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="この牛舎の集乳状況を取得できません。" />
         <text name="dc14_collection_settings_off" text="酪農シミュレーションはオフです。" />
         <text name="dc14_collection_no_real_farm" text="集乳状況を見るには農場を選択するか、農場に参加してください。" />
+        <text name="dc14_collection_worker_assigned" text="割り当て済み" />
+        <text name="dc14_collection_worker_none" text="なし" />
+        <text name="dc14_collection_due_cell" text="%s日目 %s" />
     </texts>
 </l10n>

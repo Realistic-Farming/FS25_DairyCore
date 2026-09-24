@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Starea colectării nu este disponibilă pentru acest grajd." />
         <text name="dc14_collection_settings_off" text="Simularea fermei de lapte este oprită." />
         <text name="dc14_collection_no_real_farm" text="Selectează sau alătură-te unei ferme pentru a vedea starea colectării." />
+        <text name="dc14_collection_worker_assigned" text="Alocat" />
+        <text name="dc14_collection_worker_none" text="Niciunul" />
+        <text name="dc14_collection_due_cell" text="ziua %s la %s" />
     </texts>
 </l10n>

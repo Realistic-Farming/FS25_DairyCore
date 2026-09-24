@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Ophaalstatus niet beschikbaar voor deze stal." />
         <text name="dc14_collection_settings_off" text="De melkveesimulatie staat uit." />
         <text name="dc14_collection_no_real_farm" text="Selecteer een boerderij of sluit je aan om de ophaalstatus te zien." />
+        <text name="dc14_collection_worker_assigned" text="Toegewezen" />
+        <text name="dc14_collection_worker_none" text="Geen" />
+        <text name="dc14_collection_due_cell" text="dag %s om %s" />
     </texts>
 </l10n>

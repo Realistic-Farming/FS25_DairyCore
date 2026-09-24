@@ -120,5 +120,8 @@
         <text name="dc14_collection_barn_unavailable" text="Collection status unavailable for this barn." />
         <text name="dc14_collection_settings_off" text="Dairy simulation is off." />
         <text name="dc14_collection_no_real_farm" text="Select or join a farm to view collection status." />
+        <text name="dc14_collection_worker_assigned" text="Assigned" />
+        <text name="dc14_collection_worker_none" text="None" />
+        <text name="dc14_collection_due_cell" text="day %s at %s" />
     </texts>
 </l10n>

@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Afhentningsstatus ikke tilgængelig for denne stald." />
         <text name="dc14_collection_settings_off" text="Mælkesimulationen er slået fra." />
         <text name="dc14_collection_no_real_farm" text="Vælg eller tilslut dig en gård for at se afhentningsstatus." />
+        <text name="dc14_collection_worker_assigned" text="Tildelt" />
+        <text name="dc14_collection_worker_none" text="Ingen" />
+        <text name="dc14_collection_due_cell" text="dag %s kl. %s" />
     </texts>
 </l10n>

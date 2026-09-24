@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Hämtningsstatus ej tillgänglig för den här ladugården." />
         <text name="dc14_collection_settings_off" text="Mjölksimuleringen är avstängd." />
         <text name="dc14_collection_no_real_farm" text="Välj eller gå med i en gård för att se hämtningsstatus." />
+        <text name="dc14_collection_worker_assigned" text="Tilldelad" />
+        <text name="dc14_collection_worker_none" text="Ingen" />
+        <text name="dc14_collection_due_cell" text="dag %s kl. %s" />
     </texts>
 </l10n>

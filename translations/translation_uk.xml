@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Стан збору для цього корівника недоступний." />
         <text name="dc14_collection_settings_off" text="Симуляцію молочної ферми вимкнено." />
         <text name="dc14_collection_no_real_farm" text="Оберіть ферму або приєднайтеся до неї, щоб побачити стан збору." />
+        <text name="dc14_collection_worker_assigned" text="Призначено" />
+        <text name="dc14_collection_worker_none" text="Немає" />
+        <text name="dc14_collection_due_cell" text="день %s о %s" />
     </texts>
 </l10n>

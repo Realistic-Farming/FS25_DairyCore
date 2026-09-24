@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Không có tình trạng thu gom cho chuồng này." />
         <text name="dc14_collection_settings_off" text="Mô phỏng chăn nuôi bò sữa đang tắt." />
         <text name="dc14_collection_no_real_farm" text="Hãy chọn hoặc tham gia một trang trại để xem tình trạng thu gom." />
+        <text name="dc14_collection_worker_assigned" text="Đã phân công" />
+        <text name="dc14_collection_worker_none" text="Không có" />
+        <text name="dc14_collection_due_cell" text="ngày %s lúc %s" />
     </texts>
 </l10n>

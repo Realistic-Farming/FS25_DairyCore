@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Estado de la recolección no disponible para este establo." />
         <text name="dc14_collection_settings_off" text="La simulación lechera está desactivada." />
         <text name="dc14_collection_no_real_farm" text="Selecciona una granja o únete a una para ver el estado de la recolección." />
+        <text name="dc14_collection_worker_assigned" text="Asignado" />
+        <text name="dc14_collection_worker_none" text="Ninguno" />
+        <text name="dc14_collection_due_cell" text="día %s a las %s" />
     </texts>
 </l10n>

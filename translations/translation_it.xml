@@ -121,5 +121,8 @@
         <text name="dc14_collection_barn_unavailable" text="Stato del ritiro non disponibile per questa stalla." />
         <text name="dc14_collection_settings_off" text="La simulazione lattiero-casearia è disattivata." />
         <text name="dc14_collection_no_real_farm" text="Seleziona o unisciti a una fattoria per vedere lo stato del ritiro." />
+        <text name="dc14_collection_worker_assigned" text="Assegnato" />
+        <text name="dc14_collection_worker_none" text="Nessuno" />
+        <text name="dc14_collection_due_cell" text="giorno %s alle %s" />
     </texts>
 </l10n>
