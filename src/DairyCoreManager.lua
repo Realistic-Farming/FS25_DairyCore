@@ -21,34 +21,29 @@ DairyCoreManager.SAVE_FILE        = "FS25_DairyCore.xml"      -- own-file fallba
 local PER_COW_LITRES_DAY = 22
 
 -- RSF-F216: this file's own translation lookup, used once, for the sale-fee setting
--- label. Same shape DairyRfPdaGuest.lua:33-50 already uses in this mod: read the mod
--- environment's i18n with g_i18n as a fallback, pcall getText, and reject a key echo,
--- a $l10n_ echo or a Missing marker before trusting the result.
---
--- Deliberately NOT a new shared helper and deliberately not the GUI's copy imported
--- here: each file carries the four lines it needs, which is how this mod already does
--- it. main.lua:20 latches DairyCoreModName before it sources any src file, so the name
--- exists for every file, survives a hot re-source, and never resolves nil. The
--- readable English fallback is what makes an early or missing environment harmless.
-local DC_MOD_NAME = (DairyCoreModName or g_currentModName or "FS25_DairyCore")
+-- label. The same body as DairyRfPdaGuest.lua's and DairyGuideDialog.lua's tr (the
+-- SoilFertilizer #973 shape, MAINTENANCE row 99). Deliberately NOT a new shared helper:
+-- each file carries its own copy, which is how this mod already does it. The readable
+-- English fallback is what makes an early or missing i18n harmless.
 
 local function _tr(key, fallback)
-    local modEnv = g_modEnvironments and g_modEnvironments[DC_MOD_NAME]
-    local i18n = (modEnv and modEnv.i18n) or g_i18n
-    if i18n then
-        local ok, text = pcall(function() return i18n:getText(key) end)
-        if ok and type(text) == "string" and text ~= "" then
-            local lower = text:lower()
-            if lower ~= tostring(key):lower()
-                and text ~= ("$l10n_" .. key)
-                and not lower:find("^missing%s")
-                and not lower:find("^missing_")
-            then
-                return text
-            end
-        end
+    -- MAINTENANCE row 99, the SoilFertilizer #973 shape. Gate on hasText, never on the
+    -- returned string: getText never returns nil, and for an absent key it returns the
+    -- sentence "Missing '<key>' in l10n<suffix>.xml" (I18N.lua:175-191), which the old
+    -- prefix gate caught only by also refusing any real text that begins "Missing".
+    -- Past hasText the return is opaque: type and non-empty, never inspected. g_i18n is
+    -- read plainly: in this mod's environment it IS the mod-aware instance
+    -- (mods.lua:453, modEnv.g_i18n = g_i18n:addModI18N(modName), I18N.lua:149-172); the
+    -- engine sets no modEnv.i18n, so the branch that read it was dead.
+    local i18n = g_i18n
+    if i18n == nil or type(i18n.hasText) ~= "function" or type(i18n.getText) ~= "function" then
+        return fallback or key
     end
-    return fallback or key
+    local okHas, has = pcall(i18n.hasText, i18n, key)
+    if not okHas or has ~= true then return fallback or key end
+    local ok, text = pcall(i18n.getText, i18n, key)
+    if not ok or type(text) ~= "string" or text == "" then return fallback or key end
+    return text
 end
 
 function DairyCoreManager.new()
