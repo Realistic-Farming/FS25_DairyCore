@@ -26,7 +26,6 @@
 DairyRfPdaGuest = DairyRfPdaGuest or {}
 
 local MOD_DIR = (DairyCoreModDirectory or g_currentModDirectory)
-local MOD_NAME = (DairyCoreModName or g_currentModName)
 local PANEL_ID = "dairy"
 local PANEL_ORDER = 70
 local MAX_ROWS = 8            -- the old fixed sheet rows (rfFwRow1..8), hidden on every show
@@ -34,22 +33,23 @@ local CARD_SLOTS = 4          -- rfDairyCard1..4 exist in the ten doors; hidden 
 local _registered = false
 
 local function tr(key, fallback)
-    local modEnv = g_modEnvironments and g_modEnvironments[MOD_NAME]
-    local i18n = (modEnv and modEnv.i18n) or g_i18n
-    if i18n then
-        local ok, text = pcall(function() return i18n:getText(key) end)
-        if ok and type(text) == "string" and text ~= "" then
-            local lower = text:lower()
-            if lower ~= tostring(key):lower()
-                and text ~= ("$l10n_" .. key)
-                and not lower:find("^missing%s")
-                and not lower:find("^missing_")
-            then
-                return text
-            end
-        end
+    -- MAINTENANCE row 99, the SoilFertilizer #973 shape. Gate on hasText, never on the
+    -- returned string: getText never returns nil, and for an absent key it returns the
+    -- sentence "Missing '<key>' in l10n<suffix>.xml" (I18N.lua:175-191), which the old
+    -- prefix gate caught only by also refusing any real text that begins "Missing".
+    -- Past hasText the return is opaque: type and non-empty, never inspected. g_i18n is
+    -- read plainly: in this mod's environment it IS the mod-aware instance
+    -- (mods.lua:453, modEnv.g_i18n = g_i18n:addModI18N(modName), I18N.lua:149-172); the
+    -- engine sets no modEnv.i18n, so the branch that read it was dead.
+    local i18n = g_i18n
+    if i18n == nil or type(i18n.hasText) ~= "function" or type(i18n.getText) ~= "function" then
+        return fallback or key
     end
-    return fallback or key
+    local okHas, has = pcall(i18n.hasText, i18n, key)
+    if not okHas or has ~= true then return fallback or key end
+    local ok, text = pcall(i18n.getText, i18n, key)
+    if not ok or type(text) ~= "string" or text == "" then return fallback or key end
+    return text
 end
 
 local function getHost()

@@ -23,8 +23,12 @@
 --      mark ended by the registry listener
 --   G  the states: settings off, no real farm, PF stand-down; the empty farm
 --   F  the strict farm changes under the sheet: the other farm's rows, no selection
+--   T  MAINTENANCE row 99: the three translation helpers (the guest's tr, the manager's
+--      _tr, the Field Guide's tr) under an i18n modelled on I18N.lua and mods.lua:453: a
+--      real text beginning "Missing" renders, an absent key renders the fallback (never
+--      the engine's "Missing '<key>'" sentence), a translation renders
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/MilkTank.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua, src/gui/RfEscModules.lua, src/gui/DairyRfPdaGuest.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/MilkTank.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua, src/gui/RfEscModules.lua, src/gui/DairyRfPdaGuest.lua, src/gui/DairyGuideDialog.lua
 
 getfenv = getfenv or function() return _G end
 local MILK_NAME = DairyConstants.CONTRACTS.MILK_FILLTYPE
@@ -416,4 +420,99 @@ group("F", function()
   on(m, function() g_messageCenter:publish(MessageType.PLAYER_FARM_CHANGED, nil) end)
   lightTick(m)
   T.eq("F3 a farm switch clears the selection even when the selected barn came along: its row stands under farm 2, nothing selected", cellText(m, 1, "rfFwSheetA") .. "/" .. tostring(el(m, "rfFwSheetBand").visible), "Barn b1/false")
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- T. MAINTENANCE row 99: THE TRANSLATION HELPERS GATE ON hasText
+-- ═══════════════════════════════════════════════════════════
+--- The engine's i18n as a mod sees it: I18N.lua:149-172 (addModI18N: a table whose texts
+--- fall back to the global texts, whose methods are I18N's), :175-191 (getText: the text,
+--- else the "Missing '<key>' in l10n<suffix>.xml" sentence) and :194-209 (hasText), and
+--- mods.lua:453 (the mod's environment holds it as g_i18n; there is no .i18n). Returned
+--- as the value the mod reads for g_i18n.
+local function engineModI18n(globalTexts, modTexts)
+  local base = { texts = globalTexts or {}, modEnvironments = {} }
+  function base:getText(name)
+    local ret = self.texts[name]
+    if ret == nil then ret = string.format("Missing '%s' in l10n%s.xml", name, "_en") end
+    return ret
+  end
+  function base:hasText(name)
+    if name == nil then return false end
+    return self.texts[name] ~= nil
+  end
+  local modi18n = { texts = modTexts or {} }
+  setmetatable(modi18n, { __index = base })
+  setmetatable(modi18n.texts, { __index = base.texts })
+  return modi18n
+end
+
+group("T", function()
+  local TEXTS = {
+    dc14_collection_heading_barn = "Missing herd count",   -- a REAL text that begins "Missing"
+    dc14_collection_heading_worker = "Trabajador",          -- a translation
+    dc_setting_saleFee = "Missing-litre fee",               -- a real label beginning "Missing"
+    dc_guide_saleFee_01 = "Missing milk is charged per litre.",
+    dc_guide_saleFee_03 = "Por litro: 0,011 por defecto.",
+    -- dc14_collection_heading_status, dc_guide_saleFee_02: absent
+  }
+  local i18n = engineModI18n({}, TEXTS)
+  local savedI18n, savedEnvs = g_i18n, g_modEnvironments
+  g_modEnvironments = { FS25_DairyCore = { g_i18n = i18n } }   -- mods.lua:453's field, the only one
+  g_i18n = i18n
+  local ok, err = pcall(function()
+    -- The guest through the real registry: the column headings are painted on every show.
+    setPrice(0.05)
+    local b1 = makeBarn("b1", 1, 500)
+    local m = newMachine({ isServer = true, localFarm = 1, placeables = { b1 }, feePer1000 = 50 })
+    registerGuest(m); selectDairy(m); show(m)
+    T.eq("T1 the guest renders a real text that begins 'Missing' (the old prefix gate refused it for the English fallback)",
+      el(m, "rfFwColA").text, "Missing herd count")
+    T.eq("T2 an absent key renders the fallback, never the engine's Missing sentence", el(m, "rfFwColB").text, "Collection")
+    T.eq("T3 a translation renders", el(m, "rfFwColC").text, "Trabajador")
+
+    -- The manager's _tr: the sale-fee label SettingsHub receives at the bedrock bind.
+    local label
+    local mgr2 = DairyCoreManager.new()
+    on(m, function()
+      g_currentMission.settingsHub = { registerModule = function(_, _id, spec)
+        for _, d in ipairs(spec.adminSettings or {}) do if d.id == "saleFeePer1000L" then label = d.label end end
+      end }
+      mgr2:_bindBedrock()
+      g_currentMission.settingsHub = nil
+    end)
+    T.eq("T4 the manager's _tr hands SettingsHub the real label that begins 'Missing'", tostring(label), "Missing-litre fee")
+
+    -- The Field Guide's tr: page 5's keyed fee rows, built on a bare dialog instance with
+    -- the GUI modelled (g_gui:getProfile, TextElement, the two column boxes).
+    local savedGui, savedText = g_gui, TextElement
+    g_gui = { getProfile = function() return {} end }
+    TextElement = { new = function()
+      local e = { text = nil }
+      function e:loadProfile() end
+      function e:setText(s) self.text = s end
+      function e:onGuiSetupFinished() end
+      return e
+    end }
+    local texts = {}
+    local function box() return { addElement = function(_, e) texts[#texts + 1] = e end, invalidateLayout = function() end } end
+    local dlg = setmetatable({ _elCol1 = box(), _elCol2 = box(), _contentLineEls = {} }, { __index = DairyGuideDialog })
+    local okG, errG = pcall(DairyGuideDialog._buildContent, dlg, 5)
+    g_gui, TextElement = savedGui, savedText
+    local function shown(s)
+      for _, e in ipairs(texts) do if e.text == s then return true end end
+      return false
+    end
+    T.eq("T5 the guide renders its keyed fee rows: a real 'Missing...' text, the fallback for an absent key, a translation",
+      tostring(okG) .. "/" .. tostring(shown("Missing milk is charged per litre.")) .. "/"
+        .. tostring(shown("Set per 1000 L: 11 by default, from 0 to 50.")) .. "/" .. tostring(shown("Por litro: 0,011 por defecto.")),
+      "true/true/true/true")
+
+    -- The helpers' own refusals: an i18n whose hasText raises renders the fallback.
+    g_i18n = setmetatable({ hasText = function() error("hasText refused") end }, { __index = i18n })
+    show(m)
+    T.eq("T6 an i18n whose hasText raises renders the fallback", el(m, "rfFwColC").text, "Worker")
+  end)
+  g_i18n, g_modEnvironments = savedI18n, savedEnvs
+  if not ok then error(err, 0) end
 end)
