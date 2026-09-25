@@ -718,6 +718,22 @@ function DairyCoreManager:_collectionClearLocalContext(reason)
     rtNotify(st, reason)
 end
 
+--- MAINTENANCE row 97: a departed connection's DIRECT rate record leaves the table.
+--- The engine publishes USER_REMOVED when a connection closes
+--- (FSBaseMission:onConnectionClosed -> UserManager:removeUserByConnection,
+--- users/UserManager.lua:23-31, MessageType.lua:94) with the User, whose connection
+--- (User:getConnection, users/User.lua:71-72) is the key rtRateAllows used. Without this
+--- the table held one record per connection that ever asked, for the mission.
+function DairyCoreManager:_onCollectionUserRemoved(user)
+    if type(user) ~= "table" or type(user.getConnection) ~= "function" then return end
+    local ok, connection = pcall(user.getConnection, user)
+    if not ok or connection == nil then return end
+    local st = self.collectionRoute
+    if st ~= nil and type(st.serverRate) == "table" then
+        st.serverRate[connection] = nil
+    end
+end
+
 function DairyCoreManager:_collectionRouteBind()
     if self.disabled then return end
     self:_resetCollectionRoute()
@@ -725,6 +741,13 @@ function DairyCoreManager:_collectionRouteBind()
     st.localFarmId = self:_collectionLocalFarmId()
     if self:_isServer() then
         self:_collectionServerRegister()
+        -- Row 97: only the server keeps rate records, so only the server listens.
+        pcall(function()
+            if g_messageCenter ~= nil and MessageType ~= nil and MessageType.USER_REMOVED ~= nil then
+                g_messageCenter:subscribe(MessageType.USER_REMOVED, self._onCollectionUserRemoved, self)
+                st.userRemovedBound = true
+            end
+        end)
     end
     pcall(function()
         if g_messageCenter ~= nil and MessageType ~= nil and MessageType.PLAYER_FARM_CHANGED ~= nil then
@@ -738,6 +761,13 @@ function DairyCoreManager:_collectionRouteTeardown()
     local st = self:_collectionRoute()
     if st.farmChangeBound and g_messageCenter ~= nil then
         pcall(function() g_messageCenter:unsubscribe(MessageType.PLAYER_FARM_CHANGED, self) end)
+    end
+    -- Row 97: this type only, and this callback only (MessageCenter:unsubscribe matches
+    -- the target and, when given, the callback, MessageCenter.lua:53-66). Never
+    -- unsubscribeAll: the manager subscribes other types with the same self
+    -- (DairyCoreManager.lua:129, :3691-3697).
+    if st.userRemovedBound and g_messageCenter ~= nil then
+        pcall(function() g_messageCenter:unsubscribe(MessageType.USER_REMOVED, self, self._onCollectionUserRemoved) end)
     end
     if st.nsRegistered then
         local ns = self:_getNetworkSync()
