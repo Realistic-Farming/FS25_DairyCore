@@ -120,6 +120,20 @@ MUTATIONS = [
   [("    local function waiting(reason) return { state = C.STATES.WAITING, reason = reason, rows = {} } end",
     "    local function waiting(reason) return { state = C.STATES.READY, reason = nil, rows = {} } end", 1)],
   "a pure client with no snapshot reads no-report instead of updating (slice A's V8, re-homed with the client branch)"),
+ # ── MAINTENANCE row 97 (targeted battery of that PR: run with the prefix RR) ──
+ ("RR1-user-removed-not-subscribed", RT,
+  [("                g_messageCenter:subscribe(MessageType.USER_REMOVED, self._onCollectionUserRemoved, self)\n", "", 1)],
+  "the server never hears a connection close: its rate record stays for the mission"),
+ ("RR2-pruned-by-user-not-connection", RT,
+  [("        st.serverRate[connection] = nil\n", "        st.serverRate[user] = nil\n", 1)],
+  "the prune keys on the user, which is never a rate-table key"),
+ ("RR3-teardown-keeps-the-subscription", RT,
+  [("        pcall(function() g_messageCenter:unsubscribe(MessageType.USER_REMOVED, self, self._onCollectionUserRemoved) end)\n", "", 1)],
+  "the route's USER_REMOVED subscription outlives its teardown"),
+ ("RR4-teardown-drops-every-user-removed-callback", RT,
+  [("        pcall(function() g_messageCenter:unsubscribe(MessageType.USER_REMOVED, self, self._onCollectionUserRemoved) end)\n",
+    "        pcall(function() g_messageCenter:unsubscribe(MessageType.USER_REMOVED, self) end)\n", 1)],
+  "the teardown removes every USER_REMOVED subscription of the manager, not only the route's"),
 
  # ── the two revision touches Bob named on #60 ─────────────────────────────
 ]

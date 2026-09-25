@@ -28,6 +28,9 @@
 --      cleared synchronously, late messages of the old generation ignored
 --   G  settings off, PF stand-down, no real farm
 --   H  LOCAL_PRODUCER on a listen host, a dedicated server serving a remote farm
+--   U  MAINTENANCE row 97: a departed connection's DIRECT rate record is pruned when the
+--      engine publishes USER_REMOVED for its user; the others stay; teardown unsubscribes
+--      that type and callback only
 --   X  DIRECT integrity, each check alone: a foreign sequence, another farm, a
 --      header that disagrees, a repeated index that would still add up, a total the
 --      chunks do not reach with headers that agree, a chunk index past the count, a
@@ -57,7 +60,8 @@ FarmManager = { MAX_NUM_FARMS = 8, MAX_FARM_ID = 8, SPECTATOR_FARM_ID = 0, SINGL
   GUIDED_TOUR_FARM_ID = 14, INVALID_FARM_ID = 15 }
 MoneyType = { OTHER = 1 }
 XMLFile = { loadIfExists = function() return nil end }
-MessageType = { PLAYER_FARM_CHANGED = 25 }
+-- MessageType.lua:94 names USER_REMOVED; the values are the model's own.
+MessageType = { PLAYER_FARM_CHANGED = 25, USER_REMOVED = 26 }
 function getWorldTranslation(node) return node.x, node.y, node.z end
 g_modIsLoaded = {}
 g_fillTypeManager = {
@@ -66,19 +70,22 @@ g_fillTypeManager = {
 }
 local function setPrice(p) g_fillTypeManager.getFillTypeByIndex = function() return { pricePerLiter = p } end end
 
--- The message center: subscribe(type, fn, target), unsubscribe(type, target), publish(type, arg).
+-- The message center: subscribe(type, fn, target), unsubscribe(type, target, fn), publish(type, ...).
+-- unsubscribe as MessageCenter.lua:53-66: the target must match and, when a callback is
+-- given, the callback too.
 g_messageCenter = { subs = {} }
 function g_messageCenter:subscribe(mt, fn, target) self.subs[#self.subs + 1] = { mt = mt, fn = fn, target = target } end
-function g_messageCenter:unsubscribe(mt, target)
+function g_messageCenter:unsubscribe(mt, target, fn)
   for i = #self.subs, 1, -1 do
-    if self.subs[i].mt == mt and self.subs[i].target == target then table.remove(self.subs, i) end
+    local s = self.subs[i]
+    if s.mt == mt and s.target == target and (fn == nil or s.fn == fn) then table.remove(self.subs, i) end
   end
 end
 function g_messageCenter:unsubscribeAll(target)
   for i = #self.subs, 1, -1 do if self.subs[i].target == target then table.remove(self.subs, i) end end
 end
-function g_messageCenter:publish(mt, arg)
-  for _, s in ipairs(self.subs) do if s.mt == mt then s.fn(s.target, arg) end end
+function g_messageCenter:publish(mt, ...)
+  for _, s in ipairs(self.subs) do if s.mt == mt then s.fn(s.target, ...) end end
 end
 
 -- ── the typed stream: every write is tagged, every read checks the tag ───────
@@ -877,4 +884,54 @@ group("X", function()
   T.eq("X10 [world] the retry under continuous demand kept the replica showing", state(view(bc)) .. "/" .. tostring(bc.mgr.collectionRoute.directOutstanding ~= nil), "READY/nil/260/true")
   for _ = 1, 21 do tick(bc, 500) pulse(bc, "ESC") big.inbox = {} end
   T.eq("X11 the timeout clears the stale replica: UNAVAILABLE/TRANSPORT_TIMEOUT, never a READY nobody refreshed", state(view(bc)), "UNAVAILABLE/TRANSPORT_TIMEOUT/0")
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- U. MAINTENANCE row 97: THE RATE TABLE IS PRUNED PER DEPARTED CONNECTION
+-- ═══════════════════════════════════════════════════════════
+group("U", function()
+  local barn = makeBarn("b1", 2, 500)
+  local server = newMachine({ isServer = true, localFarm = 1, ns = nil, placeables = { barn } })
+  local ca = newMachine({ isServer = false, localFarm = 2, ns = nil })
+  link(server, ca, 2)
+  local connA = server.clientConn
+  local cb = newMachine({ isServer = false, localFarm = 3, ns = nil })
+  link(server, cb, 3)
+  local connB = server.clientConn
+  -- Each client asks once through the real DIRECT request event.
+  on(ca, function() ca.mgr:_collectionDirectRequest() end)
+  on(cb, function() cb.mgr:_collectionDirectRequest() end)
+  flush(server)
+  local rate = server.mgr.collectionRoute.serverRate
+  T.eq("U1 [world] both connections asked through the real request and hold a rate record",
+    tostring(rate[connA] ~= nil) .. "/" .. tostring(rate[connB] ~= nil) .. "/" .. tostring(connA ~= connB), "true/true/true")
+  -- A's connection closes: the engine publishes USER_REMOVED with A's user
+  -- (UserManager:removeUserByConnection, UserManager.lua:28), whose getConnection is A's.
+  local userA = { getConnection = function() return connA end }
+  on(server, function() g_messageCenter:publish(MessageType.USER_REMOVED, userA, 0) end)
+  T.eq("U2 the departed connection's record is pruned and the other stays",
+    tostring(rate[connA] == nil) .. "/" .. tostring(rate[connB] ~= nil), "true/true")
+  on(server, function()
+    g_messageCenter:publish(MessageType.USER_REMOVED, { getConnection = function() return nil end }, 0)
+    g_messageCenter:publish(MessageType.USER_REMOVED, "not a user", 0)
+  end)
+  T.eq("U3 a user with no connection, or a malformed argument, prunes nothing and raises nothing",
+    tostring(rate[connB] ~= nil), "true")
+  local function subsOf(target, mt)
+    local n = 0
+    for _, s in ipairs(g_messageCenter.subs) do if s.target == target and s.mt == mt then n = n + 1 end end
+    return n
+  end
+  T.eq("U4 only the server listens: the clients hold no USER_REMOVED subscription",
+    subsOf(server.mgr, MessageType.USER_REMOVED) .. "/" .. subsOf(ca.mgr, MessageType.USER_REMOVED) .. "/" .. subsOf(cb.mgr, MessageType.USER_REMOVED), "1/0/0")
+  -- A second subscription of the same type on the same manager (another consumer of the
+  -- type) must survive the route's teardown, which unsubscribes its own callback only.
+  local other = function() end
+  g_messageCenter:subscribe(MessageType.USER_REMOVED, other, server.mgr)
+  on(server, function() server.mgr:_collectionRouteTeardown() end)
+  local kept = 0
+  for _, s in ipairs(g_messageCenter.subs) do if s.target == server.mgr and s.fn == other then kept = kept + 1 end end
+  T.eq("U5 teardown unsubscribes the route's USER_REMOVED callback and nothing else of the manager's",
+    subsOf(server.mgr, MessageType.USER_REMOVED) .. "/" .. kept, "1/1")
+  g_messageCenter:unsubscribe(MessageType.USER_REMOVED, server.mgr, other)
 end)
