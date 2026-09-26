@@ -911,12 +911,20 @@ group("U", function()
   on(server, function() g_messageCenter:publish(MessageType.USER_REMOVED, userA, 0) end)
   T.eq("U2 the departed connection's record is pruned and the other stays",
     tostring(rate[connA] == nil) .. "/" .. tostring(rate[connB] ~= nil), "true/true")
+  -- Each publish runs under its own pcall, so a raise reads as a value on U3 rather than
+  -- as the group raising: a user whose connection is nil, a string, a number, nil.
+  local calm = {}
   on(server, function()
-    g_messageCenter:publish(MessageType.USER_REMOVED, { getConnection = function() return nil end }, 0)
-    g_messageCenter:publish(MessageType.USER_REMOVED, "not a user", 0)
+    local function publish(arg)
+      calm[#calm + 1] = tostring((pcall(g_messageCenter.publish, g_messageCenter, MessageType.USER_REMOVED, arg, 0)))
+    end
+    publish({ getConnection = function() return nil end })
+    publish("not a user")
+    publish(7)
+    publish(nil)
   end)
   T.eq("U3 a user with no connection, or a malformed argument, prunes nothing and raises nothing",
-    tostring(rate[connB] ~= nil), "true")
+    table.concat(calm, "/") .. "/" .. tostring(rate[connB] ~= nil), "true/true/true/true/true")
   local function subsOf(target, mt)
     local n = 0
     for _, s in ipairs(g_messageCenter.subs) do if s.target == target and s.mt == mt then n = n + 1 end end
