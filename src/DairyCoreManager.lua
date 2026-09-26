@@ -446,6 +446,32 @@ function DairyCoreManager:_getFieldInfo(fieldId)
     return ok and info or nil
 end
 
+--- [SF-73] Soil's crop-relative FIELD_REPORT for a designated feed field
+--- (SoilFertilitySystem:getCropNutrientRelationship(fieldId), no coordinates), or nil
+--- when Soil is absent, older, or answers anything but a COMPLETE field report. A
+--- vehicle footprint never reaches the herd: only scope FIELD_REPORT is accepted.
+---@return table|nil { N = relationship, P = ..., K = ... }
+function DairyCoreManager:_getFieldRelationships(fieldId)
+    local sf = g_currentMission ~= nil and g_currentMission.soilFertilityManager
+    if sf == nil or sf.soilSystem == nil or type(sf.soilSystem.getCropNutrientRelationship) ~= "function" then
+        return nil
+    end
+    local ok, rel = pcall(sf.soilSystem.getCropNutrientRelationship, sf.soilSystem, fieldId)
+    if not ok or type(rel) ~= "table" or rel.scope ~= "FIELD_REPORT" or type(rel.nutrients) ~= "table" then
+        return nil
+    end
+    local out = {}
+    for _, n in ipairs({ "N", "P", "K" }) do
+        local x = rel.nutrients[n]
+        local kind = type(x) == "table" and x.relationship or nil
+        if kind ~= "BELOW" and kind ~= "APPROACHING" and kind ~= "IDEAL" and kind ~= "ABOVE" then
+            return nil   -- UNDETERMINED or missing: the whole legacy test decides
+        end
+        out[n] = kind
+    end
+    return out
+end
+
 -- MarketDynamics live spot price for milk; base-game price when absent.
 function DairyCoreManager:_milkSpotPrice()
     local price = nil
@@ -785,11 +811,21 @@ function DairyCoreManager:_farmBusinessModifiers(barn)
             local om = info.organicMatter or 5
             if om < DairyConstants.HERD.OM_SEVERE then anySevereOM = true
             elseif om < DairyConstants.HERD.OM_DEPLETED then anyLowOM = true end
-            local nStatus = info.nitrogen and info.nitrogen.status
-            local pStatus = info.phosphorus and info.phosphorus.status
-            local kStatus = info.potassium and info.potassium.status
-            if not (nStatus == "Good" and pStatus == "Good" and kStatus == "Good") then
-                balancedAll = false
+            -- [SF-73] On a complete crop-relative FIELD_REPORT the field is balanced
+            -- when all three nutrients sit IDEAL or ABOVE the crop's window; without
+            -- one, the complete legacy all-three-Good test decides, unchanged.
+            local rel = self:_getFieldRelationships(fieldId)
+            if rel ~= nil then
+                for _, n in ipairs({ "N", "P", "K" }) do
+                    if rel[n] ~= "IDEAL" and rel[n] ~= "ABOVE" then balancedAll = false end
+                end
+            else
+                local nStatus = info.nitrogen and info.nitrogen.status
+                local pStatus = info.phosphorus and info.phosphorus.status
+                local kStatus = info.potassium and info.potassium.status
+                if not (nStatus == "Good" and pStatus == "Good" and kStatus == "Good") then
+                    balancedAll = false
+                end
             end
             if (info.weedPressure or 0) > DairyConstants.HERD.WEED_PRESSURE_LIMIT then anyWeed = true end
             if type(info.rotationStatus) == "string" and info.rotationStatus:lower():find("legume") then
