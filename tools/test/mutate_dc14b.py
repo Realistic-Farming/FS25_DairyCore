@@ -134,6 +134,17 @@ MUTATIONS = [
   [("        pcall(function() g_messageCenter:unsubscribe(MessageType.USER_REMOVED, self, self._onCollectionUserRemoved) end)\n",
     "        pcall(function() g_messageCenter:unsubscribe(MessageType.USER_REMOVED, self) end)\n", 1)],
   "the teardown removes every USER_REMOVED subscription of the manager, not only the route's"),
+ # MAINTENANCE row 124: the handler's argument guard and the server-only subscribe (U3, U4).
+ ("RR5-user-removed-type-guard-dropped", RT,
+  [("    if type(user) ~= \"table\" or type(user.getConnection) ~= \"function\" then return end\n", "", 1)],
+  "a number or nil argument raises in the handler instead of being ignored"),
+ ("RR6-user-removed-nil-connection-kept", RT,
+  [("    if not ok or connection == nil then return end\n", "    if not ok then return end\n", 1)],
+  "a user with no connection reaches the prune and raises on a nil table index"),
+ ("RR7-user-removed-subscribed-on-every-peer", RT,
+  [("    if self:_isServer() then\n        self:_collectionServerRegister()\n        -- Row 97: only the server keeps rate records",
+    "    do\n        if self:_isServer() then self:_collectionServerRegister() end\n        -- Row 97: only the server keeps rate records", 1)],
+  "the USER_REMOVED subscribe leaves the server branch, so every client listens too"),
 
  # ── the two revision touches Bob named on #60 ─────────────────────────────
 ]
