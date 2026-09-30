@@ -150,13 +150,18 @@ T.near("2: inactive records do not push the penalty toward the cap",
   score("2d", { cow({ active(), active(), active(), active(), cured(), cured(), cured(), cured() }) }),
   BASE - 4 * PER_RECORD, 1e-6)
 
--- Absence of `cured` is not a cure.
-T.near("2: a record with neither flag set counts as active", score("2e", { cow({ {} }) }), BASE - PER_RECORD, 1e-6)
+-- Rewritten for the v1.4 delta (brief v1.0 section 3.2): a legacy record, one with
+-- no state, must carry both flags as booleans, and malformed legacy flags raise.
+-- Real 1.2.6.0 and 1.3.2.1 records always carry both booleans (their constructor,
+-- XML load and stream write them), so this changes nothing on real provider data.
+-- Before the delta, 2e counted a record with neither flag as active.
+degrades("2e a legacy record with neither flag set", { cow({ {} }) })
 
--- The provider's own predicate is `not cured and not isCarrier`, so a truthy flag
--- that is not the literal true still makes a record inactive.
-T.near("2: a truthy non-boolean cured flag is not active, as the provider reads it",
-  score("2f", { cow({ { cured = 1 }, { isCarrier = "yes" } }) }), BASE, 1e-6)
+-- Before the delta, 2f read a truthy non-boolean flag as the provider's own
+-- `not cured and not isCarrier` does. Now a non-boolean flag raises.
+-- One row per flag, so a check that dropped either one alone is seen.
+degrades("2f a truthy non-boolean cured flag", { cow({ { cured = 1, isCarrier = false } }) })
+degrades("2f a truthy non-boolean isCarrier flag", { cow({ { cured = false, isCarrier = "yes" } }) })
 
 T.near("2: per-animal filtering averages across the herd",
   score("2g", { cow({ active(), active() }), cow({ cured(), carrier() }) }),
@@ -237,3 +242,222 @@ m2.barns["barn1"] = { barnId = "barn1", farmId = 1, feedSourceFields = {}, mycot
 m2:_updateBarnHealth(m2.barns["barn1"])
 T.eq("6: after a degrade the barn is scored in Standard mode", m2.barns["barn1"].ritterMode, false)
 T.ok("6: with a numeric Standard score", type(m2.barns["barn1"].herdHealthScore) == "number")
+
+-- ══════════════════════════════════════════════════════════
+-- 7. REALISTIC LIVESTOCK 1.4.0.0: THE RECORD STATE
+-- ══════════════════════════════════════════════════════════
+-- Brief v1.0 on Design amendment v0.4. A 1.4 record carries a string state and
+-- isCarrier, and no cured (Disease.lua constructor, XML load and save, and streams
+-- at tag v1.4.0.0). The getter is the provider's own Animal:getHasAnyDisease,
+-- RealisticLivestock_Animal.lua:1942-1954 at tag v1.4.0.0 (e914c2f8), line for line,
+-- wrapped only to count that it was asked: false with no manager, diseases off or no
+-- diseases table; otherwise true when any record passes RLDiseaseStatus.isDiseased
+-- (RLDiseaseStatus.lua:72-74, state == STATE.INFECTIOUS; STATE values equal their
+-- keys, RLDiseaseRecord.lua:39-45). Not a stub that returns true.
+
+local STATE14 = { SUSCEPTIBLE = "SUSCEPTIBLE", EXPOSED = "EXPOSED", INFECTIOUS = "INFECTIOUS", RECOVERED = "RECOVERED", DEAD = "DEAD" }
+local function isDiseased14(record)
+  return record.state == STATE14.INFECTIOUS
+end
+local function gate14(self)
+  if g_diseaseManager == nil or not g_diseaseManager.diseasesEnabled or self.diseases == nil then
+    return false
+  end
+  for _, disease in ipairs(self.diseases) do
+    if isDiseased14(disease) then
+      return true
+    end
+  end
+  return false
+end
+local function getter14(self)
+  provider.calls = provider.calls + 1
+  return gate14(self)
+end
+
+local function rec14(state, carrier) return { state = state, isCarrier = carrier == true } end
+local function cow14(records) return cow(records, getter14) end
+local function INF()  return rec14("INFECTIOUS") end
+local function EXP()  return rec14("EXPOSED") end
+local function REC()  return rec14("RECOVERED") end
+local function DEAD() return rec14("DEAD") end
+
+-- RLBridge:init needs g_diseaseManager present; the 1.4 gate also reads its
+-- diseasesEnabled flag, which setRitterPresent's fresh table does not carry.
+local function score14(tag, herd, enabled)
+  provider.calls = 0
+  setRitterPresent()
+  g_diseaseManager.diseasesEnabled = enabled ~= false
+  setHerd(herd)
+  local s = RLBridge:computeHerdScore("barn1", 1)
+  T.eq(tag .. " [reached: still in Ritter mode]", RLBridge.active, true)
+  T.eq(tag .. " [reached: every animal's getter was asked]", provider.calls, #herd)
+  return s
+end
+local function degrades14(tag, herd)
+  provider.calls = 0
+  setRitterPresent()
+  g_diseaseManager.diseasesEnabled = true
+  setHerd(herd)
+  T.eq(tag .. ": no score is invented", RLBridge:computeHerdScore("barn1", 1), nil)
+  T.eq(tag .. ": the bridge degraded to Standard mode", RLBridge.active, false)
+end
+
+-- Counts: 0, 1, 2, 5 and 6 INFECTIOUS records, and the 0.40 cap.
+T.near("7: v1.4, no records, no penalty", score14("7a", { cow14({}) }), BASE, 1e-6)
+T.near("7: v1.4, one INFECTIOUS record costs one step", score14("7b", { cow14({ INF() }) }), BASE - PER_RECORD, 1e-6)
+T.near("7: v1.4, two INFECTIOUS records cost two steps", score14("7c", { cow14({ INF(), INF() }) }), BASE - 2 * PER_RECORD, 1e-6)
+T.near("7: v1.4, five INFECTIOUS records reach the cap",
+  score14("7d", { cow14({ INF(), INF(), INF(), INF(), INF() }) }), BASE - CAP, 1e-6)
+T.near("7: v1.4, six INFECTIOUS records stay at the cap",
+  score14("7e", { cow14({ INF(), INF(), INF(), INF(), INF(), INF() }) }), BASE - CAP, 1e-6)
+
+-- The defect case: the v0.2 classifier counted `not d.cured and not d.isCarrier`,
+-- and cured is nil on every 1.4 record, so here it cost four steps, not one.
+T.near("7: v1.4 mixed, one INFECTIOUS among EXPOSED, RECOVERED and DEAD costs exactly one step",
+  score14("7f", { cow14({ EXP(), INF(), REC(), DEAD() }) }), BASE - PER_RECORD, 1e-6)
+T.near("7: v1.4 mixed, averaged across two animals",
+  score14("7g", { cow14({ EXP(), INF(), INF(), REC() }), cow14({ EXP(), REC(), DEAD() }) }),
+  ((BASE - 2 * PER_RECORD) + BASE) / 2, 1e-6)
+T.near("7: v1.4, an INFECTIOUS carrier counts one, as the provider's own rule does",
+  score14("7h", { cow14({ rec14("INFECTIOUS", true) }) }), BASE - PER_RECORD, 1e-6)
+
+-- State wins: a state-bearing record never falls through to the legacy flags.
+T.near("7: state wins, EXPOSED and RECOVERED with both legacy flags false cost nothing",
+  score14("7i", { cow14({ INF(), { state = "EXPOSED", cured = false, isCarrier = false },
+                            { state = "RECOVERED", cured = false, isCarrier = false } }) }),
+  BASE - PER_RECORD, 1e-6)
+T.near("7: state wins, INFECTIOUS with cured = true still costs one step",
+  score14("7j", { cow14({ { state = "INFECTIOUS", cured = true, isCarrier = false } }) }), BASE - PER_RECORD, 1e-6)
+
+-- The provider says false: no penalty, and the bridge does not read the list. The
+-- animal below counts every read of its diseases field. The provider's own gate
+-- reads it twice (the nil check and the ipairs); a bridge read would be a third.
+local function readCounted(records)
+  local a = cow14(nil)
+  local seen = { reads = 0 }
+  setmetatable(a, { __index = function(_, k)
+    if k == "diseases" then seen.reads = seen.reads + 1; return records end
+  end })
+  return a, seen
+end
+do
+  local a, seen = readCounted({ EXP() })
+  T.near("7: gate false, EXPOSED only: no penalty", score14("7k", { a }), BASE, 1e-6)
+  T.eq("7: gate false, EXPOSED only: the bridge did not read the list", seen.reads, 2)
+  a, seen = readCounted({ rec14("EXPOSED", true) })
+  T.near("7: gate false, a carrier held EXPOSED: no penalty", score14("7l", { a }), BASE, 1e-6)
+  T.eq("7: gate false, a carrier held EXPOSED: the bridge did not read the list", seen.reads, 2)
+  a, seen = readCounted({ REC() })
+  T.near("7: gate false, RECOVERED only: no penalty", score14("7m", { a }), BASE, 1e-6)
+  T.eq("7: gate false, RECOVERED only: the bridge did not read the list", seen.reads, 2)
+  a, seen = readCounted({ INF() })
+  T.near("7: control, gate true: one step", score14("7n", { a }), BASE - PER_RECORD, 1e-6)
+  T.eq("7: control, gate true: the bridge's own read is seen", seen.reads, 3)
+end
+T.near("7: diseases disabled in the provider: INFECTIOUS records cost nothing",
+  score14("7o", { cow14({ INF(), INF() }) }, false), BASE, 1e-6)
+
+-- Behind a true gate (an INFECTIOUS sibling opens it), a state that is not a
+-- string or not one of the four the brief names raises, and the bridge degrades.
+-- SUSCEPTIBLE is in the provider's enum but is never held; the brief names only
+-- EXPOSED, RECOVERED and DEAD as zero states, so it degrades too.
+degrades14("7p state SUSCEPTIBLE", { cow14({ INF(), { state = "SUSCEPTIBLE", isCarrier = false } }) })
+degrades14("7q unknown state SICK", { cow14({ INF(), { state = "SICK", isCarrier = false } }) })
+degrades14("7r numeric state", { cow14({ INF(), { state = 1, isCarrier = false } }) })
+degrades14("7s boolean state", { cow14({ INF(), { state = true, isCarrier = false } }) })
+-- A 1.4 record read with a nil state and no cured (a client's out-of-range stream
+-- ordinal) takes the legacy branch, finds no boolean cured, and degrades. It cannot
+-- arise on the server, where this runs; the row pins the order.
+degrades14("7t nil state and no cured flag", { cow14({ INF(), { isCarrier = false } }) })
+
+-- The manager's Standard fallback follows an unknown-state degrade end to end.
+setRitterPresent()
+g_diseaseManager.diseasesEnabled = true
+setHerd({ cow14({ INF(), { state = "SICK", isCarrier = false } }) })
+local m3 = DairyCoreManager.new()
+m3.barns["barn1"] = { barnId = "barn1", farmId = 1, feedSourceFields = {}, mycotoxinPenalty = 0 }
+m3:_updateBarnHealth(m3.barns["barn1"])
+T.eq("7: after an unknown-state degrade the barn is scored in Standard mode", m3.barns["barn1"].ritterMode, false)
+T.ok("7: with a numeric Standard score", type(m3.barns["barn1"].herdHealthScore) == "number")
+
+-- ══════════════════════════════════════════════════════════
+-- 8. ENTRY-POINT BAR (R-18): THE PRODUCTION DAY TICK
+-- ══════════════════════════════════════════════════════════
+-- DairyCoreManager:onDayTick(ctx), the call Time Guard's day tick makes, run as the
+-- server. It reaches updateAllBarns, then discoverBarns through the placeable
+-- system's own list (the verified route, DairyCoreManager.lua discoverBarns), then
+-- _updateBarnHealth, then RLBridge:computeHerdScore, which finds the barn's animals
+-- through husbandrySystem:getPlaceablesByFarm, modelled on HusbandrySystem.lua:39-48
+-- at game 1.24.0.0 (the owner filter and the optional animal type). Nothing below
+-- calls _updateBarnHealth or computeHerdScore directly. The limit: the barn and its
+-- animals are a fixture, because the placeable registry is the engine's and the
+-- animal list is the provider's.
+do
+  local savedMission = g_currentMission
+  local function barnPlaceable(id, owner, herd)
+    local p = { spec_husbandryMilk = {},
+                spec_husbandryAnimals = { clusterSystem = { getAnimals = function() return herd end } } }
+    function p:getUniqueId() return id end
+    function p:getOwnerFarmId() return owner end
+    function p:getAnimalTypeIndex() return 1 end
+    return p
+  end
+  local function husbandrySystemOver(list)
+    local hs = { placeables = list }
+    function hs:getPlaceablesByFarm(farmId, animalTypeIndex)
+      local want = farmId or (g_localPlayer ~= nil and g_localPlayer.farmId or nil)
+      local out = {}
+      for _, placeable in ipairs(self.placeables) do
+        if want == placeable:getOwnerFarmId() and (animalTypeIndex == nil or placeable:getAnimalTypeIndex() == animalTypeIndex) then
+          table.insert(out, placeable)
+        end
+      end
+      return out
+    end
+    return hs
+  end
+
+  local sickHerd  = { cow14({ EXP(), INF(), REC(), DEAD() }) }
+  local quietHerd = { cow14({ EXP(), EXP(), REC(), DEAD() }) }
+  local list = { barnPlaceable("barnE", 1, sickHerd), barnPlaceable("barnQ", 1, quietHerd),
+                 barnPlaceable("barnX", 2, { cow14({ INF(), INF(), INF() }) }) }
+
+  local realCompute = RLBridge.computeHerdScore
+  local computeCalls = 0
+  RLBridge.computeHerdScore = function(self, ...) computeCalls = computeCalls + 1; return realCompute(self, ...) end
+
+  local function mission(isServer)
+    g_currentMission = setmetatable({ _isServer = isServer, placeableSystem = { placeables = list },
+                                      husbandrySystem = husbandrySystemOver(list) }, { __index = savedMission })
+    function g_currentMission:getIsServer() return self._isServer end
+  end
+
+  mission(true)
+  setRitterPresent()
+  g_diseaseManager.diseasesEnabled = true
+  local mgr = DairyCoreManager.new()
+  mgr:onDayTick({ monotonicDay = 5 })
+  local sick, quiet = mgr.barns["barnE"], mgr.barns["barnQ"]
+  T.ok("8: the day tick discovered the sick barn", sick ~= nil)
+  T.ok("8: the day tick discovered the quiet barn", quiet ~= nil)
+  T.ok("8: the bridge scored the barns, it was not bypassed", computeCalls >= 2)
+  local GW = DairyConstants.HERD.RITTER_GENETICS_WEIGHT * 0.5   -- productivity 1.0 normalizes to 0.5
+  if sick ~= nil and quiet ~= nil then
+    T.eq("8: the sick barn is in Ritter mode", sick.ritterMode, true)
+    T.near("8: one INFECTIOUS among EXPOSED, RECOVERED and DEAD: herdHealthScore is one step down",
+      sick.herdHealthScore, (BASE - PER_RECORD) + GW, 1e-6)
+    T.near("8: the same herd with EXPOSED for INFECTIOUS scores exactly one step higher",
+      quiet.herdHealthScore - sick.herdHealthScore, PER_RECORD, 1e-6)
+  end
+
+  -- As a client the day tick only rediscovers barns; the score is the server's.
+  computeCalls = 0
+  mission(false)
+  local client = DairyCoreManager.new()
+  client:onDayTick({ monotonicDay = 5 })
+  T.eq("8: as a client, the day tick never scores a herd", computeCalls, 0)
+
+  RLBridge.computeHerdScore = realCompute
+  g_currentMission = savedMission
+end
