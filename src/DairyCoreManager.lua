@@ -294,10 +294,14 @@ function DairyCoreManager:discoverBarns(retainUnresolved)
     -- (`for _, existingPlaceable in ipairs(g_currentMission.placeableSystem.placeables)`),
     -- it works on server and client alike, and it sidesteps the dedicated-server
     -- farm-id trap entirely because each placeable names its own owner via
-    -- getOwnerFarmId(). The previous enumerator (`husbandrySystem:getPlaceablesByFarm`)
-    -- is present in no game script, LUADOC or reference, and its fallback fields
-    -- (`hs.placeables` / `hs.husbandries`) do not exist on the engine-native system,
-    -- so discovery found 0 barns on every dedicated server.
+    -- getOwnerFarmId(). The previous enumerator, `husbandrySystem:getPlaceablesByFarm`,
+    -- is a real engine method: HusbandrySystem.lua:39-48 (game 1.24.0.0, unchanged
+    -- from 1.21.1.0), and the game calls it itself in AnimalScreenDealer.lua:21. It
+    -- walks `hs.placeables` (HusbandrySystem.lua:10) and keeps only the farm id it is
+    -- handed, so it is only as good as the ids asked for (see _farmIdsToScan).
+    -- RLBridge:getBarnAnimals depends on it: do not remove it as dead. Of the old
+    -- fallback fields only `hs.husbandries` is not an engine field. (The first DC-32
+    -- note here said the method and `hs.placeables` were absent; that was wrong.)
     local ps = mission.placeableSystem
     local placeables = nil
     if ps ~= nil and ps.placeables ~= nil then
