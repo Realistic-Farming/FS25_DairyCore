@@ -42,7 +42,7 @@
   SDS-owned.
 
 ## Bugs
-- [x] DC-32 (2026-08-18): Dairy tab showed "no barns" on the dedicated server. `discoverBarns` enumerated via `husbandrySystem:getPlaceablesByFarm` (unverifiable, absent from every reference and the game scripts) with fallbacks that do not exist on the engine-native system, so discovery found 0 barns; the network sync is update-only and could not materialise them on clients. Fix: enumerate `g_currentMission.placeableSystem.placeables` (the verified table, walked by PlaceableBeehive.lua), owner from `getOwnerFarmId()`, with a 10 s retry for slow placeable loads. 418 suite assertions green.
+- [x] DC-32 (2026-08-18): Dairy tab showed "no barns" on the dedicated server. `discoverBarns` enumerated via `husbandrySystem:getPlaceablesByFarm` (unverifiable, absent from every reference and the game scripts) with fallbacks that do not exist on the engine-native system, so discovery found 0 barns; the network sync is update-only and could not materialise them on clients. Fix: enumerate `g_currentMission.placeableSystem.placeables` (the verified table, walked by PlaceableBeehive.lua), owner from `getOwnerFarmId()`, with a 10 s retry for slow placeable loads. 418 suite assertions green. Corrected 2026-09-30: `getPlaceablesByFarm` is a real engine method (HusbandrySystem.lua:39-48, game 1.21.1.0 and 1.24.0.0) that `RLBridge:getBarnAnimals` depends on; "absent from the game scripts" was wrong.
 - [x] The sovereign floor floored the live spot and divided by that same spot, so
   the floor crashed exactly when the market crashed (DC-16, 2026-08-14): the floor
   now rides `entry.base`, read as a pull, never the live spot.
