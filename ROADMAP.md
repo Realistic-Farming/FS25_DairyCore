@@ -140,3 +140,7 @@ NOT `safeRead`, so one bad animal cannot trip the whole bridge to Standard mode.
 owed** (mixed-genetics herd, season-by-season breeding climb, uninstall/reinstall
 cycle).
 
+## 2026-10-04 (Fred): the shared RF Esc door at the suite's STOCK page set (Wizard, #74)
+
+- [x] The four shared Esc door files (`xml/gui/RfPdaMenuPage.xml`, `src/gui/RfPdaMenuPage.lua`, `src/gui/RfEscModules.lua`, `xml/gui/rfEscProfiles.xml`) are at the set every door mod carries, byte-same in all ten (Wizard's STOCK page chain build, #74, merged at fc2a7bc0): wider sheet cells, the explanation band at up to four lines, the ids and callbacks StockGuard's STOCK page uses (inert without StockGuard), the hidden ids and profiles of DairyCore's herd-advisory panel, ProStaff in the closed-module list, and Soil Fertilizer's AUTO target card kept.
+- The door's in-game check is TESTING row 412. Docs by Fred's catch-up, on Tyson's word of 2026-10-04.
