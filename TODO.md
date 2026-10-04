@@ -105,3 +105,7 @@
 - [ ] **FarmTablet Dairy tab:** the DC-14 read contract currently has no consuming
       app on a client.
 
+## 2026-10-04 (Fred): the shared RF Esc door (Wizard, #74)
+
+- [x] The four shared door files at the suite's STOCK page set, byte-same in all ten door mods; StockGuard's STOCK page chrome inert without StockGuard; the herd-advisory panel hidden.
+- [~] In game (owed): TESTING row 412.
