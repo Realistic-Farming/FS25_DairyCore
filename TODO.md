@@ -114,3 +114,8 @@
 
 - [x] The side info boxes start clear of the selected tab; text bodies 352 and 348 px wide, so line length and the right edge are unchanged; byte-same in all ten door mods.
 - [~] In game (owed): TESTING row 452.
+
+## 2026-10-06 (Fred): modDesc.xml encoding repair (MAINTENANCE row 223)
+
+- [x] 23 garbled description lines decoded back to the text already decided; nothing else touched.
+- [~] In game (owed): TESTING row 482.
