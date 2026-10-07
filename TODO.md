@@ -119,3 +119,9 @@
 
 - [x] 23 garbled description lines decoded back to the text already decided; nothing else touched.
 - [~] In game (owed): TESTING row 482.
+
+## 2026-10-07 (Fred): Soil harvest integration (MAINTENANCE rows 242 and 260)
+
+- [x] Soil's manager read from the mission at both sites; the harvest bus called with a dot, so both listeners register.
+- [~] In game (owed): TESTING row 505.
+- [ ] Feed-field designation opener: MAINTENANCE row 261, LATER until Wizard's call.

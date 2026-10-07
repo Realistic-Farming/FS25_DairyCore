@@ -153,3 +153,9 @@ cycle).
 ## 2026-10-06 (Fred): the mod's description readable again in every language (MAINTENANCE row 223)
 
 - [x] `modDesc.xml`: 23 description lines (every language but English, Dutch and Indonesian) had been saved through two wrong code pages (UTF-8 read as cp1252 and saved, then read as the DOS cp850 page and saved again), so the mod manager showed garbled text. Each is decoded back to the exact text the file held before the damage (it matches the file at the parent of 613500a, 2026-08-10, line for line). No other line changes.
+
+## 2026-10-07 (Fred): DairyCore's Soil harvest integration works in a game (MAINTENANCE rows 242 and 260)
+
+- [x] Soil's manager is read from the mission (`g_currentMission.soilFertilityManager`) before the bare global, at both sites: the contract's organic credit (`_barnOrganicFraction`) and the harvest capture (`FeedProvenance:onHarvestCut`). Soil writes its global into its own mod environment, so the bare read was nil in a game.
+- [x] Soil's harvest bus is called with a dot, `bus.subscribe(name, fn)` and `bus.unsubscribe(name)`, the shape Soil publishes; the colon call registered nothing. Grain harvests now seed the feed provenance, with organic from Soil's certification; diseased harvested grain raises the farm's feed pool, and from the next day every barn on the farm carries a mycotoxin penalty; a diseased harvest of a designated feed field sets that barn's penalty at once.
+- The in-game check is TESTING row 505. Feed-field designation has no in-game opener since 2026-09-06 (MAINTENANCE row 261, LATER until Wizard's call).

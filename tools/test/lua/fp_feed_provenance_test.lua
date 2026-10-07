@@ -80,7 +80,8 @@ local fp2 = m2.feedProvenance
 -- Mock the farm, fruit and organic sources the capture reads.
 g_farmlandManager = { getFarmlandById = function(_, id) return { farmId = id % 7 } end }
 g_fruitTypeManager = { getFruitTypeByIndex = function(_, idx) return { name = "WHEAT" } end }
-g_SoilFertilityManager = {
+-- [MAINTENANCE row 242] Soil's manager on the mission, where a game puts it (SoilFertilizer main.lua:761).
+g_currentMission.soilFertilityManager = {
   organic = {
     getFieldOrganicState = function() return { certified = true } end,
   },
@@ -174,7 +175,7 @@ local b9 = m9:_getOrCreateBarn("b9", 1, {})
 b9.farmId = 1
 m9.feedProvenance:blend(1, "WHEAT", 100, 0.0, 1.0)
 m9.feedProvenance:blend(1, "BARLEY", 100, 0.0, 0.0)
-g_SoilFertilityManager = { organic = { getFieldOrganicState = function() return { certified = true } end } }
+g_currentMission.soilFertilityManager = { organic = { getFieldOrganicState = function() return { certified = true } end } }
 T.near("the milk premium reads the provenance organic fraction",
   m9:_barnOrganicFraction(b9), 0.5, 1e-9)
 
