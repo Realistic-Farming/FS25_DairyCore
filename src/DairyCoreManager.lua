@@ -1586,7 +1586,7 @@ end
 --- comes from it (the amount-weighted organic fraction of the farm's harvested
 --- feed) instead of a live field read, because organic rides the feed, not the
 --- field. Otherwise it reads SoilFertilizer's shipped OrganicCertification
---- (g_SoilFertilityManager.organic, delegate-when-present) over the barn's
+--- (soilFertilityManager.organic, delegate-when-present) over the barn's
 --- designated feed fields. SF absent, no provenance, no designations, or no
 --- readable fields => 0, so the pay factor stays 1.0.
 ---@param barn table
@@ -1596,7 +1596,10 @@ function DairyCoreManager:_barnOrganicFraction(barn)
     if fp ~= nil and fp:hasData(barn.farmId) then
         return fp:organicFeedFraction(barn.farmId)
     end
-    local mgr = g_SoilFertilityManager
+    -- [MAINTENANCE row 242] Soil's handle from the mission (SoilFertilizer main.lua:761), as _getFieldInfo
+    -- reads it: Soil writes g_SoilFertilityManager into its own mod environment (getfenv(0), :758), so a
+    -- bare read here is nil in a game. The bare global stays as the fallback.
+    local mgr = (g_currentMission ~= nil and g_currentMission.soilFertilityManager) or g_SoilFertilityManager
     if mgr == nil or mgr.organic == nil or mgr.organic.getFieldOrganicState == nil then return 0 end
     local sum, n = 0, 0
     for fieldId in pairs(barn.feedSourceFields or {}) do
@@ -1824,13 +1827,16 @@ end
 -- is certified: { fieldId, fruitTypeIndex, liters (incremental), area,
 -- diseasePressure, activeDisease, activeDiseaseSeverity }. Subscribe is keyed by
 -- name, so re-registering replaces our own listener rather than stacking.
+-- [MAINTENANCE row 260] Soil publishes the bus as plain functions, subscribe(name, fn) and
+-- unsubscribe(name) (SoilFertilizer main.lua:800-803), so they are called with a dot: a colon call
+-- passes the bus table as the name, and Soil's subscribeHarvest rejects it without an error.
 function DairyCoreManager:_bindHarvestBus()
     if self.harvestBound then return end
     if not self:_isServer() then return end
     local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
     if bus == nil or bus.subscribe == nil then return end
     local ok = pcall(function()
-        bus:subscribe("DairyCore_FeedProvenance", function(payload)
+        bus.subscribe("DairyCore_FeedProvenance", function(payload)
             if self.feedProvenance ~= nil then
                 self.feedProvenance:onHarvestCut(payload)
             end
@@ -1839,7 +1845,7 @@ function DairyCoreManager:_bindHarvestBus()
         -- name so re-registering replaces rather than stacks. Routes contaminated
         -- feed-field harvests into the barn's mycotoxin penalty (latent until the
         -- designation surface gives barns fields).
-        bus:subscribe("DairyCore_FeedContamination", function(payload)
+        bus.subscribe("DairyCore_FeedContamination", function(payload)
             self:_applyHarvestContamination(payload)
         end)
     end)
@@ -1851,8 +1857,8 @@ function DairyCoreManager:_unbindHarvestBus()
     local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
     if bus ~= nil and bus.unsubscribe ~= nil then
         pcall(function()
-            bus:unsubscribe("DairyCore_FeedProvenance")
-            bus:unsubscribe("DairyCore_FeedContamination")
+            bus.unsubscribe("DairyCore_FeedProvenance")
+            bus.unsubscribe("DairyCore_FeedContamination")
         end)
     end
     self.harvestBound = false
