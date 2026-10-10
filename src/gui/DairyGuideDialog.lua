@@ -339,17 +339,21 @@ function DairyGuideDialog:onGuiSetupFinished()
     self._elCol1 = self:getDescendantById("dcGuide_col1")
     self._elCol2 = self:getDescendantById("dcGuide_col2")
     self._elSubtitle = self:getDescendantById("dcGuide_subtitle")
+    self._elClose    = self:getDescendantById("dcGuide_close")   -- [REPAIR-354] Return
+    self._elBack     = self:getDescendantById("dcGuide_back")    -- [REPAIR-354] Escape
 end
 
 function DairyGuideDialog:onOpen()
     DairyGuideDialog:superClass().onOpen(self)
     self._currentPage = 1
+    self._isGuideOpen = true     -- [REPAIR-354] guards against a double close
     self:_selectPage(1)
 end
 
 function DairyGuideDialog:onClose()
     DairyGuideDialog:superClass().onClose(self)
     self:_clearContent()
+    self._isGuideOpen = false    -- [REPAIR-354]
     self._currentPage = 1
 end
 
@@ -418,6 +422,30 @@ end
 
 -- -- Button -----------------------------------------------
 
+--- The ONE close route. Both button box controls point here through onClick, so the
+--- mouse, Escape and Return all converge on the same code.
+--- Idempotent: a second call while already closed does nothing, so no combination of
+--- button match and inherited dispatch can close twice.
 function DairyGuideDialog:onClickClose()
+    if self._isGuideOpen == false then
+        return
+    end
+    self._isGuideOpen = false
     g_gui:closeDialogByName(DairyGuideDialog.GUI_NAME)
+end
+
+--- [REPAIR-354] Secondary, and deliberately NOT the primary Escape route.
+--- Escape is carried by the buttonBack control above, which is the traced path.
+--- This override only matters if the engine also dispatches the inherited
+--- ScreenElement:onClickBack, whose body 1.24 omits and whose caller is not visible
+--- in any available source. It is safe either way because it funnels into the same
+--- idempotent handler, so a double dispatch still yields exactly one close.
+--- Return convention follows DialogElement 1.24 :70-77, false meaning event used,
+--- and usedMenuButton is respected.
+function DairyGuideDialog:onClickBack(forceBack, usedMenuButton)
+    if usedMenuButton then
+        return true      -- event unused
+    end
+    self:onClickClose()
+    return false         -- event used
 end
