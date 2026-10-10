@@ -41,8 +41,19 @@
 
     </GuiElement>
 
+    <!-- [REPAIR-354] Two controls in the established dialog button box, each owning
+         exactly ONE stock global action, both calling the same idempotent handler.
+           buttonBack -> <inputAction value="MENU_BACK"/>   gives Escape
+           buttonOK   -> <inputAction value="MENU_ACCEPT"/> gives Return
+         Both profiles are stock in dataS/guiProfiles.xml, so each button acquires
+         its action through ButtonElement:loadProfile, the same documented route.
+         Back is first, matching the stock Cancel-then-OK reading order. The Close
+         text is left as the existing literal deliberately: only the NEW control
+         takes a localisation key, so a resolution problem could not regress the
+         button that already works. -->
     <BoxLayout profile="fs25_dialogButtonBox">
-      <Button profile="buttonOK" text="Close" onClick="onClickClose"/>
+      <Button profile="buttonBack" id="dcGuide_back" text="$l10n_button_back" onClick="onClickClose"/>
+      <Button profile="buttonOK" id="dcGuide_close" text="Close" onClick="onClickClose"/>
     </BoxLayout>
 
   </GuiElement>
@@ -60,7 +71,14 @@
     </Profile>
 
     <!-- The guide tabs and Close stay buttonOK: dialog chrome, not Esc overlay chips. -->
-    <Profile name="dcGuide_tab" extends="buttonOK">
+    <!-- [HELP-CLOSE-352] was parented on buttonOK, which carries a stock
+         <inputAction value="MENU_ACCEPT"/>. Every tab inherited it, and
+         ScreenElement.callButtonsWithAction returns on the FIRST matching button in
+         tree order, with the tab row declared before the button box, so Return
+         activated tab 1 instead of Close. fs25_wideButton is buttonOK's own parent
+         and carries no inputAction, so the look is kept and no tab owns a global
+         action any more. -->
+    <Profile name="dcGuide_tab" extends="fs25_wideButton">
       <size value="174px 36px"/>
       <textSize value="11px"/>
       <textUpperCase value="true"/>
