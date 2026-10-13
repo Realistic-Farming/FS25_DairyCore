@@ -13,6 +13,24 @@ the repo's git history and README.
 
 ## [Unreleased]
 
+## [1.1.0.0] - 2026-10-12
+
+> **This is not a final release.** It gives everyone, testers and players, new or returning, everything we have built so far, so nobody has to wait on an old version any longer. The Realistic Farming suite is far from done: we are still building and expanding every mod, and completing it could take months, possibly a year. Expect changes and rough edges along the way, and please report anything that looks wrong.
+
+### Added
+- With Soil & Fertilizer installed, harvested grain now feeds your dairy: organic harvests count toward the organic milk premium, and diseased grain in the farm's feed gives your barns a mycotoxin penalty from the next day.
+- The farm office page in the Esc menu now explains a refused milk collection: for each barn it says when a scheduled collection was refused and why, and when the next one is due while a worker is assigned. This works for every player in multiplayer.
+- When Soil & Fertilizer reports the crop's nutrient window for a feed field, the balanced-feed bonus needs all three nutrients inside or above that window.
+
+### Changed
+- The office milk sale charges a fixed handling fee per litre instead of a share of the market price, and a sale whose fee would meet or beat the price is refused before any milk leaves the tank. The setting is now a fee per 1,000 L; existing saves start at the new default.
+
+### Fixed
+- With Realistic Livestock 1.4, a barn's herd health score counts one disease penalty per sick animal again; animals in the hidden early phase, recovered animals and leftover records no longer drag it down.
+- Multiplayer: the feed flush and other farm actions reach the server correctly, and a player who leaves no longer leaves a stale collection record behind.
+- The Dairy Help screen closes with Escape and Enter again.
+- Translations: the Esc pages, the dairy manager and the Field Guide fall back to English instead of showing raw text keys, the page legend shows a plain dot between page names (a stray "Â" is gone), and the mod's description reads correctly in the mod manager in every language.
+
 ### Added
 - DC-14 host, slice A: DairyCore now records, for the session only, why a scheduled milk round left milk behind (the handling fee met or exceeded the sale price at that attempt), read fail-closed from the barn's native storage and the Dairy milk tanks in reach, and offers it through one farm-private getter. No surface shows it yet (slice C paints the Esc sheet; slice B carries it to joined clients), and the new feedback surface stays release-locked until its observations pass. The sale, the fee, the money and the round's timing are unchanged. Sixteen new strings in all 26 languages.
 
