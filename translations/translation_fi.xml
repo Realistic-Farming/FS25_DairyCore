@@ -95,5 +95,34 @@
         <text name="dairy_rf_pda_side_teach" text="Maito&#10;&#10;Yksi kortti jokaista tilasi navettaa kohti. Sivut vaihtuvat , ja . tai sivunappuloilla.&#10;&#10;Karja nyt on tanaan navetassa seisova lypsykarja roduittain. Maito sailiossa on varastoitu maito sen antaneiden rotujen mukaan. Maito ilman rotutietoa pysyy tuntemattomana. Uusi karja vanhan maidon rinnalla on normaalia.&#10;&#10;Pilaantumiskello: kaynnistyy, kun nouto kirjataan. Kello pysahdyksissa tarkoittaa, ettei se ole kaynnistynyt, joten Tuore ei ole viela kayva ajastin.&#10;&#10;Rehutautikello: sairas rehu varastossa tuo karjalle mykotoksiinia. Se laskee paiva paivalta. Sivun vihje nimeaa navetan niin kauan kuin se kestaa.&#10;&#10;Varastoitu rehu: laatu lukittuu kasviin niitossa ja sekoittuu tilan siiloissa. Kaukalo ottaa siita varastosta ja maito seuraa sita. Luomu tarkoittaa yli 80% luomuosuutta. Odotetaan sadonkorjuutietoja ensimmaiseen kirjattuun niittoon asti." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Rodut" />
         <text name="dairy_rf_pda_breed_next" text="Rodut (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Maidon myyntimaksu (per 1000 l)" />
+        <text name="dc_guide_saleFee_01" text="Toimisto ja kierros perivät maksun litralta." />
+        <text name="dc_guide_saleFee_02" text="Per 1000 l: oletus 11, väliltä 0-50." />
+        <text name="dc_guide_saleFee_03" text="Se on oletuksena 0,011/l, enintään 0,05/l." />
+        <text name="dc_guide_saleFee_04" text="Vanhat prosenttiarvot palautuvat arvoon 11." />
+        <text name="dc_guide_saleFee_05" text="Aktiiviset dynaamiset hinnat pätevät; muuten" />
+        <text name="dc_guide_saleFee_06" text="käytetään perushintaa, ei aseman hintaa." />
+        <text name="dc_guide_saleFee_07" text="Maksu hinnan tasolla: maito jää myymättä." />
+        <text name="dc_guide_saleFee_08" text="Hylätty kierros käyttää silti vuoronsa." />
+        <text name="dc_guide_saleFee_09" text="Vanheneminen jatkuu; katso palvelinloki." />
+        <text name="dc14_collection_heading_barn" text="Navetta" />
+        <text name="dc14_collection_heading_status" text="Nouto" />
+        <text name="dc14_collection_heading_worker" text="Työntekijä" />
+        <text name="dc14_collection_heading_next_due" text="Seuraava nouto" />
+        <text name="dc14_collection_row_refused" text="Maito jäi" />
+        <text name="dc14_collection_row_none" text="Ei raporttia" />
+        <text name="dc14_collection_row_unavailable" text="Ei saatavilla" />
+        <text name="dc14_collection_fee_refused" text="Suunnitellussa noudossa päivänä %s klo %s maito jäi noutamatta, koska käsittelymaksu ylitti myyntihinnan tai oli yhtä suuri kuin se tuolla yrityksellä." />
+        <text name="dc14_collection_next_due" text="Seuraava nouto: päivä %s klo %s." />
+        <text name="dc14_collection_no_worker" text="Noutotyöntekijää ei ole tällä hetkellä määrätty." />
+        <text name="dc14_collection_no_report" text="Tässä istunnossa ei ole raporttia hylätystä noudosta." />
+        <text name="dc14_collection_updating" text="Päivitetään noudon tilaa." />
+        <text name="dc14_collection_unavailable" text="Noudon tila ei ole saatavilla." />
+        <text name="dc14_collection_barn_unavailable" text="Noudon tila ei ole saatavilla tälle navetalle." />
+        <text name="dc14_collection_settings_off" text="Maitotilan simulaatio on pois päältä." />
+        <text name="dc14_collection_no_real_farm" text="Valitse tila tai liity tilaan nähdäksesi noudon tilan." />
+        <text name="dc14_collection_worker_assigned" text="Määrätty" />
+        <text name="dc14_collection_worker_none" text="Ei ole" />
+        <text name="dc14_collection_due_cell" text="päivä %s klo %s" />
     </texts>
 </l10n>

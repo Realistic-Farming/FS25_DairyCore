@@ -24,14 +24,24 @@ DairyConstants.QUALITY = {
     },
 }
 
--- DC-19: the co-op herd advisory. A formatted read of state that already exists,
+-- DC-19 / RSF-F166: the co-op herd advisory. A read of state that already exists,
 -- gated by ProStaff's hasHerdAdvisory flag (L12). Advisory-only: it NEVER writes
 -- state, moves money or applies economics. The health cutoff REUSES a tier
 -- boundary from QUALITY.TIERS (by key) rather than inventing a number, so the
 -- advisory language cannot drift from what _qualityTierForScore / the Financial
 -- Cockpit already show. SPOILAGE_STAGES names the DC-8 lifecycle stages that
--- count as "Ageing or worse". The sentence and reason strings are dumb formatted
--- reads that live here, never in logic.
+-- count as "Ageing or worse".
+--
+-- RSF-F166 REPLACED THE SENTENCE STRINGS WITH REASON CODES. The producer used to
+-- format English here ("Barn %s: herd health trending down..."), which forced one
+-- mod's prose onto every consumer and could not be localized by the machine that
+-- displays it. It now emits semantic codes and each view owns its own words, in
+-- its own locale, on the viewer. That is why SENTENCE, HEALTH, SPOILAGE and JOIN
+-- are gone rather than merely unused: keeping them would leave a second, silent
+-- source of advisory wording for someone to reach for later.
+--
+-- The codes are the contract. They are part of the published row schema, so they
+-- are not free to rename: two views and their translation files key off them.
 DairyConstants.HERD_ADVISORY = {
     -- The tier whose minScore is the "needs attention" health cutoff. A barn at
     -- or below this boundary is flagged. Referenced by key so the value is the
@@ -41,10 +51,11 @@ DairyConstants.HERD_ADVISORY = {
     SPOILAGE_STAGES = {
         ageing = true, atrisk = true, condemned = true,
     },
-    SENTENCE = "Barn %s: %s",
-    HEALTH   = "herd health trending down, check feed quality",
-    SPOILAGE = "near spoilage risk, collection overdue",
-    JOIN     = "; ",
+    -- Semantic reason codes. Emitted in this order when both apply.
+    REASONS = {
+        HEALTH = "HEALTH_ATTENTION",
+        MILK   = "MILK_AGEING",
+    },
 }
 
 -- Time-based spoilage. Stages are keyed off in-game days since last collection,
@@ -140,15 +151,24 @@ DairyConstants.COLLECTION = {
     },
 }
 
--- DC-21: administrative milk disposal. The margin is the administrative cost of an
--- office/rota sale with no truck and no fuel, and its MAGNITUDE is a human ruling.
--- This default is a RECOMMENDATION (a percentage, because it scales with herd size),
--- named and tunable via SettingsHub, never hardcoded inline. Pending Arissani's call.
+-- DC-21 / RSF-F216: administrative milk disposal. The charge is the handling cost of
+-- an office/rota sale with no truck and no fuel, so it is a fixed amount per litre and
+-- not a share of the price: handling costs what it costs whatever the market pays.
+-- Magnitude is Arissani's ruling, 2026-09-19.
+--
+-- Stored and exposed as an integer per 1000 litres, because the shared settings editor
+-- steps a float by 0.1 and prints %.2f, which cannot display or reach 0.011. The
+-- per-litre values are DERIVED by the sale, never stored twice:
+--   11 / 1000 = 0.011 per litre (default)
+--    0 / 1000 = 0.0   per litre (floor; an admin may waive the charge)
+--   50 / 1000 = 0.05  per litre (ceiling)
+-- Named and tunable via SettingsHub, never hardcoded inline.
 DairyConstants.SALE = {
-    DEFAULT_MARGIN = 0.05,   -- 5% off the spot price
-    MARGIN_MIN     = 0.0,
-    MARGIN_MAX     = 0.25,
-    INCOME_LABEL   = "Milk Sale (Administrative)",
+    FEE_PER_1000L     = 11,
+    FEE_MIN_PER_1000L = 0,
+    FEE_MAX_PER_1000L = 50,
+    FEE_DIVISOR       = 1000,
+    INCOME_LABEL      = "Milk Sale (Administrative)",
 }
 
 -- Dairy contracts. termDays are in-game DAYS (Time Guard clock; no "week").
@@ -309,6 +329,40 @@ DairyConstants.ACTIONS = {
     SELL_MILK     = "DairyCore_SellMilk",      -- DC-21 office sale (args: barnId, quantity)
     ASSIGN_ROTA   = "DairyCore_AssignRota",    -- DC-9 rota assignment (args: barnId, workerId)
     UNASSIGN_ROTA = "DairyCore_UnassignRota",  -- DC-9 rota release (args: barnId)
+}
+
+-- DC-14 collection refusal (SDS v0.9, brief v1.0): the session-lived, farm-private
+-- explanation of a scheduled round that left milk behind. View states and reasons
+-- are the getter's; row states, their wire codes and the per-row reasons are the
+-- producer's; the module id is slice B's NetworkSync scoped module.
+DairyConstants.COLLECTION_REFUSAL = {
+    NETWORK_MODULE = "dairy.collectionRefusal.v1",
+    SCHEMA = 1,
+    STATES = { WAITING = "WAITING", READY = "READY", UNAVAILABLE = "UNAVAILABLE" },
+    REASONS = {
+        FIRST_SNAPSHOT    = "FIRST_SNAPSHOT",
+        NS_READY_WAIT     = "NS_READY_WAIT",
+        TRANSPORT_TIMEOUT = "TRANSPORT_TIMEOUT",
+        TRANSPORT_ERROR   = "TRANSPORT_ERROR",
+        SETTINGS_OFF      = "SETTINGS_OFF",
+        NO_REAL_FARM      = "NO_REAL_FARM",
+    },
+    ROW_STATES = { NONE_RECORDED = "NONE_RECORDED", FEE_EXCEEDS_PRICE = "FEE_EXCEEDS_PRICE", UNAVAILABLE = "UNAVAILABLE" },
+    ROW_CODES  = { NONE_RECORDED = 0, FEE_EXCEEDS_PRICE = 1, UNAVAILABLE = 2 },
+    ROW_REASONS = { OWNER_UNRESOLVED = "OWNER_UNRESOLVED", EVALUATION_ERROR = "EVALUATION_ERROR" },
+    MAX_KEY_BYTES = 128,
+    MAX_LABEL_BYTES = 128,
+    LABEL_FALLBACK_PREFIX = "Barn ",
+    -- Slice B, the transports (SDS v0.9 sections 4 and 5).
+    NS_WAIT_MS = 10000,                 -- WAITING_NS bound from the first enabled wait
+    NS_AVAILABILITY_MS = 10000,         -- visible demand with no APPLIED replica, then DIRECT
+    DIRECT_BUDGET_BYTES = 8192,         -- conservative application budget per response chunk
+    DIRECT_MAX_CHUNKS = 1024,
+    DIRECT_MAX_ROWS_PER_CHUNK = 512,
+    DIRECT_TIMEOUT_MS = 10000,
+    DIRECT_RETRY_MS = 5000,
+    DIRECT_MAX_REQUESTS_PER_SECOND = 8, -- per connection, excess ignored without reply
+    DEMAND_WINDOW_MS = 2500,            -- the Esc light refresh (2 s) plus 500 ms
 }
 
 -- DC-25: milk tank placeable. A mod-owned storage within reach of a barn.

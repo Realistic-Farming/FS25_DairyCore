@@ -95,5 +95,34 @@
         <text name="dairy_rf_pda_side_teach" text="Bo sua&#10;&#10;Moi chuong trong trang trai mot the. Lat trang bang , va . hoac nut trang.&#10;&#10;Dan hien tai la dan vat sua dang o trong chuong hom nay, theo giong. Sua trong bon la sua du tru theo cac giong da cho sua. Sua khong co ban ghi giong van la chua ro. Dan moi ben canh sua cu la binh thuong.&#10;&#10;Dong ho hu hong: bat dau khi mot lan thu gom duoc ghi nhan. Dong ho dung nghia la chua bat dau, nen Tuoi chua phai la bo dem dang chay.&#10;&#10;Dong ho benh thuc an: thuc an bi benh trong kho lam dan nhiem doc to nam. No giam dan tung ngay. Goi y trang neu ten chuong khi con keo dai.&#10;&#10;Thuc an du tru: chat luong duoc chot tren cay trong luc cat va tron trong cac silo cua trang trai. Mang an lay tu kho do va sua di theo. Huu co nghia la ty le huu co tren 80%. Dang cho du lieu thu hoach cho den khi lan cat dau tien duoc ghi nhan." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Giong" />
         <text name="dairy_rf_pda_breed_next" text="Giong (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Phí bán sữa (mỗi 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Văn phòng và tuyến thu phí theo lít." />
+        <text name="dc_guide_saleFee_02" text="Mỗi 1000 L: mặc định 11, từ 0 đến 50." />
+        <text name="dc_guide_saleFee_03" text="Tức 0,011/L mặc định, tối đa 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Cài đặt phần trăm cũ trở về 11." />
+        <text name="dc_guide_saleFee_05" text="Giá động đang bật sẽ được áp dụng; nếu không" />
+        <text name="dc_guide_saleFee_06" text="dùng giá cơ bản, không phải giá trạm." />
+        <text name="dc_guide_saleFee_07" text="Phí bằng hoặc hơn giá: sữa không bán được." />
+        <text name="dc_guide_saleFee_08" text="Lượt bị từ chối vẫn dùng khung giờ của nó." />
+        <text name="dc_guide_saleFee_09" text="Sữa vẫn cũ đi; xem nhật ký máy chủ." />
+        <text name="dc14_collection_heading_barn" text="Chuồng bò" />
+        <text name="dc14_collection_heading_status" text="Thu gom" />
+        <text name="dc14_collection_heading_worker" text="Công nhân" />
+        <text name="dc14_collection_heading_next_due" text="Lần tới" />
+        <text name="dc14_collection_row_refused" text="Sữa còn lại" />
+        <text name="dc14_collection_row_none" text="Không có báo cáo" />
+        <text name="dc14_collection_row_unavailable" text="Không có sẵn" />
+        <text name="dc14_collection_fee_refused" text="Trong lần thu gom theo lịch vào ngày %s lúc %s, sữa đã không được thu gom vì phí xử lý ở lần đó bằng hoặc vượt giá bán." />
+        <text name="dc14_collection_next_due" text="Lần thu gom tới: ngày %s lúc %s." />
+        <text name="dc14_collection_no_worker" text="Hiện chưa có công nhân thu gom nào được phân công." />
+        <text name="dc14_collection_no_report" text="Không có báo cáo từ chối thu gom trong phiên này." />
+        <text name="dc14_collection_updating" text="Đang cập nhật tình trạng thu gom." />
+        <text name="dc14_collection_unavailable" text="Không có tình trạng thu gom." />
+        <text name="dc14_collection_barn_unavailable" text="Không có tình trạng thu gom cho chuồng này." />
+        <text name="dc14_collection_settings_off" text="Mô phỏng chăn nuôi bò sữa đang tắt." />
+        <text name="dc14_collection_no_real_farm" text="Hãy chọn hoặc tham gia một trang trại để xem tình trạng thu gom." />
+        <text name="dc14_collection_worker_assigned" text="Đã phân công" />
+        <text name="dc14_collection_worker_none" text="Không có" />
+        <text name="dc14_collection_due_cell" text="ngày %s lúc %s" />
     </texts>
 </l10n>

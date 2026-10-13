@@ -95,5 +95,34 @@
         <text name="dairy_rf_pda_side_teach" text="Laiterie&#10;&#10;Une carte par etable de votre ferme. Changez de page avec , et . ou le pagineur.&#10;&#10;Troupeau actuel : les laitieres presentes dans l'etable aujourd'hui, par race. Lait en cuve : le lait stocke selon les races qui l'ont produit. Le lait sans releve de race reste inconnu. Un nouveau troupeau a cote de vieux lait est normal.&#10;&#10;Horloge de deterioration : demarre quand une collecte est enregistree. Horloge inactive veut dire non demarree, Frais n'est donc pas encore un compteur en marche.&#10;&#10;Horloge de maladie du fourrage : du fourrage malade dans le stock met de la mycotoxine sur le troupeau. Elle recule jour apres jour. L'indice de page nomme l'etable tant que cela dure.&#10;&#10;Fourrage stocke : la qualite est fixee sur la culture a la coupe et melangee dans les silos de la ferme. L'auge puise dans ce stock et le lait le suit. Bio veut dire plus de 80% de part bio. En attente des donnees de recolte jusqu'a la premiere coupe enregistree." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Races" />
         <text name="dairy_rf_pda_breed_next" text="Races (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Frais de vente du lait (par 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Bureau et tournée prennent des frais par litre." />
+        <text name="dc_guide_saleFee_02" text="Par 1000 L : 11 par défaut, de 0 à 50." />
+        <text name="dc_guide_saleFee_03" text="Soit 0,011/L par défaut, jusqu'à 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Les anciens pourcentages repassent à 11." />
+        <text name="dc_guide_saleFee_05" text="Les prix dynamiques actifs s'appliquent ; sinon" />
+        <text name="dc_guide_saleFee_06" text="le prix de base est utilisé, pas celui d'une station." />
+        <text name="dc_guide_saleFee_07" text="Frais au niveau du prix : le lait reste invendu." />
+        <text name="dc_guide_saleFee_08" text="Une tournée refusée consomme son créneau." />
+        <text name="dc_guide_saleFee_09" text="Le vieillissement continue ; voir le journal." />
+        <text name="dc14_collection_heading_barn" text="Étable" />
+        <text name="dc14_collection_heading_status" text="Collecte" />
+        <text name="dc14_collection_heading_worker" text="Ouvrier" />
+        <text name="dc14_collection_heading_next_due" text="Prochaine échéance" />
+        <text name="dc14_collection_row_refused" text="Lait resté sur place" />
+        <text name="dc14_collection_row_none" text="Aucun rapport" />
+        <text name="dc14_collection_row_unavailable" text="Non disponible" />
+        <text name="dc14_collection_fee_refused" text="Lors de la collecte prévue le jour %s à %s, le lait est resté sur place parce que les frais de manutention atteignaient ou dépassaient le prix de vente lors de cette tentative." />
+        <text name="dc14_collection_next_due" text="Prochaine collecte prévue : jour %s à %s." />
+        <text name="dc14_collection_no_worker" text="Aucun ouvrier de collecte n'est présentement affecté." />
+        <text name="dc14_collection_no_report" text="Aucun rapport de collecte refusée pour cette session." />
+        <text name="dc14_collection_updating" text="Mise à jour de l'état de la collecte." />
+        <text name="dc14_collection_unavailable" text="État de la collecte non disponible." />
+        <text name="dc14_collection_barn_unavailable" text="État de la collecte non disponible pour cette étable." />
+        <text name="dc14_collection_settings_off" text="La simulation laitière est désactivée." />
+        <text name="dc14_collection_no_real_farm" text="Sélectionnez ou joignez une ferme pour voir l'état de la collecte." />
+        <text name="dc14_collection_worker_assigned" text="Affecté" />
+        <text name="dc14_collection_worker_none" text="Aucun" />
+        <text name="dc14_collection_due_cell" text="jour %s à %s" />
     </texts>
 </l10n>

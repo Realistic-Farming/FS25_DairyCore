@@ -22,6 +22,10 @@
   herd-advisory state computation (health at/below the Standard tier boundary, or spoilage
   stage Ageing/worse). Advisory-only: no write, no money, no economics. 28 assertions in
   `dc19_coop_herd_advisory_test.lua`. Branch `feat/DC-19-coop-herd-advisory` pushed; no PR.
+- [x] Herd advisory repair (RSF-F166, **producer half**, 2026-09-19): farm-id admission before
+  the provider call, the nil/all-barn route removed, barn admission against the native owner,
+  and row tables of semantic codes in place of English sentences. 99 assertions in
+  `dc19_coop_herd_advisory_test.lua`, 10 mutations killed. Wizard's view/Tablet/door half remains.
 - [x] Contract archetypes + sovereign floor anchor (DC-16, 2026-08-14): two new
   contract rows in `CONTRACTS.TYPES` (spot_run 14d/1.15x, standing_order 60d/0.92x),
   both gated by `prostaffLevel` like the shipped standard row; the settlement floor
@@ -38,7 +42,7 @@
   SDS-owned.
 
 ## Bugs
-- [x] DC-32 (2026-08-18): Dairy tab showed "no barns" on the dedicated server. `discoverBarns` enumerated via `husbandrySystem:getPlaceablesByFarm` (unverifiable, absent from every reference and the game scripts) with fallbacks that do not exist on the engine-native system, so discovery found 0 barns; the network sync is update-only and could not materialise them on clients. Fix: enumerate `g_currentMission.placeableSystem.placeables` (the verified table, walked by PlaceableBeehive.lua), owner from `getOwnerFarmId()`, with a 10 s retry for slow placeable loads. 418 suite assertions green.
+- [x] DC-32 (2026-08-18): Dairy tab showed "no barns" on the dedicated server. `discoverBarns` enumerated via `husbandrySystem:getPlaceablesByFarm` (unverifiable, absent from every reference and the game scripts) with fallbacks that do not exist on the engine-native system, so discovery found 0 barns; the network sync is update-only and could not materialise them on clients. Fix: enumerate `g_currentMission.placeableSystem.placeables` (the verified table, walked by PlaceableBeehive.lua), owner from `getOwnerFarmId()`, with a 10 s retry for slow placeable loads. 418 suite assertions green. Corrected 2026-09-30: `getPlaceablesByFarm` is a real engine method (HusbandrySystem.lua:39-48, game 1.21.1.0 and 1.24.0.0) that `RLBridge:getBarnAnimals` depends on; "absent from the game scripts" was wrong.
 - [x] The sovereign floor floored the live spot and divided by that same spot, so
   the floor crashed exactly when the market crashed (DC-16, 2026-08-14): the floor
   now rides `entry.base`, read as a pull, never the live spot.
@@ -101,3 +105,23 @@
 - [ ] **FarmTablet Dairy tab:** the DC-14 read contract currently has no consuming
       app on a client.
 
+## 2026-10-04 (Fred): the shared RF Esc door (Wizard, #74)
+
+- [x] The four shared door files at the suite's STOCK page set, byte-same in all ten door mods; StockGuard's STOCK page chrome inert without StockGuard; the herd-advisory panel hidden.
+- [~] In game (owed): TESTING row 412.
+
+## 2026-10-05 (Fred): the Esc side panel's info box (Wizard, #76)
+
+- [x] The side info boxes start clear of the selected tab; text bodies 352 and 348 px wide, so line length and the right edge are unchanged; byte-same in all ten door mods.
+- [~] In game (owed): TESTING row 452.
+
+## 2026-10-06 (Fred): modDesc.xml encoding repair (MAINTENANCE row 223)
+
+- [x] 23 garbled description lines decoded back to the text already decided; nothing else touched.
+- [~] In game (owed): TESTING row 482.
+
+## 2026-10-07 (Fred): Soil harvest integration (MAINTENANCE rows 242 and 260)
+
+- [x] Soil's manager read from the mission at both sites; the harvest bus called with a dot, so both listeners register.
+- [~] In game (owed): TESTING row 505.
+- [ ] Feed-field designation opener: MAINTENANCE row 261, LATER until Wizard's call.

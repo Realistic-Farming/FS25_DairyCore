@@ -95,5 +95,34 @@
         <text name="dairy_rf_pda_side_teach" text="Молочная ферма&#10;&#10;Одна карточка на каждый хлев вашей фермы. Страницы листаются клавишами , и . или кнопками страниц.&#10;&#10;Стадо сейчас: дойное стадо, стоящее в хлеву сегодня, по породам. Молоко в танке: хранимое молоко по породам, которые его дали. Молоко без записи породы остаётся неизвестным. Новое стадо рядом со старым молоком это нормально.&#10;&#10;Часы порчи: запускаются, когда записан вывоз. Часы не идут значит не запущены, так что Свежее пока не живой таймер.&#10;&#10;Часы болезни корма: больной корм в запасе даёт стаду микотоксин. Он спадает день за днём. Подсказка страницы называет хлев, пока это длится.&#10;&#10;Запас корма: качество фиксируется на культуре при укосе и смешивается в силосах фермы. Кормушка берёт из этого запаса, и молоко следует за ним. Органический значит более 80% органической доли. Ожидание данных уборки до первого записанного укоса." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Породы" />
         <text name="dairy_rf_pda_breed_next" text="Породы (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Сбор за продажу молока (за 1000 л)" />
+        <text name="dc_guide_saleFee_01" text="Офис и объезд берут сбор за литр." />
+        <text name="dc_guide_saleFee_02" text="За 1000 л: по умолчанию 11, от 0 до 50." />
+        <text name="dc_guide_saleFee_03" text="Это 0,011/л по умолчанию, до 0,05/л." />
+        <text name="dc_guide_saleFee_04" text="Старые проценты сбрасываются на 11." />
+        <text name="dc_guide_saleFee_05" text="Действуют активные динамические цены; иначе" />
+        <text name="dc_guide_saleFee_06" text="берётся базовая цена, не цена приёмки." />
+        <text name="dc_guide_saleFee_07" text="Сбор не ниже цены: молоко не продано." />
+        <text name="dc_guide_saleFee_08" text="Отказанный объезд всё равно тратит слот." />
+        <text name="dc_guide_saleFee_09" text="Старение продолжается; смотрите лог сервера." />
+        <text name="dc14_collection_heading_barn" text="Коровник" />
+        <text name="dc14_collection_heading_status" text="Сбор" />
+        <text name="dc14_collection_heading_worker" text="Работник" />
+        <text name="dc14_collection_heading_next_due" text="Следующий срок" />
+        <text name="dc14_collection_row_refused" text="Молоко осталось" />
+        <text name="dc14_collection_row_none" text="Нет отчёта" />
+        <text name="dc14_collection_row_unavailable" text="Недоступно" />
+        <text name="dc14_collection_fee_refused" text="При запланированном сборе в день %s в %s молоко не было забрано, потому что плата за обработку при этой попытке была равна цене продажи или превышала её." />
+        <text name="dc14_collection_next_due" text="Следующий сбор: день %s в %s." />
+        <text name="dc14_collection_no_worker" text="Работник по сбору сейчас не назначен." />
+        <text name="dc14_collection_no_report" text="В этой сессии нет отчёта об отказе в сборе." />
+        <text name="dc14_collection_updating" text="Обновление состояния сбора." />
+        <text name="dc14_collection_unavailable" text="Состояние сбора недоступно." />
+        <text name="dc14_collection_barn_unavailable" text="Состояние сбора для этого коровника недоступно." />
+        <text name="dc14_collection_settings_off" text="Симуляция молочной фермы выключена." />
+        <text name="dc14_collection_no_real_farm" text="Выберите ферму или присоединитесь к ней, чтобы увидеть состояние сбора." />
+        <text name="dc14_collection_worker_assigned" text="Назначен" />
+        <text name="dc14_collection_worker_none" text="Нет" />
+        <text name="dc14_collection_due_cell" text="день %s в %s" />
     </texts>
 </l10n>

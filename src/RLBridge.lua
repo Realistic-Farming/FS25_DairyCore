@@ -87,11 +87,20 @@ function RLBridge:computeHerdScore(barnId, farmId)
                             and animal.genetics.productivity or 1.0
             -- normalize 0.25..1.75 -> 0..1 so an average herd does not max out (F4)
             local prodGene = math.max(0, math.min(1, (prodRaw - 0.25) / 1.5))
-            -- F191: only ACTIVE records penalize. RealisticLivestock keeps a cured
-            -- record attached until its immunity counts down (Disease.lua:89-93),
-            -- and a carrier record is symptomless by design, so neither may drag
-            -- the herd score. Field names come from Disease.lua:10/15 (cured,
-            -- isCarrier). Read-only: the record is never touched.
+            -- F191: only ACTIVE records penalize, one 0.08 step each. The provider
+            -- has shipped two record shapes:
+            --   1.4.0.0 on: a record carries a string state (EXPOSED, INFECTIOUS,
+            --     RECOVERED, DEAD) and isCarrier, and no cured field. Only
+            --     INFECTIOUS is sickness, the provider's own rule
+            --     (RLDiseaseStatus.isDiseased). EXPOSED is its hidden phase, a
+            --     genetic carrier stays EXPOSED for life, and neither may drag the
+            --     herd score. When a state is present it decides alone and never
+            --     falls through to the flags.
+            --   1.2.6.0 and 1.3.2.1: no state. A record carries the cured and
+            --     isCarrier booleans. A cured record stays attached until its
+            --     immunity counts down, and a carrier is symptomless, so the record
+            --     is active only when both read false.
+            -- Read-only: the record is never touched.
             --
             -- RSF-F191: THE PROVIDER DECIDES FIRST. Each animal's own
             -- getHasAnyDisease is asked before any record is read. It answers from
@@ -99,11 +108,12 @@ function RLBridge:computeHerdScore(barnId, farmId)
             -- are enabled at all, which this mod must not read for itself. A strict
             -- false means no active record, whatever the list still holds. Only a
             -- strict true opens the list, and then the records are counted in order
-            -- with ipairs, the way the provider iterates them, each one active only
-            -- when it is neither cured nor a carrier. The true itself is never a
-            -- record. A missing or non-boolean getter, an unreadable list or a
-            -- malformed record raises inside this safeRead, so the bridge degrades
-            -- to Standard mode rather than inventing a count.
+            -- with ipairs, the way the provider iterates them. The true itself is
+            -- never a record. A missing or non-boolean getter, an unreadable list,
+            -- a malformed record, a state that is not a string or not one of the
+            -- four above, or a legacy record without both boolean flags raises
+            -- inside this safeRead, so the bridge degrades to Standard mode rather
+            -- than inventing a count.
             -- Calling a getter that is absent or not callable raises here, which
             -- is the degradation: no separate type check is needed for it.
             local hasAnyDisease = animal.getHasAnyDisease(animal)
@@ -120,8 +130,22 @@ function RLBridge:computeHerdScore(barnId, farmId)
                     if type(d) ~= "table" then
                         error("F191: a malformed disease record")
                     end
-                    if not d.cured and not d.isCarrier then
-                        diseaseCount = diseaseCount + 1
+                    local state = d.state
+                    if state ~= nil then
+                        if type(state) ~= "string" then
+                            error("F191: a disease state that is not a string (" .. tostring(state) .. ")")
+                        elseif state == "INFECTIOUS" then
+                            diseaseCount = diseaseCount + 1
+                        elseif state ~= "EXPOSED" and state ~= "RECOVERED" and state ~= "DEAD" then
+                            error("F191: an unknown disease state (" .. state .. ")")
+                        end
+                    else
+                        if type(d.cured) ~= "boolean" or type(d.isCarrier) ~= "boolean" then
+                            error("F191: a legacy disease record without boolean cured and isCarrier flags")
+                        end
+                        if not d.cured and not d.isCarrier then
+                            diseaseCount = diseaseCount + 1
+                        end
                     end
                 end
             end

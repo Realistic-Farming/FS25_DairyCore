@@ -95,5 +95,34 @@
         <text name="dairy_rf_pda_side_teach" text="Lecheria&#10;&#10;Una tarjeta por establo de tu granja. Cambia de pagina con , y . o con el paginador.&#10;&#10;Rebano ahora es el rebano lechero que hoy esta en el establo, por raza. Leche en tanque es la leche almacenada por las razas que la dieron. La leche sin registro de raza sigue como desconocida. Un rebano nuevo junto a leche vieja es normal.&#10;&#10;Reloj de deterioro: arranca cuando se registra una recoleccion. Reloj detenido significa no arrancado, asi que Fresca todavia no es un temporizador en marcha.&#10;&#10;Reloj de enfermedad del alimento: alimento enfermo en la reserva pone micotoxina sobre el rebano. Baja dia a dia. La pista de pagina nombra el establo mientras dure.&#10;&#10;Alimento almacenado: la calidad se fija en el cultivo al cortar y se mezcla en los silos de la granja. El comedero se surte de esa reserva y la leche la sigue. Organico significa mas del 80% de parte organica. Esperando datos de cosecha hasta el primer corte registrado." />
         <text name="dairy_rf_pda_breed_prev" text="&lt; Razas" />
         <text name="dairy_rf_pda_breed_next" text="Razas (%d/%d) &gt;" />
+        <text name="dc_setting_saleFee" text="Tarifa de venta de leche (por 1000 L)" />
+        <text name="dc_guide_saleFee_01" text="Oficina y ronda cobran una tarifa por litro." />
+        <text name="dc_guide_saleFee_02" text="Por 1000 L: 11 por defecto, de 0 a 50." />
+        <text name="dc_guide_saleFee_03" text="Es decir 0,011/L por defecto, hasta 0,05/L." />
+        <text name="dc_guide_saleFee_04" text="Los porcentajes antiguos vuelven a 11." />
+        <text name="dc_guide_saleFee_05" text="Se aplican precios dinámicos activos; si no," />
+        <text name="dc_guide_saleFee_06" text="se usa el precio base, no el de una estación." />
+        <text name="dc_guide_saleFee_07" text="Tarifa igual o mayor al precio: leche sin vender." />
+        <text name="dc_guide_saleFee_08" text="Una ronda rechazada gasta igualmente su turno." />
+        <text name="dc_guide_saleFee_09" text="El envejecimiento sigue; mira el registro." />
+        <text name="dc14_collection_heading_barn" text="Establo" />
+        <text name="dc14_collection_heading_status" text="Recolección" />
+        <text name="dc14_collection_heading_worker" text="Trabajador" />
+        <text name="dc14_collection_heading_next_due" text="Próxima prevista" />
+        <text name="dc14_collection_row_refused" text="Leche sin recoger" />
+        <text name="dc14_collection_row_none" text="Sin reporte" />
+        <text name="dc14_collection_row_unavailable" text="No disponible" />
+        <text name="dc14_collection_fee_refused" text="En la recolección programada del día %s a las %s, la leche quedó sin recoger porque la tarifa de manejo igualó o superó el precio de venta en ese intento." />
+        <text name="dc14_collection_next_due" text="Próxima recolección prevista: día %s a las %s." />
+        <text name="dc14_collection_no_worker" text="Actualmente no hay ningún trabajador de recolección asignado." />
+        <text name="dc14_collection_no_report" text="No hay reporte de recolección rechazada en esta sesión." />
+        <text name="dc14_collection_updating" text="Actualizando el estado de la recolección." />
+        <text name="dc14_collection_unavailable" text="Estado de la recolección no disponible." />
+        <text name="dc14_collection_barn_unavailable" text="Estado de la recolección no disponible para este establo." />
+        <text name="dc14_collection_settings_off" text="La simulación lechera está desactivada." />
+        <text name="dc14_collection_no_real_farm" text="Selecciona una granja o únete a una para ver el estado de la recolección." />
+        <text name="dc14_collection_worker_assigned" text="Asignado" />
+        <text name="dc14_collection_worker_none" text="Ninguno" />
+        <text name="dc14_collection_due_cell" text="día %s a las %s" />
     </texts>
 </l10n>

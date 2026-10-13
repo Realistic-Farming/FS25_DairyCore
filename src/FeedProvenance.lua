@@ -107,7 +107,9 @@ function FeedProvenance:onHarvestCut(payload)
     -- Organic: the field's certification at harvest (delegate-when-present).
     local isOrganic = 0
     pcall(function()
-        local sf = g_SoilFertilityManager
+        -- [MAINTENANCE row 242] Soil's handle from the mission first (SoilFertilizer main.lua:761): its
+        -- g_SoilFertilityManager lives in Soil's own mod environment and reads nil here.
+        local sf = (g_currentMission ~= nil and g_currentMission.soilFertilityManager) or g_SoilFertilityManager
         if sf ~= nil and sf.organic ~= nil and sf.organic.getFieldOrganicState ~= nil then
             local st = sf.organic:getFieldOrganicState(fieldId)
             if st ~= nil and st.certified == true then isOrganic = 1 end

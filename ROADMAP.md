@@ -28,7 +28,7 @@
   `getBarnDesignations(barnId)`. This is the last DC-15 predecessor: the herd score
   now has a way to move.
 - [x] Feed-field modifiers and the mycotoxin penalty apply in both modes (DC-11 4A placement, 2026-08-23): the feed-field bonuses and penalties plus the mycotoxin subtraction moved out of `_herdScoreStandard` into a mode-independent farm-business layer (`_farmBusinessModifiers`) that `_updateBarnHealth` applies after either score path (Standard or Ritter/RL). Ritter-mode farms were silently exempt before, because the Ritter bypass at `DairyCoreManager.lua:374-378` never runs the Standard function. Also F106: `undesignateFeedField` now marks the barn dirty, symmetric with `designateFeedField`. Bench: 10 assertions in `dc11_feed_business_layer_test.lua`.
-- [x] Dedicated-server barn discovery (DC-32, 2026-08-18): the Dairy tab showed "no barns" on the dedicated server even with barns placed. `discoverBarns` enumerated through `husbandrySystem:getPlaceablesByFarm`, a method present in no game script, LUADOC or reference, with fallbacks (`hs.placeables` / `hs.husbandries`) that do not exist on the engine-native husbandry system, so discovery found 0 barns on every dedicated server and the update-only network sync could not materialise them on clients. Discovery now iterates the placeable system's own list (`g_currentMission.placeableSystem.placeables`, the table the game itself walks in PlaceableBeehive.lua), reads each placeable's owner via `getOwnerFarmId()`, and retries every 500 ms for 10 s when the list is not yet populated (client join / slow loads). F75's per-owning-farm intent is preserved; the enumerator is now the verified one.
+- [x] Dedicated-server barn discovery (DC-32, 2026-08-18): the Dairy tab showed "no barns" on the dedicated server even with barns placed. `discoverBarns` enumerated through `husbandrySystem:getPlaceablesByFarm`, a method present in no game script, LUADOC or reference, with fallbacks (`hs.placeables` / `hs.husbandries`) that do not exist on the engine-native husbandry system, so discovery found 0 barns on every dedicated server and the update-only network sync could not materialise them on clients. Discovery now iterates the placeable system's own list (`g_currentMission.placeableSystem.placeables`, the table the game itself walks in PlaceableBeehive.lua), reads each placeable's owner via `getOwnerFarmId()`, and retries every 500 ms for 10 s when the list is not yet populated (client join / slow loads). F75's per-owning-farm intent is preserved; the enumerator is now the verified one. Corrected 2026-09-30: `getPlaceablesByFarm` and `hs.placeables` do exist in the game scripts (HusbandrySystem.lua:39-48 and :10, game 1.21.1.0 and 1.24.0.0), and `RLBridge:getBarnAnimals` depends on the method; only `hs.husbandries` is absent. The claim above that the method was missing was wrong, and the source comment in `discoverBarns` now says so.
 - [x] Harvest-contamination routing (DC-11 / F105, 2026-08-21): DairyCore subscribes to SoilFertilizer's `soilHarvestBus` a second time (`DairyCore_FeedContamination`, beside FP-1's provenance listener). A harvest cut of a field a barn has designated as a feed source routes the field's live `diseasePressure` into `applyFeedContaminationPenalty`, setting the barn's mycotoxin penalty and countdown. Clean cuts (`diseasePressure` 0) never route, because a zero-severity call would still impose MIN_PENALTY for MIN_DAYS on a healthy field. Latent until the DC-11 designation surface gives barns fields (zero callers today). Bench: 11 assertions in `dc11_mycotoxin_harvest_bus_test.lua`.
 - [x] Esc framework table freeze (Dairy guest, #30, 2026-08-15): the shared 4-bay column grid is restated on every show. Merged; 1.0.5.4.
 - [x] Co-op herd advisory (DC-19, **DairyCore half**, 2026-08-14): the gate flag
@@ -42,6 +42,21 @@
   `dc19_coop_herd_advisory_test.lua`. **The ProStaff half remains:** the one-row
   `hasHerdAdvisory = 12` FLAGS row + the `ProStaffManager:hasHerdAdvisory` getter on the
   ProStaffCoOp side (SF-40 shape), and the ProStaffApp "Dairy & Logistics" render wiring.
+
+- [x] Herd advisory repair (RSF-F166, **DairyCore producer half**, 2026-09-19): the DC-19
+  getter above was reachable but not safe to show a player. `getHerdAdvisories(farmId)` now
+  RETURNS ROW TABLES, not sentences: `{ barnId, farmId, label, reasons }` with semantic
+  codes `HEALTH_ATTENTION` and `MILK_AGEING`, in stable barn-id order, health reason first.
+  Each view owns its own words in its own locale; `HERD_ADVISORY.SENTENCE/HEALTH/SPOILAGE/JOIN`
+  are gone. Both entry points now admit the farm id before asking the provider (a nil used to
+  truncate the `_proStaff` varargs call and report farm 1's entitlement), and the nil/all-barn
+  route is removed. Barn admission requires a live record, a farmId equal to the requested farm,
+  server or `_wireReceived` facts, a currently resolvable placeable and a native
+  `getOwnerFarmId()` that agrees. A missing or malformed health fact now produces no reason,
+  where it used to read as 0 and publish the worst possible observation. Bench: 99 assertions
+  in `dc19_coop_herd_advisory_test.lua`, 10 mutations killed in `tools/test/mutate_f166.py`.
+  **Wizard's half remains:** the Dairy module view, the FarmTablet consumer, `appText`'s
+  `literalText` bypass, the locale strings and the ten-host shared-door distribution.
 - [ ] FarmTablet Dairy tab / DairyRfPdaGuest consumption of the read model.
 - [ ] Contract economics confirmations (DC-10/DC-13): SDK per-cow yield curve, the
   conversion-chain hooks, the exact storage aggregate, the trough consumption trigger.
@@ -125,3 +140,22 @@ NOT `safeRead`, so one bad animal cannot trip the whole bridge to Standard mode.
 owed** (mixed-genetics herd, season-by-season breeding climb, uninstall/reinstall
 cycle).
 
+## 2026-10-04 (Fred): the shared RF Esc door at the suite's STOCK page set (Wizard, #74)
+
+- [x] The four shared Esc door files (`xml/gui/RfPdaMenuPage.xml`, `src/gui/RfPdaMenuPage.lua`, `src/gui/RfEscModules.lua`, `xml/gui/rfEscProfiles.xml`) are at the set every door mod carries, byte-same in all ten (Wizard's STOCK page chain build, #74, merged at fc2a7bc0): wider sheet cells, the explanation band at up to four lines, the ids and callbacks StockGuard's STOCK page uses (inert without StockGuard), the hidden ids and profiles of DairyCore's herd-advisory panel, ProStaff in the closed-module list, and Soil Fertilizer's AUTO target card kept.
+- The door's in-game check is TESTING row 412. Docs by Fred's catch-up, on Tyson's word of 2026-10-04.
+
+## 2026-10-05 (Fred): the Esc side panel's info box clear of the selected tab (Wizard, #76)
+
+- [x] The shared Esc door file `xml/gui/RfPdaMenuPage.xml`, byte-same in all ten door mods (Wizard, #76, merged at c468d694): the side info boxes (`rfSideInfoShell`, `wcSideInfoShell`, `mdSideInfoShell`, `csSideInfoShell`) take an explicit position and size, 16 px further right and 16 px narrower (384 to 368 px), so the dark box starts clear of the selected tab's lime edge and its right edge stays where it was. The side text bodies narrow by the same 16 px, to 352 px (the main side text, from 368) and 348 px (the Worker Costs and Market Dynamics side help, from 364), so the text starts 16 px further right and each line ends where it did.
+- The change's in-game check is TESTING row 452. Docs by Fred's catch-up, on Tyson's word of 2026-10-05.
+
+## 2026-10-06 (Fred): the mod's description readable again in every language (MAINTENANCE row 223)
+
+- [x] `modDesc.xml`: 23 description lines (every language but English, Dutch and Indonesian) had been saved through two wrong code pages (UTF-8 read as cp1252 and saved, then read as the DOS cp850 page and saved again), so the mod manager showed garbled text. Each is decoded back to the exact text the file held before the damage (it matches the file at the parent of 613500a, 2026-08-10, line for line). No other line changes.
+
+## 2026-10-07 (Fred): DairyCore's Soil harvest integration works in a game (MAINTENANCE rows 242 and 260)
+
+- [x] Soil's manager is read from the mission (`g_currentMission.soilFertilityManager`) before the bare global, at both sites: the contract's organic credit (`_barnOrganicFraction`) and the harvest capture (`FeedProvenance:onHarvestCut`). Soil writes its global into its own mod environment, so the bare read was nil in a game.
+- [x] Soil's harvest bus is called with a dot, `bus.subscribe(name, fn)` and `bus.unsubscribe(name)`, the shape Soil publishes; the colon call registered nothing. Grain harvests now seed the feed provenance, with organic from Soil's certification; diseased harvested grain raises the farm's feed pool, and from the next day every barn on the farm carries a mycotoxin penalty; a diseased harvest of a designated feed field sets that barn's penalty at once.
+- The in-game check is TESTING row 505. Feed-field designation has no in-game opener since 2026-09-06 (MAINTENANCE row 261, LATER until Wizard's call).

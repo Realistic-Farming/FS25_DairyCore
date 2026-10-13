@@ -20,6 +20,32 @@ DairyCoreManager.SAVE_FILE        = "FS25_DairyCore.xml"      -- own-file fallba
 -- until the SDK base litersPerDay age-curve is confirmed by Tyson.
 local PER_COW_LITRES_DAY = 22
 
+-- RSF-F216: this file's own translation lookup, used once, for the sale-fee setting
+-- label. The same body as DairyRfPdaGuest.lua's and DairyGuideDialog.lua's tr (the
+-- SoilFertilizer #973 shape, MAINTENANCE row 99). Deliberately NOT a new shared helper:
+-- each file carries its own copy, which is how this mod already does it. The readable
+-- English fallback is what makes an early or missing i18n harmless.
+
+local function _tr(key, fallback)
+    -- MAINTENANCE row 99, the SoilFertilizer #973 shape. Gate on hasText, never on the
+    -- returned string: getText never returns nil, and for an absent key it returns the
+    -- sentence "Missing '<key>' in l10n<suffix>.xml" (I18N.lua:175-191), which the old
+    -- prefix gate caught only by also refusing any real text that begins "Missing".
+    -- Past hasText the return is opaque: type and non-empty, never inspected. g_i18n is
+    -- read plainly: in this mod's environment it IS the mod-aware instance
+    -- (mods.lua:453, modEnv.g_i18n = g_i18n:addModI18N(modName), I18N.lua:149-172); the
+    -- engine sets no modEnv.i18n, so the branch that read it was dead.
+    local i18n = g_i18n
+    if i18n == nil or type(i18n.hasText) ~= "function" or type(i18n.getText) ~= "function" then
+        return fallback or key
+    end
+    local okHas, has = pcall(i18n.hasText, i18n, key)
+    if not okHas or has ~= true then return fallback or key end
+    local ok, text = pcall(i18n.getText, i18n, key)
+    if not ok or type(text) ~= "string" or text == "" then return fallback or key end
+    return text
+end
+
 function DairyCoreManager.new()
     local self = setmetatable({}, DairyCoreManager_mt)
     self.barns        = {}      -- barnId -> barn record
@@ -34,7 +60,7 @@ function DairyCoreManager.new()
         defaultCollectionInterval = DairyConstants.COLLECTION.DEFAULT_INTERVAL_HOURS,
         spoilageEnabled         = true,
         contractsEnabled        = true,
-        saleMargin              = DairyConstants.SALE.DEFAULT_MARGIN,
+        saleFeePer1000L         = DairyConstants.SALE.FEE_PER_1000L,
     }
     -- FP-1: the feed provenance ledger (authority #5). DairyCore is the sole writer.
     self.feedProvenance = FeedProvenance.new(self)
@@ -58,6 +84,9 @@ end
 -- =========================================================
 
 function DairyCoreManager:onMissionLoaded()
+    -- DC-14: the session report is mission-lived and the manager object is not
+    -- (main.lua builds it once per process); reset above the PF stand-down return.
+    self:_resetCollectionRefusalSession()
     self._discoveryRetries = 0
     self._discoveryTimer = 0
     self._discoveryPending = true
@@ -85,6 +114,9 @@ function DairyCoreManager:onMissionLoaded()
     -- DC-27: storage/herd change messages and the hook verify line.
     self:_bindMilkBreedMessages()
     self:_logMilkBreedVerify()
+    -- DC-14 slice B: the routes (scoped provider on the server, the pure client's
+    -- selection, the local farm-change subscription).
+    self:_collectionRouteBind()
 
     -- Trailer-transfer completion (Ritter mode, Integration 29C): base-game event.
     pcall(function()
@@ -99,6 +131,8 @@ function DairyCoreManager:onMissionLoaded()
 end
 
 function DairyCoreManager:onMissionDelete()
+    self:_collectionRouteTeardown()
+    self:_resetCollectionRefusalSession()
     self:_teardownMilkBreed()
     if self.animalMoveBound and g_messageCenter ~= nil then
         pcall(function() g_messageCenter:unsubscribeAll(self) end)
@@ -113,6 +147,8 @@ function DairyCoreManager:update(dt)
     if not self.clockBound then self:_subscribeClock() end
     self:_retryDiscovery(dt)
     self:_updateBreedSurfaceFallback(dt)
+    -- DC-14 slice B: real-time clocks of the routes (waits, timeouts, retries).
+    self:_collectionRouteUpdate(dt)
 end
 
 -- DC-32: on a dedicated server and on a client join, onMissionLoaded can fire before the
@@ -258,10 +294,14 @@ function DairyCoreManager:discoverBarns(retainUnresolved)
     -- (`for _, existingPlaceable in ipairs(g_currentMission.placeableSystem.placeables)`),
     -- it works on server and client alike, and it sidesteps the dedicated-server
     -- farm-id trap entirely because each placeable names its own owner via
-    -- getOwnerFarmId(). The previous enumerator (`husbandrySystem:getPlaceablesByFarm`)
-    -- is present in no game script, LUADOC or reference, and its fallback fields
-    -- (`hs.placeables` / `hs.husbandries`) do not exist on the engine-native system,
-    -- so discovery found 0 barns on every dedicated server.
+    -- getOwnerFarmId(). The previous enumerator, `husbandrySystem:getPlaceablesByFarm`,
+    -- is a real engine method: HusbandrySystem.lua:39-48 (game 1.24.0.0, unchanged
+    -- from 1.21.1.0), and the game calls it itself in AnimalScreenDealer.lua:21. It
+    -- walks `hs.placeables` (HusbandrySystem.lua:10) and keeps only the farm id it is
+    -- handed, so it is only as good as the ids asked for (see _farmIdsToScan).
+    -- RLBridge:getBarnAnimals depends on it: do not remove it as dead. Of the old
+    -- fallback fields only `hs.husbandries` is not an engine field. (The first DC-32
+    -- note here said the method and `hs.placeables` were absent; that was wrong.)
     local ps = mission.placeableSystem
     local placeables = nil
     if ps ~= nil and ps.placeables ~= nil then
@@ -306,6 +346,9 @@ function DairyCoreManager:discoverBarns(retainUnresolved)
     if changed or next(previous) ~= nil then
         self:_markBarnsDirty()
         self:_markBreedSurfaceDirty()
+        -- DC-14: the census moved (bound, hidden, removed or re-owned), so the
+        -- admitted rows moved with it.
+        self:_touchCollectionRefusal()
     end
 end
 
@@ -374,6 +417,8 @@ function DairyCoreManager:_getOrCreateBarn(barnId, farmId, placeable)
     if farmId ~= nil and self:_isRealFarmId(barn.farmId) and barn.farmId ~= farmId then
         barn.assignedWorkerId = nil
         barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+        -- DC-14: a barn that changed hands carries no old owner's explanation.
+        self:_clearCollectionRefusal(barnId)
     end
     barn.farmId = farmId or barn.farmId
     barn._placeable = placeable  -- transient runtime reference, not saved
@@ -403,6 +448,32 @@ function DairyCoreManager:_getFieldInfo(fieldId)
     if sf == nil or sf.soilSystem == nil then return nil end
     local ok, info = pcall(function() return sf.soilSystem:getFieldInfo(fieldId) end)
     return ok and info or nil
+end
+
+--- [SF-73] Soil's crop-relative FIELD_REPORT for a designated feed field
+--- (SoilFertilitySystem:getCropNutrientRelationship(fieldId), no coordinates), or nil
+--- when Soil is absent, older, or answers anything but a COMPLETE field report. A
+--- vehicle footprint never reaches the herd: only scope FIELD_REPORT is accepted.
+---@return table|nil { N = relationship, P = ..., K = ... }
+function DairyCoreManager:_getFieldRelationships(fieldId)
+    local sf = g_currentMission ~= nil and g_currentMission.soilFertilityManager
+    if sf == nil or sf.soilSystem == nil or type(sf.soilSystem.getCropNutrientRelationship) ~= "function" then
+        return nil
+    end
+    local ok, rel = pcall(sf.soilSystem.getCropNutrientRelationship, sf.soilSystem, fieldId)
+    if not ok or type(rel) ~= "table" or rel.scope ~= "FIELD_REPORT" or type(rel.nutrients) ~= "table" then
+        return nil
+    end
+    local out = {}
+    for _, n in ipairs({ "N", "P", "K" }) do
+        local x = rel.nutrients[n]
+        local kind = type(x) == "table" and x.relationship or nil
+        if kind ~= "BELOW" and kind ~= "APPROACHING" and kind ~= "IDEAL" and kind ~= "ABOVE" then
+            return nil   -- UNDETERMINED or missing: the whole legacy test decides
+        end
+        out[n] = kind
+    end
+    return out
 end
 
 -- MarketDynamics live spot price for milk; base-game price when absent.
@@ -446,6 +517,71 @@ function DairyCoreManager:_milkBasePrice()
         end
     end)
     return base or 1.0
+end
+
+-- RSF-F216: the office/rota sale resolves its own per-litre price, rung by rung. This
+-- is NOT an edit to _milkSpotPrice: that helper's other production caller is
+-- _payContract, and Arissani ratified active-only pricing for the sale, not for
+-- contract settlement. _milkSpotPrice stays byte-identical and _payContract keeps
+-- today's behaviour exactly.
+--
+-- Rung 1 is an economy that is actually running: the mission handle exists, isActive is
+-- true, the PriceHook settings predicate allows pricing, the engine and getPrice exist,
+-- and the quote is a positive number. Anything else, INCLUDING A THROWING PROVIDER,
+-- falls through to DairyCore's own fill-type base price.
+--
+-- Each rung is guarded SEPARATELY and deliberately. A single outer pcall is the defect
+-- the shared helper has: one throwing MarketDynamics read would abort the whole ladder
+-- and land the sale on 1.0 having never tried the fill type.
+function DairyCoreManager:_milkSaleUnitPrice(fillType)
+    fillType = fillType or DairyConstants.CONTRACTS.MILK_FILLTYPE
+
+    local ftIndex = nil
+    pcall(function()
+        local ftm = g_fillTypeManager
+        if ftm ~= nil then ftIndex = ftm:getFillTypeIndexByName(fillType) end
+    end)
+
+    -- Rung 1: accepted MarketDynamics quote. Same acceptance test PriceHook applies
+    -- before the selling station uses a dynamic price. A present settings table with
+    -- nil or false pricesEnabled rejects; an absent settings object does not by itself.
+    local quote = nil
+    pcall(function()
+        local md = g_currentMission ~= nil and g_currentMission.MarketDynamics or nil
+        if md == nil or md.isActive ~= true then return end
+        if md.settings ~= nil and not md.settings.pricesEnabled then return end
+        local engine = md.marketEngine
+        if engine == nil or engine.getPrice == nil or ftIndex == nil then return end
+        quote = engine:getPrice(ftIndex)
+    end)
+    if type(quote) == "number" and quote > 0 then
+        return quote
+    end
+
+    -- Rung 2: DairyCore's existing fill-type base price. This is our own base rung, not
+    -- a promise of parity with the selling station's effective price, and not a
+    -- seasonal or quality-adjusted figure.
+    --
+    -- It accepts any number INCLUDING zero, deliberately, where rung 1 requires a
+    -- positive quote. The asymmetry is principled: rung 3's 1.0 is a last-resort
+    -- fabrication, so falling to it from a base we successfully read as zero would
+    -- convert "we know the price is zero" into "we pretend it is one", and then sell
+    -- at the pretended price. A real zero should reach the refusal, not be papered
+    -- over. Rung 1 rejects a non-positive quote because that is the provider saying
+    -- it has no opinion, which is different from a base price of zero.
+    local base = nil
+    pcall(function()
+        local ftm = g_fillTypeManager
+        if ftm == nil or ftIndex == nil then return end
+        local desc = ftm:getFillTypeByIndex(ftIndex)
+        base = desc ~= nil and desc.pricePerLiter or nil
+    end)
+    if type(base) == "number" then
+        return base
+    end
+
+    -- Rung 3: the existing literal, unchanged and still DC-23's.
+    return 1.0
 end
 
 -- RandomWorldEvents: the new top-level getActiveEvent() -> {name,intensity,category,remainingMs}.
@@ -679,11 +815,21 @@ function DairyCoreManager:_farmBusinessModifiers(barn)
             local om = info.organicMatter or 5
             if om < DairyConstants.HERD.OM_SEVERE then anySevereOM = true
             elseif om < DairyConstants.HERD.OM_DEPLETED then anyLowOM = true end
-            local nStatus = info.nitrogen and info.nitrogen.status
-            local pStatus = info.phosphorus and info.phosphorus.status
-            local kStatus = info.potassium and info.potassium.status
-            if not (nStatus == "Good" and pStatus == "Good" and kStatus == "Good") then
-                balancedAll = false
+            -- [SF-73] On a complete crop-relative FIELD_REPORT the field is balanced
+            -- when all three nutrients sit IDEAL or ABOVE the crop's window; without
+            -- one, the complete legacy all-three-Good test decides, unchanged.
+            local rel = self:_getFieldRelationships(fieldId)
+            if rel ~= nil then
+                for _, n in ipairs({ "N", "P", "K" }) do
+                    if rel[n] ~= "IDEAL" and rel[n] ~= "ABOVE" then balancedAll = false end
+                end
+            else
+                local nStatus = info.nitrogen and info.nitrogen.status
+                local pStatus = info.phosphorus and info.phosphorus.status
+                local kStatus = info.potassium and info.potassium.status
+                if not (nStatus == "Good" and pStatus == "Good" and kStatus == "Good") then
+                    balancedAll = false
+                end
             end
             if (info.weedPressure or 0) > DairyConstants.HERD.WEED_PRESSURE_LIMIT then anyWeed = true end
             if type(info.rotationStatus) == "string" and info.rotationStatus:lower():find("legume") then
@@ -794,6 +940,8 @@ function DairyCoreManager:markCollected(barn, currentDay, nowHours, source)
     if source ~= nil then barn.lastCollectionSource = source end
     barn.spoilageStatus = DairyConstants.SPOILAGE.STAGES.fresh.key
     barn._spoilageTierDrop = 0
+    -- DC-14: an actual collection from any real source clears the refusal explanation.
+    self:_clearCollectionRefusal(barn.barnId)
     self:_markBarnsDirty()
 end
 
@@ -911,6 +1059,8 @@ function DairyCoreManager:assignCollectionWorker(barnId, workerId)
     if barn.nextCollectionDue == nil then
         barn.nextCollectionDue = self:_nowHours() + (barn.collectionInterval or 24)
     end
+    -- DC-14: assignment changes the published next-due truth, never the last attempt.
+    self:_touchCollectionRefusal()
     self:_markBarnsDirty()
     return true
 end
@@ -920,21 +1070,59 @@ function DairyCoreManager:unassignCollectionWorker(barnId)
     if barn == nil or not self:_isServer() then return false end
     barn.assignedWorkerId = nil
     barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
+    -- DC-14: the past attempt is retained; only the next-due publication changes.
+    self:_touchCollectionRefusal()
     self:_markBarnsDirty()
     return true
 end
 
 -- DC-21 3.1: the internal office/rota sale. ONE ordinary mechanism, no permission
--- check inside it. Reads the level, prices it through the spot market, applies the
--- margin, removes the milk by the standard removal path (pricing against what ACTUALLY
--- came out), credits the money and records the collection. Permission lives at the
--- boundary: the NetworkSync action wrapper for office, the server tick for rota.
+-- check inside it. Prices the milk and resolves the handling fee FIRST, refuses
+-- outright if the fee meets or beats the price, and only then removes the milk by the
+-- standard removal path (pricing against what ACTUALLY came out), credits the money
+-- and records the collection. Permission lives at the boundary: the NetworkSync action
+-- wrapper for office, the server tick for rota.
 -- DC-9 3.4: this is what the rota calls directly on the server.
+--
+-- RSF-F216: the charge is a fixed amount per litre, not a share of the price. The
+-- price and the fee are resolved ONCE, above the withdrawal, and the same two numbers
+-- are spent by the calculation below, so the refusal and the payment can never
+-- disagree about which economy is live.
 function DairyCoreManager:_adminSellMilk(barn, quantity, source, nowHours, monotonicDay)
     if barn == nil or not self:_isServer() then
         return nil, "server_only"
     end
     local fillType = DairyConstants.CONTRACTS.MILK_FILLTYPE
+
+    -- RSF-F216: refuse before anything moves. This sits above the tank draw, above the
+    -- barn read and above the _suppressDetection bracket on purpose: a refusal must
+    -- leave the tank, the barn, the passive detector, the money and the collection
+    -- record exactly as it found them.
+    local spot = self:_milkSaleUnitPrice(fillType)
+    -- The sale enforces its own declared type. A hub value arrives whole, but a
+    -- standalone build, a console write or a direct assignment can put a fraction in
+    -- self.settings, and that must not become a second fractional charge.
+    local raw = tonumber(self.settings.saleFeePer1000L)
+    -- A non-finite value must not reach the comparison. spot <= fee is FALSE for a
+    -- NaN, so the refusal would not fire, and math.max(0, spot - fee) would then
+    -- floor the income to zero with the milk already gone: exactly the defect this
+    -- repair removes, through the door this block exists to shut. The clamp below
+    -- does happen to sanitise a NaN, but only because math.min returns its first
+    -- argument when the comparison is false, so it is correct by argument order
+    -- rather than by design. That is a fragility to remove, not to document.
+    if raw == nil or raw ~= raw or raw == math.huge or raw == -math.huge then
+        raw = DairyConstants.SALE.FEE_PER_1000L
+    end
+    local feePer1000 = math.floor(raw)
+    feePer1000 = math.max(DairyConstants.SALE.FEE_MIN_PER_1000L,
+                          math.min(DairyConstants.SALE.FEE_MAX_PER_1000L, feePer1000))
+    local fee = feePer1000 / DairyConstants.SALE.FEE_DIVISOR
+    -- <= and not <: at exact equality the sale would pay nothing.
+    if spot <= fee then
+        DCLogger.info("Milk sale refused (%s): fee %.4f/L meets or beats price %.4f/L (barn %s)",
+            tostring(source), fee, spot, tostring(barn.barnId))
+        return nil, "fee_exceeds_price"
+    end
 
     -- DC-25: read tank then barn in one server tick.
     local tankRemoved = 0
@@ -979,11 +1167,11 @@ function DairyCoreManager:_adminSellMilk(barn, quantity, source, nowHours, monot
     local removed = tankRemoved + barnRemoved
     if removed <= 0 then return nil, "no_milk" end
 
-    local spot = self:_milkSpotPrice()
-    local margin = self.settings.saleMargin or DairyConstants.SALE.DEFAULT_MARGIN
-    margin = math.max(DairyConstants.SALE.MARGIN_MIN,
-                      math.min(DairyConstants.SALE.MARGIN_MAX, margin))
-    local income = math.floor(removed * spot * (1 - margin))
+    -- RSF-F216: subtract the per-litre fee from the per-litre price, against the litres
+    -- ACTUALLY removed. spot and fee are the same two numbers the refusal decided on.
+    -- The clamp cannot bite with the refusal in front; it keeps the non-negative
+    -- guarantee local to the price rather than depending on the refusal staying correct.
+    local income = math.floor(removed * math.max(0, spot - fee))
     if income > 0 then
         pcall(function()
             g_currentMission:addMoney(income, barn.farmId, MoneyType.OTHER, true, true)
@@ -1005,7 +1193,9 @@ end
 
 -- DC-21 3.3: the rota's entry point, called directly by the hour tick on the server.
 function DairyCoreManager:_rotaCollection(barn, nowHours, monotonicDay)
-    self:_adminSellMilk(barn, nil, DairyConstants.COLLECTION.SOURCES.rota, nowHours, monotonicDay)
+    -- RSF-F216: the rota must observe the refusal. The hour tick already captures this
+    -- value into `local removed`; without the return it read nil on every round.
+    return self:_adminSellMilk(barn, nil, DairyConstants.COLLECTION.SOURCES.rota, nowHours, monotonicDay)
 end
 
 -- DC-21 3.2: the thin admin wrapper the office menu invokes.
@@ -1028,6 +1218,8 @@ function DairyCoreManager:_reconcileBarns(retainUnresolved)
             if barn._probeDead and not retainUnresolved and not barn._startupUnresolved then
                 self:_detachStorageListeners(barn)
                 self:_forgetMilkBreedBarn(barn, barnId)
+                -- DC-14: a confirmed removal clears its explanation.
+                self:_clearCollectionRefusal(barnId)
                 self.barns[barnId] = nil
             else
                 barn._probeDead = true
@@ -1044,6 +1236,10 @@ function DairyCoreManager:_reconcileBarns(retainUnresolved)
                     barn.assignedWorkerId = nil
                     barn.rotaState = DairyConstants.COLLECTION.ROTA_STATES.UNASSIGNED
                     barn.farmId = owner
+                    -- DC-14: owner reconciliation invalidates the old owner's explanation
+                    -- and moves the barn between two farms' views.
+                    self:_clearCollectionRefusal(barnId)
+                    self:_touchCollectionRefusal()
                 end
             end
         end
@@ -1080,6 +1276,8 @@ function DairyCoreManager:onCollectionHourTick(ctx)
 
         if barn.nextCollectionDue == nil then
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
+            -- DC-14: a worker's published next due is part of the shown projection.
+            if barn.assignedWorkerId ~= nil then self:_touchCollectionRefusal() end
         elseif nowHours >= barn.nextCollectionDue then
             -- A scheduled window has arrived. If no worker is assigned the window is
             -- MISSED: the milk ages on, which the elapsed-time clock already shows.
@@ -1089,14 +1287,21 @@ function DairyCoreManager:onCollectionHourTick(ctx)
                 -- which actually removes, prices and credits the milk.
                 local skill = DairyConstants.COLLECTION.SKILL[self:_workerLevelName(barn)]
                               or DairyConstants.COLLECTION.SKILL.experienced
-                local removed = self:_rotaCollection(barn, nowHours, monotonicDay)
-                if removed and removed > 0 then
+                -- DC-14: capture the COMPLETE rota return. The status used to be
+                -- dropped here; a raising sale used to abort the whole tick loop.
+                -- Only ok with "fee_exceeds_price" can produce an explanation, and
+                -- only after the presence read proves milk was left behind.
+                local ok, removed, status = pcall(self._rotaCollection, self, barn, nowHours, monotonicDay)
+                self:_recordCollectionAttempt(barn, ok, removed, status, nowHours)
+                if ok and type(removed) == "number" and removed > 0 then
                     barn._lastRunSpeedMod = skill.speedMod
                 end
             else
                 DCLogger.debug("Barn %s: collection window missed (no worker assigned)", tostring(barn.barnId))
             end
             barn.nextCollectionDue = nowHours + (barn.collectionInterval or 24)
+            -- DC-14: the next due moved; a worker's barn publishes it.
+            if barn.assignedWorkerId ~= nil then self:_touchCollectionRefusal() end
         end
     end
 end
@@ -1381,7 +1586,7 @@ end
 --- comes from it (the amount-weighted organic fraction of the farm's harvested
 --- feed) instead of a live field read, because organic rides the feed, not the
 --- field. Otherwise it reads SoilFertilizer's shipped OrganicCertification
---- (g_SoilFertilityManager.organic, delegate-when-present) over the barn's
+--- (soilFertilityManager.organic, delegate-when-present) over the barn's
 --- designated feed fields. SF absent, no provenance, no designations, or no
 --- readable fields => 0, so the pay factor stays 1.0.
 ---@param barn table
@@ -1391,7 +1596,10 @@ function DairyCoreManager:_barnOrganicFraction(barn)
     if fp ~= nil and fp:hasData(barn.farmId) then
         return fp:organicFeedFraction(barn.farmId)
     end
-    local mgr = g_SoilFertilityManager
+    -- [MAINTENANCE row 242] Soil's handle from the mission (SoilFertilizer main.lua:761), as _getFieldInfo
+    -- reads it: Soil writes g_SoilFertilityManager into its own mod environment (getfenv(0), :758), so a
+    -- bare read here is nil in a game. The bare global stays as the fallback.
+    local mgr = (g_currentMission ~= nil and g_currentMission.soilFertilityManager) or g_SoilFertilityManager
     if mgr == nil or mgr.organic == nil or mgr.organic.getFieldOrganicState == nil then return 0 end
     local sum, n = 0, 0
     for fieldId in pairs(barn.feedSourceFields or {}) do
@@ -1521,22 +1729,29 @@ function DairyCoreManager:_bindActions()
     local ns = self:_getNetworkSync()
     if ns == nil or ns.registerAction == nil then return end
 
+    -- The args are the POSITIONAL array the transport carries, in the order
+    -- DairyConstants.ACTIONS documents (barnId, quantity / barnId, workerId / barnId):
+    -- a keyed table arrives empty (see requestFeedFlush). No sender exists for these
+    -- three yet; the first one written must send that array.
     ns:registerAction(DairyConstants.ACTIONS.SELL_MILK, {
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.barnId == nil then return end
-            self:sellMilk(args.barnId, args.quantity)
+            local barnId = type(args) == "table" and args[1] or nil
+            if barnId == nil then return end
+            self:sellMilk(barnId, args[2])
         end,
     })
     ns:registerAction(DairyConstants.ACTIONS.ASSIGN_ROTA, {
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.barnId == nil then return end
-            self:assignCollectionWorker(args.barnId, args.workerId)
+            local barnId = type(args) == "table" and args[1] or nil
+            if barnId == nil then return end
+            self:assignCollectionWorker(barnId, args[2])
         end,
     })
     ns:registerAction(DairyConstants.ACTIONS.UNASSIGN_ROTA, {
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.barnId == nil then return end
-            self:unassignCollectionWorker(args.barnId)
+            local barnId = type(args) == "table" and args[1] or nil
+            if barnId == nil then return end
+            self:unassignCollectionWorker(barnId)
         end,
     })
     -- D1: the feed flush is a FARM action (a farm flushes its own feed), not an
@@ -1546,14 +1761,18 @@ function DairyCoreManager:_bindActions()
     ns:registerAction(DairyConstants.FEED_FLUSH.ACTION, {
         adminOnly = false,
         onAction = function(userId, args)
-            if type(args) ~= "table" or args.farmId == nil then return end
+            -- The farm is args[1], a positive number: getFarmByUserId answers farm 0 for a
+            -- user in no farm (FarmManager.lua:201), so a spectator's 0 would otherwise
+            -- pass the ownership equality below.
+            local farmId = type(args) == "table" and args[1] or nil
+            if type(farmId) ~= "number" or farmId <= 0 then return end
             local farm = g_farmManager ~= nil and g_farmManager:getFarmByUserId(userId) or nil
-            if farm == nil or farm.farmId ~= args.farmId then
+            if farm == nil or farm.farmId ~= farmId then
                 DCLogger.warning("FEED_FLUSH rejected: userId %s is not a member of farm %s",
-                    tostring(userId), tostring(args.farmId))
+                    tostring(userId), tostring(farmId))
                 return
             end
-            self:_doFeedFlush(args.farmId)
+            self:_doFeedFlush(farmId)
         end,
     })
     self.actionsBound = true
@@ -1608,13 +1827,16 @@ end
 -- is certified: { fieldId, fruitTypeIndex, liters (incremental), area,
 -- diseasePressure, activeDisease, activeDiseaseSeverity }. Subscribe is keyed by
 -- name, so re-registering replaces our own listener rather than stacking.
+-- [MAINTENANCE row 260] Soil publishes the bus as plain functions, subscribe(name, fn) and
+-- unsubscribe(name) (SoilFertilizer main.lua:800-803), so they are called with a dot: a colon call
+-- passes the bus table as the name, and Soil's subscribeHarvest rejects it without an error.
 function DairyCoreManager:_bindHarvestBus()
     if self.harvestBound then return end
     if not self:_isServer() then return end
     local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
     if bus == nil or bus.subscribe == nil then return end
     local ok = pcall(function()
-        bus:subscribe("DairyCore_FeedProvenance", function(payload)
+        bus.subscribe("DairyCore_FeedProvenance", function(payload)
             if self.feedProvenance ~= nil then
                 self.feedProvenance:onHarvestCut(payload)
             end
@@ -1623,7 +1845,7 @@ function DairyCoreManager:_bindHarvestBus()
         -- name so re-registering replaces rather than stacks. Routes contaminated
         -- feed-field harvests into the barn's mycotoxin penalty (latent until the
         -- designation surface gives barns fields).
-        bus:subscribe("DairyCore_FeedContamination", function(payload)
+        bus.subscribe("DairyCore_FeedContamination", function(payload)
             self:_applyHarvestContamination(payload)
         end)
     end)
@@ -1635,8 +1857,8 @@ function DairyCoreManager:_unbindHarvestBus()
     local bus = g_currentMission ~= nil and g_currentMission.soilHarvestBus
     if bus ~= nil and bus.unsubscribe ~= nil then
         pcall(function()
-            bus:unsubscribe("DairyCore_FeedProvenance")
-            bus:unsubscribe("DairyCore_FeedContamination")
+            bus.unsubscribe("DairyCore_FeedProvenance")
+            bus.unsubscribe("DairyCore_FeedContamination")
         end)
     end
     self.harvestBound = false
@@ -1710,16 +1932,23 @@ function DairyCoreManager:_bindBedrock()
                   adminOnly = true, label = "Default Collection Interval (h)" },
                 { id = "spoilageEnabled", type = "bool", default = true, adminOnly = true, label = "Milk Spoilage" },
                 { id = "contractsEnabled", type = "bool", default = true, adminOnly = true, label = "Dairy Contracts" },
-                { id = "saleMargin", type = "float", default = DairyConstants.SALE.DEFAULT_MARGIN,
-                  min = DairyConstants.SALE.MARGIN_MIN, max = DairyConstants.SALE.MARGIN_MAX,
-                  adminOnly = true, label = "Milk Sale Margin (fraction)" },
+                -- RSF-F216: an integer per 1000 L, not a float fraction. The shared
+                -- editor steps a float by 0.1 and prints %.2f, so a float def would
+                -- paint 0.011 as 0.01 and snap to 0.00 or 0.05 on the first press,
+                -- putting the ratified default out of reach. The int path steps by 1,
+                -- clamps, and prints through tostring. The KEY IS NEW ON PURPOSE: a
+                -- stored saleMargin of 0.05 would floor to 0 and silently waive the
+                -- fee on every existing save.
+                { id = "saleFeePer1000L", type = "int", default = DairyConstants.SALE.FEE_PER_1000L,
+                  min = DairyConstants.SALE.FEE_MIN_PER_1000L, max = DairyConstants.SALE.FEE_MAX_PER_1000L,
+                  step = 1, adminOnly = true, label = _tr("dc_setting_saleFee", "Milk Sale Fee (per 1000 L)") },
             },
             onChange = function(key, value)
                 if key == "enabled" then self.settings.enabled = value ~= false
                 elseif key == "defaultCollectionInterval" then self.settings.defaultCollectionInterval = value
                 elseif key == "spoilageEnabled" then self.settings.spoilageEnabled = value ~= false
                 elseif key == "contractsEnabled" then self.settings.contractsEnabled = value ~= false
-                elseif key == "saleMargin" then self.settings.saleMargin = value end
+                elseif key == "saleFeePer1000L" then self.settings.saleFeePer1000L = value end
             end,
         })
         bound = true
@@ -2306,56 +2535,233 @@ function DairyCoreManager:getBarnRows()
 end
 
 -- =========================================================
--- DC-19: the co-op herd advisory (read-only, gated by the ProStaff flag)
+-- DC-19 / RSF-F166: the co-op herd advisory (read-only, gated by the ProStaff flag)
 -- =========================================================
 
--- The gate flag: has the farm's co-op reached the level that publishes the herd
--- advisory? Read through the shared ProStaff accessor with NO farmId, deliberately
--- inheriting the farmId-blind read the DC-6/DC-7 read architecture fixes once (the
--- same class as F75; a local patch here would leave two patches for one bug). The
--- flag's level gate lives in the ProStaffCoOp callback itself (false below L12);
--- DairyCore never checks a level. Neutral-false when ProStaffCoOp is absent, so the
--- advisory stays off until the flag exists. farmId is accepted for the published
--- getter contract and matches the ProStaff flag's own signature; the read itself is
--- farmId-blind by design.
+-- RSF-F166: the farm id admission that every advisory entry point runs FIRST.
+-- Returns the id when it is a real, usable farm; nil otherwise.
+--
+-- NIL IS THE DANGEROUS CASE AND THE REASON THIS EXISTS. _proStaff builds
+-- `local args = {...}` and calls `unpack(args)`, so a nil farmId truncates the
+-- call to ZERO arguments. ProStaff's _resolveFarm then treats "no argument" as
+-- "ask the mission", and the mission answers farm 1. So a nil does not fail
+-- closed on the provider side; it silently reports FARM 1's entitlement to
+-- whoever asked. It has to be rejected here, before the provider is asked, and
+-- forwarding a nil in the hope that the far side refuses it is not a guard.
+--
+-- _isRealFarmId is necessary but NOT sufficient. It tests `type ~= "number" or
+-- <= 0` plus the three reserved ids, which lets NaN, the infinities and
+-- non-integers through: `NaN <= 0` is false, and NaN is equal to none of the
+-- reserved ids. Each of those does fail closed further down, but for an
+-- unrelated reason (it misses `self.farms[id]` on the ProStaff side and lands on
+-- level 0), and a guard that works by coincidence is not a guard either. They
+-- are rejected here on their own terms.
+--
+-- _isRealFarmId itself is deliberately NOT changed: it has other callers, and
+-- widening it for this feature would be a silent behaviour change across the
+-- manager for the sake of one getter.
+function DairyCoreManager:_advisoryFarmId(farmId)
+    if type(farmId) ~= "number" then return nil end
+    if farmId ~= farmId then return nil end                                -- NaN
+    if farmId == math.huge or farmId == -math.huge then return nil end
+    if math.floor(farmId) ~= farmId then return nil end
+    if not self:_isRealFarmId(farmId) then return nil end
+    return farmId
+end
+
+-- The gate flag: has this farm's co-op reached the level that publishes the herd
+-- advisory?
+--
+-- RSF-F166 made this farm-EXPLICIT. It used to call _proStaff with no farmId at
+-- all, inheriting the farm-blind read as a deliberate choice; that choice is what
+-- the nil-to-farm-1 fallback above turns into a disclosure, so the argument is now
+-- admitted and forwarded. The level gate still lives entirely in ProStaffCoOp
+-- (false below L12) and DairyCore still never looks at a level.
+--
+-- Neutral-false on every absence: no manager, settings off, provider missing,
+-- method missing, a throwing provider, or any return that is not boolean true.
+-- "Not false" is not entitlement.
 function DairyCoreManager:hasHerdAdvisory(farmId)
-    return self:_proStaff("hasHerdAdvisory", false)
+    if self.disabled then return false end
+    if self.settings == nil or self.settings.enabled == false then return false end
+    local id = self:_advisoryFarmId(farmId)
+    if id == nil then return false end
+    return self:_proStaff("hasHerdAdvisory", false, id) == true
 end
 
--- The public advisory getter: a list of advisory strings, one per barn of the farm
--- that needs attention, or an empty list when the gate does not apply. Advisory-only:
--- formats state that already exists (herdHealthScore and the spoilage stage), NEVER
--- writes state, moves money or applies economics. farmId filters to that farm's barns;
--- nil returns every barn (the optional-farm convention the ProStaff getters use).
+-- The public advisory getter: an array of fresh row tables, one per admitted barn
+-- of the requested farm that needs attention, or an empty array.
+--
+-- Each row is
+--   { barnId = <stable barn id>, farmId = <requested real farm>,
+--     label  = <locally resolved barn name>, reasons = { "HEALTH_ATTENTION", ... } }
+-- in stable barnId order, with the reasons array in health-then-milk order.
+--
+-- RSF-F166 CHANGED THIS RETURN TYPE from English sentences to rows, and removed
+-- the nil/all-barn route. The old signature accepted nil and then walked EVERY
+-- barn on the map, and separately admitted any barn whose own farmId was nil for
+-- any requested farm. Either path could name another farm's barn to a player. A
+-- fleet-wide sweep of every FS25_* repo on its development branch finds no caller
+-- of this getter outside DairyCore, so nothing outside breaks; the Dairy bench is
+-- updated with it.
+--
+-- Advisory-only: this reads. It creates no barn, mutates no record, starts no
+-- discovery and repairs no ownership. A temporary omission is safer than naming
+-- another farm's barn, and an empty result NEVER means the herd is healthy.
 function DairyCoreManager:getHerdAdvisories(farmId)
-    if not self:hasHerdAdvisory(farmId) then return {} end
-    local out = {}
+    local id = self:_advisoryFarmId(farmId)
+    if id == nil then return {} end
+    if not self:hasHerdAdvisory(id) then return {} end
+
+    -- Resolved ONCE per read, and its absence is announced rather than
+    -- absorbed. See _advisoryPlaceableSystem for why that distinction matters.
+    local ps = self:_advisoryPlaceableSystem()
+    if ps == nil then return {} end
+
+    local isServer = self:_isServer()
+    local rows = {}
     for barnId, barn in pairs(self.barns) do
-        if farmId == nil or barn.farmId == nil or barn.farmId == farmId then
-            local sentence = self:_herdAdvisoryForBarn(barn)
-            if sentence ~= nil then out[#out + 1] = sentence end
-        end
+        local row = self:_herdAdvisoryRow(barnId, barn, id, isServer, ps)
+        if row ~= nil then rows[#rows + 1] = row end
     end
-    return out
+    table.sort(rows, function(a, b) return tostring(a.barnId) < tostring(b.barnId) end)
+    return rows
 end
 
--- The advisory sentence for one barn, or nil when the barn needs no attention.
--- EITHER condition qualifies: herd health at or below the needs-attention cutoff
--- (the Standard tier's minScore, reused from QUALITY.TIERS so the language cannot
--- drift from what _qualityTierForScore / the Financial Cockpit show), or a spoilage
--- stage that is Ageing or worse (DC-8 lifecycle). Both reasons join into one sentence.
-function DairyCoreManager:_herdAdvisoryForBarn(barn)
+-- The admitted row for one barn, or nil when the barn is not admissible or needs
+-- no attention. Every rejection below is a separate reason and none of them falls
+-- back to a weaker check.
+--
+-- ADMISSION, in order:
+--   1. a real record with a stable id that is not a dead probe;
+--   2. the barn's own farmId EQUALS the requested farm (no nil-owner route);
+--   3. facts we are allowed to trust: server, or a client whose wire arrived;
+--   4. a placeable that resolves RIGHT NOW for that barn id;
+--   5. a protected getOwnerFarmId() on that placeable equal to the same farm.
+--
+-- 3 is the one worth naming. A client barn record begins at herdHealthScore 60
+-- and the attention cutoff is an inclusive 60, so an unreceived default would be
+-- reported as an observation of a herd in trouble. _wireReceived is what stops
+-- that; it is a knowledge-state gate, not a freshness promise, and it does not
+-- prove the snapshot is current.
+--
+-- 5 is not redundant with 2. The stored farmId can lag native ownership after a
+-- sale or a farm merge, so the cached row can still match a farm that no longer
+-- owns the building. The placeable names its own owner, and where the two
+-- disagree the barn is omitted rather than resolved in either direction.
+function DairyCoreManager:_herdAdvisoryRow(barnId, barn, farmId, isServer, ps)
+    if type(barn) ~= "table" then return nil end
+    if barnId == nil or barn._probeDead then return nil end
+    if barn.farmId ~= farmId then return nil end
+    if not isServer and barn._wireReceived ~= true then return nil end
+
+    local placeable = self:_advisoryPlaceable(barnId, ps)
+    if placeable == nil then return nil end
+    if type(placeable.getOwnerFarmId) ~= "function" then return nil end
+    local ok, owner = pcall(function() return placeable:getOwnerFarmId() end)
+    if not ok or owner ~= farmId then return nil end
+
     local reasons = {}
-    if (barn.herdHealthScore or 0) <= self:_herdAdvisoryCutoff() then
-        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.HEALTH
+    local score = barn.herdHealthScore
+    if type(score) == "number" and score == score
+        and score ~= math.huge and score ~= -math.huge
+        and score <= self:_herdAdvisoryCutoff() then
+        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.REASONS.HEALTH
     end
-    local stage = self:_normalizeSpoilageKey(barn.spoilageStatus)
-    if DairyConstants.HERD_ADVISORY.SPOILAGE_STAGES[stage] then
-        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.SPOILAGE
+    if DairyConstants.HERD_ADVISORY.SPOILAGE_STAGES[
+            self:_normalizeSpoilageKey(barn.spoilageStatus)] then
+        reasons[#reasons + 1] = DairyConstants.HERD_ADVISORY.REASONS.MILK
     end
     if #reasons == 0 then return nil end
-    return string.format(DairyConstants.HERD_ADVISORY.SENTENCE, tostring(barn.barnId),
-        table.concat(reasons, DairyConstants.HERD_ADVISORY.JOIN))
+
+    -- A fresh table every call. The caller must never hold a writable reference
+    -- into the simulation, and the reasons array is its own copy for the same
+    -- reason.
+    return {
+        barnId  = barnId,
+        farmId  = farmId,
+        label   = self:_advisoryBarnLabel(barnId, placeable),
+        reasons = reasons,
+    }
+end
+
+-- The placeable system, or nil ONCE THE ABSENCE HAS BEEN ANNOUNCED.
+--
+-- THIS IS THE ONE PRECONDITION THAT FAILS GLOBALLY RATHER THAN PER BARN, and
+-- that asymmetry is why it gets a log line when the other four admission rules
+-- do not. A barn excluded by its farm, its probe, its wire or its native owner
+-- is ordinary operation. But if the placeable system is missing, or
+-- getPlaceableByUniqueId is not a function, then EVERY barn fails and the
+-- advisory is permanently empty, which is indistinguishable from "no barn needs
+-- attention" to anyone reading the result. That is a feature unable to run,
+-- wearing operation's output.
+--
+-- It is not hypothetical: getPlaceableByUniqueId is decompiled evidence rather
+-- than an official signature, so a game update removing or renaming it silently
+-- turns this feature off. Once per session, in log.txt, is what makes that
+-- diagnosable instead of a support thread about an advisory that never appears.
+function DairyCoreManager:_advisoryPlaceableSystem()
+    local ps = g_currentMission ~= nil and g_currentMission.placeableSystem or nil
+    if ps ~= nil and type(ps.getPlaceableByUniqueId) == "function" then return ps end
+    if not self._advisoryLookupWarned then
+        self._advisoryLookupWarned = true
+        DCLogger.warning("Herd advisory stood down: %s. Every barn fails the "
+            .. "native owner check, so the advisory is permanently EMPTY. That is "
+            .. "not the same as no barn needing attention.",
+            ps == nil and "no placeable system"
+                      or "placeableSystem:getPlaceableByUniqueId is not a function")
+    end
+    return nil
+end
+
+-- The placeable currently registered for this barn id, or nil.
+--
+-- Deliberately the LOOKUP rather than barn._placeable: admission needs "resolves
+-- right now", and a cached handle can outlive the building it pointed at. The
+-- engine call is protected because getPlaceableByUniqueId is decompiled evidence
+-- rather than an official signature.
+--
+-- A nil here is an ordinary per-barn exclusion: this barn has no live placeable.
+-- The system-level absence is _advisoryPlaceableSystem's, and it is announced.
+function DairyCoreManager:_advisoryPlaceable(barnId, ps)
+    if ps == nil then return nil end
+    local ok, p = pcall(function() return ps:getPlaceableByUniqueId(barnId) end)
+    if not ok or type(p) ~= "table" then return nil end
+    return p
+end
+
+-- The barn's display name, resolved on the viewing machine.
+--
+-- This is an IDENTITY string, never advisory prose: it is whatever the player
+-- calls that building, passed through as opaque text. It is never used as a
+-- format string, so a barn named "100%" or "Barn: North" cannot corrupt a view's
+-- formatting, and a view must keep treating it as a literal argument.
+--
+-- The ladder mirrors DairyRfPdaGuest's barnLabel deliberately, so the same barn
+-- reads the same in both surfaces, minus that one's first rung: it starts from
+-- name fields on a published ROW, and barn records in the manager carry none.
+-- The placeable passed in is the one admission already resolved, so this makes
+-- no second engine lookup.
+function DairyCoreManager:_advisoryBarnLabel(barnId, placeable)
+    if placeable ~= nil then
+        if type(placeable.getName) == "function" then
+            local ok, n = pcall(function() return placeable:getName() end)
+            if ok and type(n) == "string" and n ~= "" then return n end
+        end
+        if type(placeable.nameCustom) == "string" and placeable.nameCustom ~= "" then
+            return placeable.nameCustom
+        end
+        if type(placeable.nameL10n) == "string" and placeable.nameL10n ~= "" then
+            return placeable.nameL10n
+        end
+        local si = placeable.storeItem
+        if si ~= nil and type(si.name) == "string" and si.name ~= "" then
+            return si.name
+        end
+    end
+    local id = tostring(barnId or "?")
+    if #id > 24 then return id:sub(1, 22) .. "..." end
+    return id
 end
 
 -- The needs-attention health cutoff: the minScore of the tier named by
@@ -2522,7 +2928,11 @@ function DairyCoreManager:requestFeedFlush(farmId)
     if self:_isServer() then return self:_doFeedFlush(farmId) end
     local ns = self:_getNetworkSync()
     if ns ~= nil and ns.requestAction ~= nil then
-        ns:requestAction(DairyConstants.FEED_FLUSH.ACTION, { farmId = farmId })
+        -- A POSITIONAL ARRAY: NetworkSync's action event writes args[1..#args]
+        -- (RealisticFarmingSyncEvent.lua:209-216), so a keyed table has length zero and
+        -- arrives empty; a joined client's flush silently did nothing (PLAYER-REPORTS
+        -- row 199). A host never sees it: requestAction applies in memory there.
+        ns:requestAction(DairyConstants.FEED_FLUSH.ACTION, { farmId })
         return true, "requested"
     end
     DCLogger.warning("requestFeedFlush: no server authority and NetworkSync absent - cannot flush on a pure client")

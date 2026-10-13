@@ -2,14 +2,16 @@
 -- Verifies _barnOrganicFraction (the mapping table + nil rules), the per-accrual-day
 -- accumulation in _settleContractDay, the pay-line factor (never below 1.0, scaled by
 -- the mean organic credit, neutral 1.0 ship value), and the save round-trip.
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua
 
 local PREMIUM_MAX = DairyConstants.CONTRACTS.ORGANIC_MILK_PREMIUM_MAX
 
 -- ── SF organic authority stub ───────────────────────────────
 -- getFieldOrganicState returns { state, daysAccrued, transitionDaysNeeded, certified, breaches }.
+-- [MAINTENANCE row 242] On the mission, where a game puts Soil's manager (SoilFertilizer main.lua:761):
+-- its g_SoilFertilityManager lives in Soil's own mod environment, never in Dairy's.
 local function sfWith(states)
-  g_SoilFertilityManager = {
+  g_currentMission.soilFertilityManager = {
     organic = {
       getFieldOrganicState = function(_self, fieldId)
         return states[fieldId]
@@ -18,7 +20,7 @@ local function sfWith(states)
   }
 end
 
-local function sfAbsent() g_SoilFertilityManager = nil end
+local function sfAbsent() g_currentMission.soilFertilityManager = nil end
 
 -- ── manager + barn helpers ─────────────────────────────────
 local function newManager()
@@ -75,7 +77,7 @@ end
 
 -- Unreadable field (getFieldOrganicState throws): skipped, not fatal.
 do
-  g_SoilFertilityManager = {
+  g_currentMission.soilFertilityManager = {
     organic = {
       getFieldOrganicState = function() error("boom") end,
     },

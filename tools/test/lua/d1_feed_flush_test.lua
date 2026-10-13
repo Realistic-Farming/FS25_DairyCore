@@ -6,7 +6,7 @@
 -- when the spine is absent). The passive daily decay stays the free never-stuck
 -- floor. Mirrors the C2 disease-flush shape (ProStaffDiseaseFlush.lua).
 --
---!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua
+--!load: src/Logger.lua, src/DairyConstants.lua, src/FeedProvenance.lua, src/DairyCoreManager.lua, src/DairyCollectionRefusal.lua, src/network/DairyCollectionStatusEvents.lua, src/DairyCollectionRoute.lua
 
 g_currentMission = {
   _isServer = true,
@@ -151,9 +151,9 @@ do
 
   local fp = m.feedProvenance
   fp:blend(1, "WHEAT", 100, 0.5, 0.0)
-  def.onAction("userA", { farmId = 2 })          -- userA belongs to farm 1
+  def.onAction("userA", { 2 })                   -- userA belongs to farm 1 (the positional array the transport carries)
   T.ok('action.foreignRejected', fp:getFraction(1, "WHEAT").contaminated > 0.4)
-  def.onAction("userA", { farmId = 1 })          -- own farm flushes
+  def.onAction("userA", { 1 })                   -- own farm flushes
   T.near('action.ownFlushed', fp:getFraction(1, "WHEAT").contaminated, 0.0, 1e-9)
 end
 

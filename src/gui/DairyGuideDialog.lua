@@ -5,7 +5,35 @@
 -- guide, in its own mod, opened from the shared Help footer through this guest's onOpenHelp. The
 -- chrome is SoilGuideDialog's so all of them read as one family; only the words differ.
 -- Rows are { t = "H" | "B" | "S" | "COL", v = "text" }: header, body, spacer, column break.
+-- RSF-F216: a row may also carry key = "dc_...", which is resolved at render time with v
+-- as the readable English fallback. Only the nine sale-fee rows use it today.
 -- =========================================================
+
+-- This dialog's own translation lookup, used only for the sale-fee rows. The same body
+-- as DairyRfPdaGuest.lua's tr and the manager's _tr (the SoilFertilizer #973 shape,
+-- MAINTENANCE row 99). Deliberately a local copy rather than a new shared helper, and
+-- not imported into the manager, which carries its own: that is how this mod already
+-- does it.
+
+local function tr(key, fallback)
+    -- MAINTENANCE row 99, the SoilFertilizer #973 shape. Gate on hasText, never on the
+    -- returned string: getText never returns nil, and for an absent key it returns the
+    -- sentence "Missing '<key>' in l10n<suffix>.xml" (I18N.lua:175-191), which the old
+    -- prefix gate caught only by also refusing any real text that begins "Missing".
+    -- Past hasText the return is opaque: type and non-empty, never inspected. g_i18n is
+    -- read plainly: in this mod's environment it IS the mod-aware instance
+    -- (mods.lua:453, modEnv.g_i18n = g_i18n:addModI18N(modName), I18N.lua:149-172); the
+    -- engine sets no modEnv.i18n, so the branch that read it was dead.
+    local i18n = g_i18n
+    if i18n == nil or type(i18n.hasText) ~= "function" or type(i18n.getText) ~= "function" then
+        return fallback or key
+    end
+    local okHas, has = pcall(i18n.hasText, i18n, key)
+    if not okHas or has ~= true then return fallback or key end
+    local ok, text = pcall(i18n.getText, i18n, key)
+    if not ok or type(text) ~= "string" or text == "" then return fallback or key end
+    return text
+end
 
 ---@class DairyGuideDialog
 DairyGuideDialog = DairyGuideDialog or {}
@@ -231,10 +259,18 @@ DairyGuideDialog.PAGE5 = {
     { t="B", v="Dairy Contracts turns the dairy contract" },
     { t="B", v="machinery on or off." },
     { t="COL", v="" },
-    { t="B", v="Milk Sale Margin is the cut taken off the" },
-    { t="B", v="spot price on an administrative milk sale." },
-    { t="B", v="It runs from none up to a quarter and" },
-    { t="B", v="starts at one twentieth." },
+    -- RSF-F216. Only these nine rows carry a key; the rest of the guide is
+    -- unconverted and stays that way. row.v keeps a readable English fallback so a
+    -- missing key or a missing mod environment cannot put a raw key on the screen.
+    { t="B", key="dc_guide_saleFee_01", v="Office and rota take a handling fee per litre." },
+    { t="B", key="dc_guide_saleFee_02", v="Set per 1000 L: 11 by default, from 0 to 50." },
+    { t="B", key="dc_guide_saleFee_03", v="That is 0.011/L by default, up to 0.05/L." },
+    { t="B", key="dc_guide_saleFee_04", v="Old percentage settings reset to 11." },
+    { t="B", key="dc_guide_saleFee_05", v="Active dynamic pricing applies; otherwise" },
+    { t="B", key="dc_guide_saleFee_06", v="the base price is used, not a station quote." },
+    { t="B", key="dc_guide_saleFee_07", v="Fee at or above price leaves the milk unsold." },
+    { t="B", key="dc_guide_saleFee_08", v="A refused round still uses its scheduled slot." },
+    { t="B", key="dc_guide_saleFee_09", v="Ageing continues normally; see the server log." },
     { t="S", v=" " },
     { t="H", v="COMMON QUESTIONS" },
     { t="B", v="I see no Dairy entry in the list." },
@@ -303,17 +339,21 @@ function DairyGuideDialog:onGuiSetupFinished()
     self._elCol1 = self:getDescendantById("dcGuide_col1")
     self._elCol2 = self:getDescendantById("dcGuide_col2")
     self._elSubtitle = self:getDescendantById("dcGuide_subtitle")
+    self._elClose    = self:getDescendantById("dcGuide_close")   -- [REPAIR-354] Return
+    self._elBack     = self:getDescendantById("dcGuide_back")    -- [REPAIR-354] Escape
 end
 
 function DairyGuideDialog:onOpen()
     DairyGuideDialog:superClass().onOpen(self)
     self._currentPage = 1
+    self._isGuideOpen = true     -- [REPAIR-354] guards against a double close
     self:_selectPage(1)
 end
 
 function DairyGuideDialog:onClose()
     DairyGuideDialog:superClass().onClose(self)
     self:_clearContent()
+    self._isGuideOpen = false    -- [REPAIR-354]
     self._currentPage = 1
 end
 
@@ -359,7 +399,7 @@ function DairyGuideDialog:_buildContent(pageNum)
             if profile ~= nil then
                 local el = TextElement.new()
                 el:loadProfile(profile, true)
-                el:setText(row.v or "")
+                el:setText(row.key ~= nil and tr(row.key, row.v) or (row.v or ""))
                 currentBox:addElement(el)
                 el:onGuiSetupFinished()
                 table.insert(self._contentLineEls, { box = currentBox, el = el })
@@ -382,6 +422,30 @@ end
 
 -- -- Button -----------------------------------------------
 
+--- The ONE close route. Both button box controls point here through onClick, so the
+--- mouse, Escape and Return all converge on the same code.
+--- Idempotent: a second call while already closed does nothing, so no combination of
+--- button match and inherited dispatch can close twice.
 function DairyGuideDialog:onClickClose()
+    if self._isGuideOpen == false then
+        return
+    end
+    self._isGuideOpen = false
     g_gui:closeDialogByName(DairyGuideDialog.GUI_NAME)
+end
+
+--- [REPAIR-354] Secondary, and deliberately NOT the primary Escape route.
+--- Escape is carried by the buttonBack control above, which is the traced path.
+--- This override only matters if the engine also dispatches the inherited
+--- ScreenElement:onClickBack, whose body 1.24 omits and whose caller is not visible
+--- in any available source. It is safe either way because it funnels into the same
+--- idempotent handler, so a double dispatch still yields exactly one close.
+--- Return convention follows DialogElement 1.24 :70-77, false meaning event used,
+--- and usedMenuButton is respected.
+function DairyGuideDialog:onClickBack(forceBack, usedMenuButton)
+    if usedMenuButton then
+        return true      -- event unused
+    end
+    self:onClickClose()
+    return false         -- event used
 end
